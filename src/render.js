@@ -13,12 +13,13 @@ function makeNoise(N){// tileable value-noise FBM in 4 channels
   const px=new Uint8Array(N*N*4);for(let c=0;c<4;c++){let mn=1,mx=0;for(const v of ch[c]){mn=Math.min(mn,v);mx=Math.max(mx,v);}for(let i=0;i<N*N;i++)px[i*4+c]=Math.round((ch[c][i]-mn)/(mx-mn)*255);}
   return px;}
 const VS_PHOTO=`attribute vec2 a;uniform vec4 u_view;varying vec2 v;void main(){v=a;gl_Position=vec4((u_view.xy+a*u_view.zw)*vec2(2.,-2.)+vec2(-1.,1.),0.,1.);}`;
-const FS_PHOTO=`precision mediump float;varying vec2 v;uniform sampler2D u_img,u_noise;uniform vec2 u_size;uniform float u_time,u_dim;
+const FS_PHOTO=`precision mediump float;varying vec2 v;uniform sampler2D u_img,u_noise;uniform vec2 u_size;uniform float u_time,u_dim,u_gk,u_fog,u_flood;uniform vec3 u_amb,u_fogc;
 uniform vec4 u_L[8];uniform vec4 u_W[24];uniform vec4 u_WP[24];uniform int u_nL,u_nW;
-void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*(1.-u_dim);
+void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*u_amb*(1.-u_dim);
+ col+=base*vec3(.86,.9,1.)*u_flood*(.25+.75*smoothstep(.2,1.,v.y)); // apparatus scene lighting, strongest low on the facade
  vec3 light=vec3(0.);
  for(int i=0;i<8;i++){if(i>=u_nL)break;vec4 L=u_L[i];vec2 d=(p-L.xy)/L.z;d.y*=d.y<0.?.75:1.25;float r2=dot(d,d);float fl=.82+.18*sin(u_time*11.+float(i)*3.1)*sin(u_time*6.3+float(i));light+=vec3(1.,.42,.12)*L.w*fl/(1.+r2*12.)*smoothstep(1.6,0.,r2);}
- col+=base*light*1.1+light*.02;
+ col+=base*light*1.1*u_gk+light*.02*u_gk*u_gk; // fire light on the facade reads much stronger after dark
  for(int i=0;i<24;i++){if(i>=u_nW)break;vec4 R=u_W[i];vec4 P=u_WP[i];if(P.z<.5||P.x<.25)continue;
    // soot/heat staining on the wall above a vented, burning opening
    vec2 s=(p-vec2(R.x,R.y-R.w*.5))/vec2(R.z*.5,R.w);float up=-s.y;if(up<-.05||up>2.2)continue;
@@ -44,12 +45,15 @@ void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*(1.-u
    vec3 room=mix(upper,lower,m);
    vec3 inside;
    if(P.z>.5)inside=mix(vec3(.03,.025,.02),room,clamp(g*1.4+.25,0.,1.));
-   else{vec3 glass=base*(1.-P.y*.85);vec3 behind=mix(upper,lower,m)*.8;inside=mix(glass,behind+glass*.12,clamp(g*.75*(1.-P.y*.5),0.,1.));}
+   else{vec3 glass=base*(u_amb+u_flood*.4)*(1.-P.y*.85)+light*.18*u_gk;vec3 behind=mix(upper,lower,m)*.8;inside=mix(glass,behind+glass*.12,clamp(g*.75*(1.-P.y*.5),0.,1.));}
    float edge=smoothstep(1.,.9,max(abs(q.x),abs(q.y)));col=mix(col,inside,edge);}
+
+ // fog / precipitation haze: scatters the fire glow into a halo
+ float fg=u_fog*(.8+.2*(1.-v.y));col=mix(col,u_fogc+light*.35*u_gk,fg);
  gl_FragColor=vec4(col,1.);}`;
 const VS_P=`attribute vec2 a_pos;attribute vec2 a_uv;attribute vec4 a_col;attribute vec3 a_p;uniform vec4 u_view;uniform vec2 u_size;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;
 void main(){v_uv=a_uv;v_col=a_col;v_p=a_p;vec2 n=a_pos/u_size;gl_Position=vec4((u_view.xy+n*u_view.zw)*vec2(2.,-2.)+vec2(-1.,1.),0.,1.);}`;
-const FS_SMOKE=`precision mediump float;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;uniform sampler2D u_noise;uniform float u_time;
+const FS_SMOKE=`precision mediump float;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;uniform sampler2D u_noise;uniform float u_time,u_sfog;uniform vec3 u_samb,u_fogc;
 float D(vec2 b,float ev){float d1=texture2D(u_noise,b+vec2(ev*.03,-ev*.05)).b;float d2=texture2D(u_noise,b*2.6+vec2(-ev*.05,ev*.02)+d1*.18).b;float d3=texture2D(u_noise,b*5.3+d2*.1).r;return d1*.55+d2*.3+d3*.15;}
 void main(){float r=length(v_uv);if(r>1.)discard;
  float ev=v_p.y;vec2 b=v_uv*.42+vec2(v_p.x*3.1,v_p.x*1.37);
@@ -62,8 +66,10 @@ void main(){float r=length(v_uv);if(r>1.)discard;
  float top=clamp(-v_uv.y*.5+.5,0.,1.);
  vec3 c=v_col.rgb*(.42+.95*lit)*(.85+.3*top);
  c+=vec3(.08)*lit*top*(1.-dot(v_col.rgb,vec3(.33))); // sky light catching the tops of dark billows
- c+=vec3(.9,.38,.1)*v_p.z*.55*smoothstep(-.2,1.,v_uv.y)*lit;
- float a=dens*v_col.a;gl_FragColor=vec4(c*a,a);}`;
+ c*=u_samb; // ambient light: at night smoke colour is hard to read without scene lighting
+ c+=vec3(.9,.38,.1)*v_p.z*.55*smoothstep(-.2,1.,v_uv.y)*lit; // under-lit by the fire
+ c=mix(c,u_fogc,u_sfog);
+ float a=dens*v_col.a*(1.-u_sfog*.45);gl_FragColor=vec4(c*a,a);}`;
 const FS_FIRE=`precision mediump float;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;uniform sampler2D u_noise;uniform float u_time;
 // quad: base at the neutral plane inside the opening; hv = fraction of quad height that is inside the opening (base..head); ow = opening half-width in quad units
 void main(){vec2 uv=v_uv;float h=clamp(uv.y,0.,1.);
@@ -135,19 +141,20 @@ function create(canvas){
     const L=new Float32Array(32),Wd=new Float32Array(96),WP=new Float32Array(96);let nL=0,nW=0,dim=0;
     if(vis){(vis.lights||[]).slice(0,8).forEach((l,i)=>{L.set([l.x,l.y,l.r,l.i],i*4);nL++;});(vis.windows||[]).slice(0,24).forEach((w,i)=>{Wd.set([w.x,w.y,w.w,w.h],i*4);WP.set([w.glow,w.stain,w.broken?1:0,w.seed],i*4);nW++;});dim=vis.dim||0;}
     gl.uniform4fv(pr.u.u_L,L);gl.uniform4fv(pr.u.u_W,Wd);gl.uniform4fv(pr.u.u_WP,WP);gl.uniform1i(pr.u.u_nL,nL);gl.uniform1i(pr.u.u_nW,nW);gl.uniform1f(pr.u.u_dim,dim);
+    const E=(vis&&vis.env)||{};gl.uniform3fv(pr.u.u_amb,E.amb||[1,1,1]);gl.uniform1f(pr.u.u_gk,E.gk||1);gl.uniform1f(pr.u.u_fog,E.fog||0);gl.uniform3fv(pr.u.u_fogc,E.fogc||[.7,.72,.75]);gl.uniform1f(pr.u.u_flood,E.flood||0);
     gl.drawArrays(gl.TRIANGLES,0,6);
     if(!vis)return;
     // smoke particles (premultiplied alpha), sorted: older (higher) first so fresh dense smoke sits in front at the opening
-    const U=H/800;let n=0;const sm=R.smoke.slice().sort((a,b)=>b.age/b.life-a.age/a.life);
+    const EV=vis.env||{};const LT=vis.lights||[];const U=H/800;let n=0;const sm=R.smoke.slice().sort((a,b)=>b.age/b.life-a.age/a.life);
     for(const p of sm){const k=p.age/p.life;const sz=(p.s0+(p.s1-p.s0)*Math.sqrt(k))*.5;const a=p.a*Math.min(1,k/.12)*(k>.3?Math.pow((1-k)/.7,1.5):1);if(a<.01)continue;
       const fade=Math.min(1,k*p.cool*2.2);const g=[.47,.46,.45];const c=p.rgb.map((v,j)=>v+(g[j]-v)*fade*.45);
-      const glow=p.glow*Math.max(0,1-k*3.5);
+      let glow=p.glow*Math.max(0,1-k*3.5);if(EV.ug>0&&LT.length){let li=0;for(const l of LT){const dx=p.x-l.x,dy=p.y-l.y;const d2=(dx*dx+dy*dy)/(l.r*l.r*6);li+=l.i/(1+d2*3);}glow+=Math.min(1.7,li*EV.ug);}
       const cs=Math.cos(p.rot)*sz,sn=Math.sin(p.rot)*sz;const corners=[[-1,-1],[1,-1],[-1,1],[-1,1],[1,-1],[1,1]];
       for(const[u,v]of corners){const o=n*FL;vb[o]=p.x+u*cs-v*sn;vb[o+1]=p.y+u*sn+v*cs;vb[o+2]=u;vb[o+3]=v;vb[o+4]=c[0];vb[o+5]=c[1];vb[o+6]=c[2];vb[o+7]=a;vb[o+8]=p.seed;vb[o+9]=p.ev;vb[o+10]=glow;n++;}}
     const drawBatch=(prog,count)=>{gl.useProgram(prog.p);gl.bindBuffer(gl.ARRAY_BUFFER,pbuf);gl.bufferData(gl.ARRAY_BUFFER,vb.subarray(0,count*FL),gl.DYNAMIC_DRAW);const S=FL*4;
       gl.enableVertexAttribArray(prog.a.a_pos);gl.vertexAttribPointer(prog.a.a_pos,2,gl.FLOAT,false,S,0);gl.enableVertexAttribArray(prog.a.a_uv);gl.vertexAttribPointer(prog.a.a_uv,2,gl.FLOAT,false,S,8);
       gl.enableVertexAttribArray(prog.a.a_col);gl.vertexAttribPointer(prog.a.a_col,4,gl.FLOAT,false,S,16);gl.enableVertexAttribArray(prog.a.a_p);gl.vertexAttribPointer(prog.a.a_p,3,gl.FLOAT,false,S,32);
-      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,noise);gl.uniform1i(prog.u.u_noise,1);gl.uniform4fv(prog.u.u_view,vw);gl.uniform2f(prog.u.u_size,W,H);gl.uniform1f(prog.u.u_time,t);gl.drawArrays(gl.TRIANGLES,0,count);};
+      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,noise);gl.uniform1i(prog.u.u_noise,1);if(prog.u.u_samb){const E=vis.env||{};gl.uniform3fv(prog.u.u_samb,E.samb||[1,1,1]);gl.uniform1f(prog.u.u_sfog,E.sfog||0);gl.uniform3fv(prog.u.u_fogc,E.fogc||[.7,.72,.75]);}gl.uniform4fv(prog.u.u_view,vw);gl.uniform2f(prog.u.u_size,W,H);gl.uniform1f(prog.u.u_time,t);gl.drawArrays(gl.TRIANGLES,0,count);};
     // fire quads (additive). Built first so smoke can be split into behind/in-front sets.
     const fires=vis.flames||[];
     gl.enable(gl.BLEND);

@@ -1,7 +1,18 @@
 /* Maps model state -> renderer inputs (windows, lights, flames, smoke emitters). */
 const SizeupVisual=(()=>{
 function windPx(w){if(!w||w.dir==='calm')return 0;const s=[14,34,62][w.spd||0];return w.dir==='B'?s:w.dir==='D'?-s:0;}
-function build(S,B,M){const vis={windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.scn.wind),dim:0};const ov=M.openingVis(S);const U=B.H/800;const lean=vis.wind/90;
+// time of day & weather -> lighting/haze parameters for the renderer (look-tuned, not physical)
+function envOf(S){const e=S.scn.env||{};const tod=e.tod||'day',pr=e.precip||'none',lit=!!S.lights;
+  const T={day:{amb:[1,1,1],gk:1,samb:[1,1,1],fogc:[.74,.76,.79],ug:0},
+    dusk:{amb:[.5,.45,.56],gk:1.7,samb:[.52,.5,.58],fogc:[.36,.34,.42],ug:.9},
+    night:{amb:[.075,.09,.15],gk:2.6,samb:[.16,.17,.22],fogc:[.05,.06,.08],ug:2.2}}[tod]||{};
+  const o={amb:T.amb.slice(),gk:T.gk,samb:T.samb.slice(),fogc:T.fogc.slice(),ug:T.ug,fog:0,flood:0,sfog:0,tod,precip:pr,lit};
+  if(lit&&tod!=='day'){o.flood=tod==='night'?.42:.22;o.samb=o.samb.map(v=>Math.max(v,tod==='night'?.62:.72));o.fogc=o.fogc.map(v=>v+(tod==='night'?.16:.08));}
+  if(pr==='rain'){o.amb=o.amb.map((v,i)=>v*[.78,.81,.88][i]);o.samb=o.samb.map(v=>v*.92);o.fog=.12;}
+  if(pr==='snow'){o.amb=o.amb.map((v,i)=>v*[.9,.93,1][i]);o.fog=.2;o.fogc=o.fogc.map(v=>tod==='day'?v+.08:v+.03);}
+  if(pr==='fog'){o.fog=tod==='day'?.52:.45;}
+  o.sfog=o.fog*.85;return o;}
+function build(S,B,M){const vis={windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.wind||S.scn.wind),dim:0,env:envOf(S)};const ov=M.openingVis(S);const U=B.H/800;const lean=vis.wind/90;
   let total=0;
   B.openings.forEach((o,i)=>{const v=ov[o.id];if(!v)return;const seed=(i*0.137)%1;
     if(o.hidden){if(v.rate>.05&&B.ridge){const z=B.zones.find(z=>z.id===o.zone);vis.emitters.push({key:'r'+o.id,kind:'rear',x:(z.x0+z.x1)/2,y:B.ridge.y+30*U,w:Math.min(240*U,(z.x1-z.x0)),hgt:10*U,rate:v.rate*16,vel:Math.min(2,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,alpha:.85,cool:.5});total+=v.rate*.6;}return;}
@@ -28,4 +39,4 @@ function build(S,B,M){const vis={windows:[],lights:[],flames:[],emitters:[],wind
   vis.lights.sort((a,b)=>b.i-a.i);vis.lights=vis.lights.slice(0,8);
   vis.dim=Math.min(.28,total*.06);
   return vis;}
-return{build,windPx};})();
+return{build,windPx,envOf};})();

@@ -14,11 +14,21 @@ The fire behavior is a simplified teaching model grounded in UL FSRI (Fire Safet
 
 Image and source credits are in [CREDITS.md](CREDITS.md).
 
-## What's new (Oct 9, 2026)
+## What's new (Oct 9, 2026, evening)
+
+- **Dispatch and companies.** A Dispatch tab before the drill builds the assignment: engines, ladders/trucks, rescues/squads, medics and a battalion chief, each with an ID, staffing (1 to 6), arrival time after dispatch and equipment. Engines have a tank (default 1000 gal), a pump, supply hose and editable preconnects (defaults: 1¾ in. 200 ft at 150 gpm ×2 and 2½ in. 200 ft at 250 gpm). Ladders and rescues have ground ladders, an aerial, a fan, saws and hooks. These are generic, editable defaults, not any department's SOP.
+- **Presets.** "Generic first alarm (residential)" is built in. You can save and load your own assignments on this device, and the assignment travels inside exported drills.
+- **Assign tasks to a company.** Companies show on the board as en route, staged, working (with a countdown) or available. You can give a specific company a task: stretch a chosen preconnect to a room or opening, lay a forward or reverse supply line from the hydrant, horizontal or vertical vent, PPV, door control, primary or secondary search, pull ceiling, ladder a side, RIT, scene lighting or rehab. A busy company is refused with the reason, and **Reassign** releases its current tasks. Quick orders still work; they go to the company that can start soonest.
+- **Crews limit the lines** in place of the old 3-line cap. Each engine's tank feeds its own lines at their real gpm until a supply line reaches it. A line must be long enough for the setback and the run inside.
+- **Editable task times.** The Task times tab holds the teaching values that every task time is built from, along with staffing, hose length, floor, setback, and cold and heat modifiers. They're saved and exported with the drill.
+- **Time of day and weather.** Day, dusk or night: at night the scene darkens, fire glow lights the windows, smoke and facade, and smoke colour is hard to read until a company sets up scene lighting. Occupancy can follow the time of day. You can add rain, snow or fog, cold and icy or hot conditions, and wind with a scheduled wind shift. Wind into an open window of a burning room drives heat and smoke along the flow path; this follows the NIST wind-driven fire experiments.
+- The debrief now lists each company and its tasks, supply, RIT and scene lighting.
+
+## Earlier on Oct 9, 2026
 
 - Orders picked from the dropdowns now stay selected while the drill clock runs. Pressing an order button with nothing picked shows a message.
 - The line list puts burning rooms first and preselects one. One-tap "＋ Line → room" chips appear for burning rooms.
-- Up to 3 hoselines at once, interior and exterior. Each line is shown on the board with its status, plus Reassign and Withdraw controls.
+- Several hoselines at once, interior and exterior. Each line is shown on the board with its status, plus Reassign and Withdraw controls.
 - Flashed-over rooms can now be knocked down. A knocked-down room left dry, with no line standing by, can rekindle once, slowly.
 - The attic or cockloft can be reached by pulling the ceiling from a room below it, or with an exterior stream through an open roof vent.
 - "Fire under control" when no room is still burning: a banner appears, the clock pauses, and you're prompted to open the debrief.

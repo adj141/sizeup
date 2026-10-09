@@ -40,8 +40,8 @@ function photoBuilding(W,H,mk){const n=mk.stories,eave=mk.eave,grade=mk.grade,bh
     facts:{occupancy:'Residential (confirm)',construction:'Unknown, confirm on 360',stories:String(n),exposures:'B: ? · D: ?',life:'Unknown, not yet confirmed'},suggested:{origin:'L1',fuel:'modern',preburn:210}};}
 
 /* ---------- scenario & sim ---------- */
-function newScenario(B){const sg=B.suggested||{};return{format:'sizeup-scenario',v:2,sceneId:B.id,origin:sg.origin||B.zones[0].id,fuel:sg.fuel||'modern',preburn:sg.preburn||360,
-  openings:{...(sg.openings||{})},doors:{...(sg.doors||{})},occupant:'random',wind:{dir:'calm',spd:0},glass:'fails',seed:(Math.random()*1e9)|0,actions:[],tNow:0};}
+function newScenario(B){const sg=B.suggested||{};return ensureScn({format:'sizeup-scenario',v:2,sceneId:B.id,origin:sg.origin||B.zones[0].id,fuel:sg.fuel||'modern',preburn:sg.preburn||360,
+  openings:{...(sg.openings||{})},doors:{...(sg.doors||{})},occupant:'random',wind:{dir:'calm',spd:0},glass:'fails',seed:(Math.random()*1e9)|0,actions:[],tNow:0});}
 function rebuild(){const sc=A.scn;const S=M.create(A.B,JSON.parse(JSON.stringify(sc)));M.run(S,sc.preburn);S.tArr=sc.preburn;
   const evs=S.events.length;A.preEvents=S.events.slice();
   for(const a of sc.actions)M.act(S,{...a,t:sc.preburn+a.t});M.run(S,sc.tNow);A.S=S;A.lastEvN=evs;A.visT=-1;A.simAcc=0;}
@@ -88,13 +88,14 @@ function drawOverlay(){const c=octx;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,
       B.openings.filter(o=>!o.hidden).forEach(o=>markRect(o,o.type==='door'?'#90caf9':'#ffb300',false));}
     const o=A.originPt;if(o){const r=20*U*(1+.12*Math.sin(performance.now()/180));c.fillStyle='rgba(211,47,47,.3)';c.beginPath();c.arc(o.x,o.y,r*1.6,0,7);c.fill();c.lineWidth=5*U;c.strokeStyle='#fff';c.beginPath();c.arc(o.x,o.y,r,0,7);c.stroke();c.fillStyle='#fff';c.beginPath();c.arc(o.x,o.y,6*U,0,7);c.fill();}}
   if(A.screen===3&&A.S){B.openings.filter(o=>!o.hidden).forEach(o=>{const st=A.S.o[o.id].state;if(st!=='closed')markRect(o,'#ffb300',true);else{c.globalAlpha=.25;markRect(o,'#fff',true);c.globalAlpha=1;}});}
+  drawWeather(c);
   if(A.screen===4&&A.S&&A.showFlow&&!isHidden()){const v=curVis();const ov_=M.openingVis(A.S);
     for(const o of B.openings){if(o.hidden)continue;const st=A.S.o[o.id];if(!st||st.state==='closed')continue;const vv=ov_[o.id];const out=vv.rate>.05,inn=vv.inflow||(A.S.fan&&A.S.fan.at===o.id);
       const arrow=(x,y,dir,col)=>{const s=16*U;c.fillStyle=col;c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=2*U;c.beginPath();if(dir<0){c.moveTo(x,y-s);c.lineTo(x+s*.8,y+s*.4);c.lineTo(x-s*.8,y+s*.4);}else{c.moveTo(x,y+s);c.lineTo(x+s*.8,y-s*.4);c.lineTo(x-s*.8,y-s*.4);}c.closePath();c.fill();c.stroke();};
       if(out)arrow(o.x,o.y-o.h/2-12*U,-1,'#ff7043');if(inn)arrow(o.x,o.y+o.h/2-14*U,1,'#64b5f6');}}}
 
 /* ---------- navigation ---------- */
-const TITLES={1:['SizeUp','Capture the building'],2:['Tap where the fire starts','Set the fire origin'],3:['Dial in fire & smoke','Set the conditions at arrival'],4:['Command board','Size-up drill']};
+const TITLES={1:['SizeUp','Capture the building'],2:['Tap where the fire starts','Set the fire origin'],3:['Set up the drill','Fire, weather and the assignment'],4:['Command board','Size-up drill']};
 function show(n){if(n>A.maxScreen)return;const prev=A.screen;A.screen=n;$$('.screen').forEach(s=>s.classList.toggle('on',s.id==='s'+n));
   const slot=$('#s'+n+' .slot');if(slot){slot.appendChild(stage);stage.style.display='';}else{document.body.appendChild(stage);stage.style.display='none';}
   $('#ttl').textContent=TITLES[n][0];$('#sub').textContent=`Step ${n} of 4 · ${TITLES[n][1]}`;$('#backBtn').hidden=n===1;stage.classList.toggle('tapmode',n===2||n===3);
@@ -138,7 +139,7 @@ function fireRoomConn(){const z=A.scn.origin;return A.B.conns.find(c=>c.type==='
 function renderSetup(){if(!A.B)return;const sc=A.scn;
   $('#olist').innerHTML=A.B.openings.map(o=>{const st=sc.openings[o.id]||o.init||'closed';return `<div class="oitem"><span>${esc(o.name)}</span><div class="seg" data-op="${o.id}"><button data-v="closed" class="${st==='closed'?'on':''}">Closed</button><button data-v="${o.type==='window'?'failed':'open'}" class="${st!=='closed'?'on':''}">${o.type==='window'?'Broken/open':'Open'}</button></div></div>`;}).join('');
   $('#dlist').innerHTML=A.B.conns.filter(c=>c.type==='door').map(c=>{const st=sc.doors[c.id]||c.init||'closed';return `<div class="oitem"><span>${esc(c.name||c.id)}</span><div class="seg" data-dr="${c.id}"><button data-v="open" class="${st==='open'?'on':''}">Open</button><button data-v="closed" class="${st==='closed'?'on':''}">Closed</button></div></div>`;}).join('');
-  const occ=sc.occupant;$('#occSel').innerHTML=`<option value="none">No occupant reported</option><option value="random">Occupant reported, location unknown (random, hidden)</option>`+A.B.zones.filter(z=>!z.attic).map(z=>`<option value="${z.id}">Occupant in ${esc(z.name)}</option>`).join('');$('#occSel').value=occ;
+  const occ=sc.occupant;$('#occSel').innerHTML=`<option value="none">No occupant reported</option><option value="random">Occupant reported, location unknown (random, hidden)</option><option value="bytime">Unknown: likely by time of day (hidden, simplification)</option>`+A.B.zones.filter(z=>!z.attic).map(z=>`<option value="${z.id}">Occupant in ${esc(z.name)}</option>`).join('');$('#occSel').value=occ;
   const frc=fireRoomConn();$('#vFrd').textContent=frc?frc.name:'(no door: open to the rest of the floor)';$$('.seg[data-key=frdoor] button').forEach(b=>{b.disabled=!frc;b.classList.toggle('on',!!frc&&(sc.doors[frc.id]||frc.init)===b.dataset.v);});
   $('#reading').innerHTML=readingHTML();
   if(A.S){const nf=Object.values(A.S.o).filter(o=>o.state!=='closed'&&o.type==='window').length;$('#preHint').textContent=`At arrival: ${M.stageOf(A.S,A.scn.origin).toLowerCase()}${nf?` · ${nf} window${nf>1?'s':''} already open/failed`:''}. The clock starts running at arrival.`;}syncUI();}
@@ -156,18 +157,26 @@ $$('.seg[data-key]').forEach(seg=>seg.addEventListener('click',e=>{const b=e.tar
   switch(key){case 'markMode':A.markMode=v;break;case 'side':A.side=v;break;
    case 'fuel':sc.fuel=v;rebuild();warm(3);break;case 'glass':sc.glass=v;rebuild();warm(3);break;case 'preburn':sc.preburn=v;rebuild();warm(3);break;
    case 'frdoor':{const c=fireRoomConn();if(c){sc.doors[c.id]=v;rebuild();warm(3);}break;}
-   case 'windDir':sc.wind={...sc.wind,dir:v};if(A.S)A.S.scn.wind={...sc.wind};A.visT=-1;break;case 'windSpd':sc.wind={...sc.wind,spd:v};if(A.S)A.S.scn.wind={...sc.wind};A.visT=-1;break;
+   case 'windDir':sc.wind={...sc.wind,dir:v};if(A.S){A.S.scn.wind={...sc.wind};A.S.wind={...sc.wind};}A.visT=-1;break;case 'windSpd':sc.wind={...sc.wind,spd:v};if(A.S){A.S.scn.wind={...sc.wind};A.S.wind={...sc.wind};}A.visT=-1;break;
+   case 'tod':case 'precip':case 'temp':sc.env={...sc.env,[key]:v};rebuild();warm(3);break;
+   case 'shiftAt':sc.windShift=v?{at:v,dir:(sc.windShift&&sc.windShift.dir)||'C',spd:(sc.windShift&&sc.windShift.spd!=null)?sc.windShift.spd:2}:null;rebuild();break;
+   case 'shiftDir':case 'shiftSpd':sc.windShift={at:(sc.windShift&&sc.windShift.at)||360,dir:(sc.windShift&&sc.windShift.dir)||'C',spd:(sc.windShift&&sc.windShift.spd!=null)?sc.windShift.spd:2,[key==='shiftDir'?'dir':'spd']:v};rebuild();break;
    case 'strategy':order({kind:'strategy',v});break;
    case 'speed':A.speed=v;break;case 'stepSize':A.stepSize=v;break;
    default:if(key.startsWith('call_')){A.calls[key.slice(5)]=v;renderCalls();}}
   if(A.screen===3)renderSetup();syncUI();}));
 function syncUI(){const sc=A.scn;
   $$('.seg[data-key]').forEach(seg=>{const k=seg.dataset.key;let v;
-    if(k==='markMode')v=A.markMode;else if(k==='side')v=A.side;else if(!sc)return;else if(k==='fuel')v=sc.fuel;else if(k==='glass')v=sc.glass||'fails';else if(k==='preburn')v=sc.preburn;else if(k==='windDir')v=sc.wind.dir;else if(k==='windSpd')v=sc.wind.spd;else if(k==='strategy')v=A.S&&A.S.strategy;else if(k==='speed')v=A.speed;else if(k==='stepSize')v=A.stepSize;else if(k.startsWith('call_'))v=A.calls[k.slice(5)];else return;
+    if(k==='markMode')v=A.markMode;else if(k==='side')v=A.side;else if(!sc)return;else if(k==='fuel')v=sc.fuel;else if(k==='glass')v=sc.glass||'fails';else if(k==='preburn')v=sc.preburn;else if(k==='windDir')v=sc.wind.dir;else if(k==='windSpd')v=sc.wind.spd;else if(k==='tod'||k==='precip'||k==='temp')v=(sc.env||{})[k];else if(k==='shiftAt')v=sc.windShift?sc.windShift.at:0;else if(k==='shiftDir')v=sc.windShift&&sc.windShift.dir;else if(k==='shiftSpd')v=sc.windShift&&sc.windShift.spd;else if(k==='strategy')v=A.S&&A.S.strategy;else if(k==='speed')v=A.speed;else if(k==='stepSize')v=A.stepSize;else if(k.startsWith('call_'))v=A.calls[k.slice(5)];else return;
     seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',String(v)===b.dataset.v));});
   if(!sc)return;
   $('#vFuel').textContent=M.FUEL[sc.fuel].label;$('#vPre').textContent=`${+(sc.preburn/60).toFixed(1)} min`;$('#vGlass').textContent=(sc.glass||'fails')==='hold'?'Glass holds: closed fires starve':'Glass can fail on its own';$('#vWind').textContent=windText();
   $$('.seg[data-key=windSpd] button').forEach(b=>b.disabled=sc.wind.dir==='calm');
+  {const e=sc.env||{};$('#vTod').textContent=({day:'Day',dusk:'Dusk',night:'Night'})[e.tod];$('#vPrecip').textContent=({none:'Clear',rain:'Rain',snow:'Snow',fog:'Fog'})[e.precip];$('#vTemp').textContent=({mild:'Mild',cold:'Cold & icy',hot:'Hot'})[e.temp];
+   $('#todHint').textContent=e.tod==='day'?'Daylight: smoke colour reads normally.':`${e.tod==='night'?'Night':'Dusk'}: the photo is darkened, fire glow lights the windows, smoke and facade, and smoke colour is hard to read until a company sets up scene lighting. With “Likely by time of day” occupancy, homes are more likely occupied (asleep) at night and businesses are closed after hours (simplification).`;
+   $('#tempHint').textContent=e.temp==='cold'?`Cold & icy: every task takes ×${sc.settings.cold} as long (simplification).`:e.temp==='hot'?`Hot: crews slow down with work time, +${Math.round(sc.settings.heatPer10*100)}% per 10 min up to +${Math.round(sc.settings.heatCap*100)}%; rehab halves it (simplification).`:'';
+   const ws=sc.windShift;$('#vShift').textContent=ws?`T+${fmt(ws.at)} → ${['light','moderate','strong'][ws.spd]} from Side ${ws.dir}`:'None';$$('.seg[data-key=shiftDir] button,.seg[data-key=shiftSpd] button').forEach(b=>b.disabled=!ws);
+   const ss=$('#setupSum');if(ss)ss.textContent=setupSummary();}
   const isPhoto=A.B&&A.B.id==='photo';$('#markCtl').hidden=!isPhoto;$('#storiesCtl').hidden=!isPhoto;
   if(isPhoto){const mk=A.photoMarks;$('#markStat').textContent=`${mk.openings.filter(o=>o.type==='window').length} windows, ${mk.openings.filter(o=>o.type==='door').length} doors marked. Tap a marked one again to remove it.`;$('#markHint').textContent={origin:'Tap the fire room',window:'Tap each window',door:'Tap each door',eave:'Tap the eave line',grade:'Tap the ground line'}[A.markMode];$('#stOut').textContent=mk.stories;}
   const z=zoneOf(sc.origin);$('#floorAuto').textContent=A.originSet?`${z.name} · ${floorLabel(z.floor)}`:'Tap the photo or pick a room';
@@ -186,14 +195,14 @@ function syncUI(){const sc=A.scn;
 $$('.modesw button').forEach(b=>b.onclick=()=>{A.mode=b.dataset.mode;if(A.mode==='crew')A.hidden=true;layout();syncUI();renderBoard();});
 function isHidden(){return A.mode==='crew'?A.hidden:(A.hidden&&!A.locked);}
 function floorLabel(f){if(f==='Attic')return A.B.atticName||'Attic';if(f==='B')return'Basement';return'Floor '+f;}
-function windText(){const w=A.scn.wind;return w.dir==='calm'?'Calm':`${['Light','Moderate','Strong'][w.spd]} from Side ${w.dir}`;}
+function windText(){const w=(A.S&&A.screen===4&&A.S.wind)||A.scn.wind;return w.dir==='calm'?'Calm':`${['Light','Moderate','Strong'][w.spd]} from Side ${w.dir}`;}
 
 /* ---------- readings ---------- */
 function dominant(){const S=A.S;const v=M.openingVis(S);let best=null;for(const o of A.B.openings){const x=v[o.id];if(!x)continue;const sc=x.rate+x.flame*.5;if(sc>.01&&(!best||sc>best.sc))best={...x,sc,name:o.name,id:o.id};}
   const e=M.eavesVis(S);if(e&&e.rate>.04&&(!best||e.rate*1.2>best.sc))best={...e,sc:e.rate,name:'eaves / cornice',id:'eaves'};return best;}
 function smokeWhere(){const S=A.S;const v=M.openingVis(S);const list=A.B.openings.filter(o=>v[o.id]&&v[o.id].rate>.01).sort((a,b)=>v[b.id].rate-v[a.id].rate).map(o=>(o.hidden?o.name:o.name.replace(/ \(.+\)/,''))+(v[o.id].state==='closed'?' (around the closed '+o.type+')':''));const e=M.eavesVis(S);if(e&&e.rate>.02)list.push(A.B.id==='mixed'?'cornice':'eaves');for(const id in S.o)if(S.o[id].type==='roof'&&S.o[id].state!=='closed'&&v[id]&&v[id].rate>.02)list.push('roof vent');return [...new Set(list)];}
 function fireShowing(){const S=A.S;const v=M.openingVis(S);return A.B.openings.filter(o=>v[o.id]&&v[o.id].flame>.05).map(o=>o.name);}
-function smokeText(){const d=dominant();if(!d)return'Nothing showing';const w=smokeWhere();return `${M.VOLN[d.vol]} ${d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
+function smokeText(){const d=dominant();if(!d)return'Nothing showing';const w=smokeWhere();const e=A.S.scn.env||{};const dark=e.tod==='night'&&!A.S.lights,fogv=e.precip==='fog';return `${dark?'(hard to read in the dark) ':fogv?'(partly hidden by fog) ':''}${M.VOLN[d.vol]} ${dark?'dark-looking, colour uncertain':d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
 function burningText(){const S=A.S;const b=Object.values(S.z).filter(z=>z.ign&&!z.out);if(!b.length)return underControl()?'Under control: all fire knocked down':Object.values(S.z).some(z=>z.out)?'Knocked down':'No fire';return b.map(z=>`${zname(z.id)}: ${M.stageOf(S,z.id).toLowerCase()}`).join(' · ');}
 function hostile(){const S=A.S,o=S.z[A.scn.origin];let s=0,why=[];
   if(o.vl&&!o.flashed&&o.T>.3){s+=3;why.push('ventilation-limited and hot: new air will speed it up');}
@@ -224,13 +233,14 @@ function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,
   const ed=(k,ic,label)=>`<div class="frow">${svg(ic)}<span class="k">${label}<span class="tag">EDIT</span></span><span class="v ed" contenteditable="true" role="textbox" data-f="${k}" aria-label="${label}">${esc(F[k]||'')}</span></div>`;
   const au=(ic,label,v,stack)=>`<div class="frow${stack?' stack':''}">${svg(ic)}<span class="k">${label}</span><span class="v${hid?' hidev':''}">${v}</span></div>`;
   const fs=fireShowing();const fp=M.flowPath(S);const W=S.water;
-  const occ=A.scn.occupant==='none'?'':' · occupant reported'+(A.scn.occupant==='random'?', location unknown':'');
+  const occ=A.scn.occupant==='none'?'':' · occupant reported'+(A.scn.occupant==='random'?', location unknown':'');const occ2=A.scn.occupant==='bytime'?' · occupancy unknown':'';
   $('#facts').innerHTML=(hid?`<div class="frow"><span class="hiddenNote">Answers hidden. Call out what you see: smoke, stage and flow path.</span></div>`:'')+ed('occupancy','home','Occupancy')+ed('construction','brick','Construction')
    +au('flame','Showing',esc(fs.length?'Fire from '+fs.join(', '):'No visible fire from Side A'))+au('cloud','Smoke',esc(smokeText()))+au('wind','Wind',windText())
    +au('stage','Fire stage',esc(burningText()))+ed('stories','layers','Stories')+ed('exposures','bldgs','Exposures')+ed('life','users','Life hazard')
    +au('flow','Flow path',`${esc('Exhaust: '+(fp.exhaust.join(', ')||'none open (leakage only)'))}<br>${esc('Intake: '+(fp.intake.join(', ')||'none'))} <button class="btn ghost sm" id="flowTog" style="min-height:34px;margin-left:6px">${A.showFlow?'Hide arrows':'Show arrows'}</button>`,true)
    +au('gauge','Hostile-event indicators',`${meter()} <span class="muted" style="font-size:13px">${esc(hostile().why.join('; '))}</span>`,true)
-   +`<div class="frow">${svg('drop')}<span class="k">Water</span><span class="v">${W.supply?'Supply established':W.supplyAt!=null?`Supply in ${fmt(W.supplyAt-S.t)}`:'Tank only'} · <span class="${!W.supply&&W.tank<M.TASK.lowTank?'water-low':''}">tank ${Math.round(W.tank)} gal${!W.supply&&W.tank<M.TASK.lowTank?' (low)':''}</span> · ${W.lines.length}/${M.TASK.lineCap} lines${occ}</span></div>`;
+   +`<div class="frow">${svg('drop')}<span class="k">Water</span><span class="v">${waterText()} · ${W.lines.length} line${W.lines.length===1?'':'s'}${occ}${occ2}</span></div>`
+   +`<div class="frow">${svg('wind')}<span class="k">Light &amp; weather</span><span class="v">${esc(envText())}</span></div>`;
   $$('#facts .ed').forEach(i=>{i.oninput=()=>{A.facts[i.dataset.f]=i.textContent.trim();};i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();i.blur();}};});
   const ft=$('#flowTog');if(ft)ft.onclick=()=>{A.showFlow=!A.showFlow;renderBoard();syncUI();};
   const t=now();$('#pT').textContent=`T+${fmt(t)}`;$('#prompt').classList.toggle('changing',t>0&&A.latest.length>0);
@@ -238,7 +248,9 @@ function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,
   else if(underControl()){$('#pH').textContent='Fire under control.';$('#pP').textContent='No room is still burning. Open the debrief, or keep the clock running: a room left dry with no line nearby can rekindle.';}
   else if(A.latest.length){$('#pH').textContent='Conditions changing.';$('#pP').textContent=A.latest.slice(-3).join(' ')+' Update your report, strategy and assignments.';}
   else{$('#pH').textContent='Reassess.';$('#pP').textContent='No major change in this interval. Does your plan still match conditions?';}
-  renderOrders();renderLog();renderCalls();syncUI();}
+  renderCompanies();renderOrders();renderLog();renderCalls();syncUI();}
+function waterText(){const S=A.S;return S.cos.filter(e=>e.type==='engine'&&S.t>=e.arriveAt).map(e=>{const low=!e.supplied&&e.tankLeft<(+e.eq.tank||0)*M.TASK.lowTankFrac;return `${esc(e.id)} ${e.supplied?'supplied':`<span class="${low?'water-low':''}">tank ${Math.round(e.tankLeft)} gal${low?' (low)':''}</span>${e.supplyBy?' (supply coming)':''}`}`;}).join(' · ')||'No engine on scene';}
+function envText(){const S=A.S,e=S.scn.env||{};return [({day:'Daylight',dusk:'Dusk',night:'Night'})[e.tod]+(e.tod!=='day'?(S.lights?', scene lighting up':', no scene lighting'):''),e.precip!=='none'?({rain:'rain',snow:'snow',fog:'fog: reduced visibility'})[e.precip]:'',e.temp==='cold'?'cold & icy (tasks slower)':e.temp==='hot'?'hot (crew fatigue)':''].filter(Boolean).join(' · ');}
 // rebuild a <select> only when its options change, and keep the user's pick across board refreshes
 function setOpts(sel,html,def){const v=sel.value;
   if(sel._h!==html){sel.innerHTML=html;sel._h=html;if(sel._touched&&v&&[...sel.options].some(o=>o.value===v&&!o.disabled))sel.value=v;else{sel._touched=false;sel.value=def||'';}}
@@ -262,17 +274,18 @@ function defaultLine(T){const def=A.S.strategy==='Defensive';const c=T.filter(t=
   // prefer a room the fire is in, then the attic, then exterior
   const pick=c.find(t=>t.g==='room')||c.find(t=>t.g==='attic')||c[0];return pick?pick.v:'';}
 function lineStatus(l){const S=A.S;if(S.t<l.readyAt)return`en route, in position in ${fmt(l.readyAt-S.t)}`;if(l.flowing)return'flowing';
-  if(!(S.water.supply||S.water.tank>0))return'no water (tank empty)';return'standing by: no fire within reach';}
+  const E=S.cos.find(e=>e.id===l.eng);if(E&&!(E.supplied||E.tankLeft>0))return`no water (${E.id} tank empty)`;return'standing by: no fire within reach';}
 function renderOrders(){const B=A.B,S=A.S;const T=lineTargets();const W=S.water;
   setOpts($('#lineSel'),`<option value="">Attack line…</option>`+lineOptsHTML(T),defaultLine(T));
   const fr=B.openings.find(o=>o.front);
   setOpts($('#ventSel'),`<option value="">Ventilation…</option>`+B.openings.filter(o=>o.type==='window'||(o.type==='door'&&!o.front)).map(o=>`<option value="h:${o.id}">Horizontal: ${esc(o.name)}</option>`).join('')
     +B.zones.filter(z=>z.floor===String(B.stories)&&!z.hidden||z.attic).map(z=>`<option value="v:${z.id}">Vertical: roof over ${esc(z.name)}</option>`).join('')+(fr?`<option value="ppv">PPV/PPA fan at ${esc(fr.name)}</option><option value="fanoff">Fan off</option>`:''),'');
   const floors=[...new Set(B.zones.filter(z=>!z.attic).map(z=>z.floor))].sort();
-  setOpts($('#searchSel'),`<option value="">Primary search…</option>`+floors.map(f=>`<option value="${f}">Primary search: floor ${f}</option>`).join(''),'');
+  setOpts($('#searchSel'),`<option value="">Search…</option>`+floors.map(f=>`<option value="${f}">Primary search: floor ${f}</option>`).join('')+floors.map(f=>`<option value="s2:${f}">Secondary search: floor ${f}</option>`).join(''),'');
+  {const e=S.scn.env||{};const lg=$('#lightsGo');lg.hidden=e.tod==='day'||S.lights||S.tasks.some(t=>t.kind==='lights'&&t.active);}
   // quick one-tap chips for burning places without a line
   const def=S.strategy==='Defensive';let q=[];
-  if(W.lines.length<M.TASK.lineCap){const seen=new Set();for(const t of T){if(!t.burn||t.used||seen.has(t.zone))continue;if(def?t.g!=='ext':t.g==='ext')continue;if(t.g==='attic'&&T.some(x=>x.zone===t.zone&&x.used))continue;seen.add(t.zone);q.push(t);}q=q.slice(0,4);}
+  {const seen=new Set();for(const t of T){if(!t.burn||t.used||seen.has(t.zone))continue;if(def?t.g!=='ext':t.g==='ext')continue;if(t.g==='attic'&&T.some(x=>x.zone===t.zone&&x.used))continue;seen.add(t.zone);q.push(t);}q=q.slice(0,4);}
   const qh=q.map(t=>`<button data-t="${t.v}">＋ ${t.g==='ext'?'Exterior':'Line'} → ${esc(t.short)}</button>`).join('');
   const qe=$('#lineQuick');if(qe._h!==qh){qe.innerHTML=qh;qe._h=qh;}
   // lines list with reassign / withdraw; structure rebuilt only when lines or targets change
@@ -280,16 +293,17 @@ function renderOrders(){const B=A.B,S=A.S;const T=lineTargets();const W=S.water;
   if(LL._h!==sig){LL._h=sig;
     LL.innerHTML=W.lines.map(l=>`<div class="lrow" data-id="${l.id}"><div class="lst"><b>Line ${l.id}</b>${l.ext?'Exterior':'Interior'} → ${esc(l.label.replace(/ \(exterior\)$/,''))}<small class="lstat"></small></div><span></span>
       <div class="lctl"><select class="lre" aria-label="Reassign Line ${l.id}"><option value="">Reassign Line ${l.id} to…</option>${lineOptsHTML(T,l.key)}</select><button class="btn ghost sm lwd">Withdraw</button></div></div>`).join('')
-      +(W.lines.length?`<div class="lcap">${W.lines.length} of ${M.TASK.lineCap} hoselines committed. The cap is a simplification: staffing is not modeled. <button class="btn ghost sm" id="lwdAll">Withdraw all</button></div>`:'');}
+      +(W.lines.length?`<div class="lcap">${W.lines.length} hoseline${W.lines.length===1?'':'s'} committed. Lines are limited by the crews and preconnects on scene. <button class="btn ghost sm" id="lwdAll">Withdraw all</button></div>`:'');}
   W.lines.forEach(l=>{const r=LL.querySelector(`.lrow[data-id="${l.id}"]`);if(!r)return;const st=lineStatus(l);const el=r.querySelector('.lstat');if(el.textContent!==st)el.textContent=st;r.classList.toggle('flow',!!l.flowing);r.classList.toggle('idle',!l.flowing);});
-  const lines=W.lines.map(l=>`Line ${l.id} ${l.ext?'exterior → '+M.oname(S,l.opening):'interior → '+l.label} (${lineStatus(l)})`);
+  const lines=W.lines.map(l=>`Line ${l.id} ${l.ext?'exterior → '+M.oname(S,l.opening):'interior → '+l.label} [${l.co}] (${lineStatus(l)})`);
   const srch=S.searches.map(s=>`floor ${s.floor} ${s.done?(s.aborted?'aborted':'done'):`(${fmt(s.end-S.t)} left)`}`);
   $('#opsStat').textContent=`Strategy: ${S.strategy||'not set'} · Lines: ${lines.join('; ')||'none'} · Search: ${srch.join('; ')||'none'}${S.fan&&S.fan.on?' · Fan running':''}`;}
 function needPick(sel){toast('Pick an option from the list first, then press the button.');sel.classList.add('need');sel.focus();setTimeout(()=>sel.classList.remove('need'),2500);}
 function doneSel(sel){sel._touched=false;}
 $('#lineGo').onclick=()=>{const el=$('#lineSel'),v=el.value;if(!v)return needPick(el);doneSel(el);order({kind:'line',target:v});};
 $('#ventGo').onclick=()=>{const el=$('#ventSel'),v=el.value;if(!v)return needPick(el);doneSel(el);if(v.startsWith('h:'))order({kind:'vent',type:'horizontal',opening:v.slice(2)});else if(v.startsWith('v:'))order({kind:'vent',type:'vertical',zone:v.slice(2)});else if(v==='ppv')order({kind:'vent',type:'ppv'});else order({kind:'vent',type:'none'});};
-$('#searchGo').onclick=()=>{const el=$('#searchSel'),v=el.value;if(!v)return needPick(el);doneSel(el);order({kind:'search',floor:v});};
+$('#searchGo').onclick=()=>{const el=$('#searchSel'),v=el.value;if(!v)return needPick(el);doneSel(el);if(v.startsWith('s2:'))order({kind:'search',floor:v.slice(3),secondary:true});else order({kind:'search',floor:v});};
+$('#lightsGo').onclick=()=>{const S=A.S;const best=S.cos.filter(c=>!M.canDo(c,'lights')&&M.freeCrew(S,c)>=1).sort((a,b)=>Math.max(S.t,a.arriveAt)-Math.max(S.t,b.arriveAt))[0];if(!best){toast('No company has a free member for scene lighting. Release a task first.');return;}order({kind:'assign',co:best.id,task:'lights'});};
 $('#lineQuick').onclick=e=>{const b=e.target.closest('button[data-t]');if(b)order({kind:'line',target:b.dataset.t});};
 $('#linesList').addEventListener('change',e=>{const s=e.target.closest('select.lre');if(!s||!s.value)return;const id=+s.closest('.lrow').dataset.id;order({kind:'reassign',line:id,target:s.value});});
 $('#linesList').addEventListener('click',e=>{if(e.target.id==='lwdAll'){order({kind:'line',target:'none'});return;}const b=e.target.closest('.lwd');if(!b)return;order({kind:'withdraw',line:+b.closest('.lrow').dataset.id});});
@@ -316,7 +330,7 @@ function buildInjects(){const B=A.B,S=A.S;if(!S)return;let h='<option value="">I
   h+=`<option value="note|Bystander reports someone at a window upstairs.">Report: someone seen at an upper window</option><option value="note|Occupant reported out. Confirm with your search.">Report: occupants say everyone is out</option>`;
   $('#injectSel').innerHTML=h;}
 $('#injectBtn').onclick=()=>{const v=$('#injectSel').value;if(!v)return;const p=v.split('|');let a;
-  if(p[0]==='fail'||p[0]==='open'||p[0]==='close')a={kind:p[0],opening:p[1]};else if(p[0]==='idoor')a={kind:'idoor',conn:p[1],state:p[2]};else if(p[0]==='wind'){a={kind:'wind',dir:p[1],spd:2};A.scn.wind={dir:p[1],spd:2};}else a={kind:'note',text:p[1]};
+  if(p[0]==='fail'||p[0]==='open'||p[0]==='close')a={kind:p[0],opening:p[1]};else if(p[0]==='idoor')a={kind:'idoor',conn:p[1],state:p[2]};else if(p[0]==='wind'){a={kind:'wind',dir:p[1],spd:2};}else a={kind:'note',text:p[1]};
   order(a);A.latest=[A.S.events[A.S.events.length-1].msg];toast(`Inject · ${A.latest[0]}`);buildInjects();renderBoard();};
 
 /* ---------- solo size-up calls ---------- */
@@ -378,6 +392,7 @@ function debrief(){const S=A.S,sc=A.scn,ta=S.tArr,items=[];const at=t=>`T+${fmt(
   const S0=S.searches.filter(s=>s.done&&!s.aborted);if(!S.searches.length)add('mid','No primary search ordered','',[]);
   // strategy note
   if(S.strategy==='Defensive'){const o=S.z[sc.origin];const confined=Object.values(S.z).filter(z=>z.ign).length<=1&&!o.flashed;add('mid','Defensive strategy',confined?'At arrival the fire was in one compartment. Compare that with your life-hazard read. The choice is yours; this is just what the model showed.':'Conditions included flashover or extension. The model just shows what the building did.',[]);}
+  companyDebrief(add,at);
   const out=Object.values(S.z).filter(z=>z.ign);const allOut=out.length&&out.every(z=>z.out);add(allOut?'ok':'mid',allOut?`Fire under control at ${at(S.underControl!=null?S.underControl:Math.max(...out.map(z=>z.tOut||0)))}`:`Fire not yet under control at the end of the drill (still burning: ${out.filter(z=>!z.out).map(z=>zname(z.id)).join(', ')})`,`Burned: ${out.map(z=>zname(z.id)).join(', ')||'none'}.`,['push']);
   return items;}
 $('#finishBtn').onclick=()=>{A.playing=false;A.wasPlaying=false;A.finished=true;syncUI();const items=debrief();const ok=items.filter(i=>i.st==='ok').length;
@@ -386,7 +401,7 @@ $('#finishBtn').onclick=()=>{A.playing=false;A.wasPlaying=false;A.finished=true;
   A.lastDebrief=items;$('#dbCopy').onclick=()=>copyText(items.map(i=>`[${i.st}] ${i.title}${i.detail?' - '+i.detail:''}`).join('\n'),'#dbCopy');$('#dbShare').onclick=openShare;};
 
 /* ---------- sources panel ---------- */
-$('#rules').innerHTML=RULES.map(r=>`<div class="rule"><b>${esc(r.name)}<span class="tag ${r.kind==='fsri'?'fsri':'simp'}">${r.kind==='fsri'?'FSRI':'SIMPLIFICATION'}</span></b>${esc(r.does)}${r.quote?`<span class="q">${esc(r.quote)}</span>`:''}${r.src.length?`<div class="srcl">${r.src.map(s=>`<a href="${SRC[s].url}" target="_blank" rel="noopener">${esc(SRC[s].title)}</a>`).join('<br>')}</div>`:''}</div>`).join('')
+$('#rules').innerHTML=RULES.map(r=>`<div class="rule"><b>${esc(r.name)}<span class="tag ${r.kind==='fsri'||r.kind==='nist'?'fsri':'simp'}">${r.kind==='fsri'?'FSRI':r.kind==='nist'?'NIST':'SIMPLIFICATION'}</span></b>${esc(r.does)}${r.quote?`<span class="q">${esc(r.quote)}</span>`:''}${r.src.length?`<div class="srcl">${r.src.map(s=>`<a href="${SRC[s].url}" target="_blank" rel="noopener">${esc(SRC[s].title)}</a>`).join('<br>')}</div>`:''}</div>`).join('')
   +`<div class="rule"><b>Further training</b><a href="${SRC['FSRI-ACAD'].url}" target="_blank" rel="noopener">${esc(SRC['FSRI-ACAD'].title)}</a></div>`;
 
 /* ---------- share / export / import ---------- */
@@ -427,7 +442,7 @@ $('#shareBtn').onclick=openShare;
 $('#mClose').onclick=closeModal;$('#modal').onclick=e=>{if(e.target.id==='modal')closeModal();};
 async function loadScenario(o){if(!o||o.format!=='sizeup-scenario')throw new Error('Not a SizeUp scenario file');
   let B,img;if(o.sceneId==='photo'){img=await loadImg(o.photo);A.photoData=o.photo;A.photoMarks=o.marks;B=photoBuilding(img.naturalWidth,img.naturalHeight,o.marks);}else{B=BUILDINGS[o.sceneId];img=IMGS[o.sceneId];}
-  A.B=B;A.img=img;setTexture();A.scn={format:o.format,v:o.v,sceneId:o.sceneId,origin:o.origin,fuel:o.fuel,preburn:o.preburn,openings:o.openings||{},doors:o.doors||{},occupant:o.occupant||'none',wind:o.wind||{dir:'calm',spd:0},glass:o.glass||'fails',seed:o.seed,actions:o.actions||[],tNow:o.tNow||0};
+  A.B=B;A.img=img;setTexture();A.scn={format:o.format,v:o.v,sceneId:o.sceneId,origin:o.origin,fuel:o.fuel,preburn:o.preburn,openings:o.openings||{},doors:o.doors||{},occupant:o.occupant||'none',wind:o.wind||{dir:'calm',spd:0},glass:o.glass||'fails',seed:o.seed,actions:o.actions||[],tNow:o.tNow||0,companies:o.companies,presetName:o.presetName||(o.companies?'edited':'generic'),settings:o.settings,env:o.env,windShift:o.windShift||null};ensureScn(A.scn);
   A.mode=o.mode==='crew'?'crew':'solo';A.hidden=!!o.hideAnswers;A.locked=false;A.lockResult=null;A.calls={};A.facts={...B.facts,...(o.facts||{})};$('#radio').value=o.radio||'';A.side=o.side||'A';A.originSet=true;A.latest=[];buildRoomSel();
   A.maxScreen=4;A.screen=3;A.finished=false;rebuild();warm(4);show(4);buildInjects();startClock();toast(`Drill loaded: ${B.name} at T+${fmt(now())}. Clock running.`);}
 $('#fileScn').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const t=await f.text();let o;if(/^\s*</.test(t)){const d=new DOMParser().parseFromString(t,'text/html').getElementById('sizeup-scenario');if(!d)throw new Error('No scenario inside that file');o=JSON.parse(d.textContent);}else o=JSON.parse(t);await loadScenario(o);}catch(err){$('#fileErr').textContent='Could not open that drill: '+err.message;}});

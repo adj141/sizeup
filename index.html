@@ -251,6 +251,45 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
 .ucbanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:6px;background:rgba(20,60,24,.95);border:2px solid var(--ok);border-radius:12px;padding:10px 14px;text-align:center;z-index:5;max-width:92%}
 .ucbanner.show{display:flex}.ucbanner b{font-size:16px;letter-spacing:.04em}.ucbanner span{font-size:13px}.ucbtns{display:flex;gap:8px}
 .water-low{color:var(--amber);font-weight:700}
+/* setup tabs */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;position:sticky;top:0;z-index:3;background:var(--bg,#0d0f12)}
+.tabs button{flex:0 0 auto;min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid #2c323b;background:#161a20;color:#cfd6df;font-weight:600;font-size:14px}
+.tabs button.on{background:#e8eef6;color:#0d0f12;border-color:#e8eef6}
+.tabp{display:none}.tabp.on{display:block}
+/* dispatch cards */
+.cocards{display:grid;gap:10px}
+.cocard{border:1px solid #2c323b;border-radius:12px;padding:10px;background:#12161b;display:grid;gap:8px}
+.corow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.corow label{display:flex;gap:6px;align-items:center}
+.corow input,.corow select,.prow input,.prow select,.setgrid input{min-height:40px;border-radius:8px;border:1px solid #333a44;background:#0d1014;color:#e8eef6;padding:4px 8px;font-size:15px}
+.corow input[type=number]{width:84px}.co-id{width:70px}.co-name{flex:1;min-width:120px}
+.corow.flags{gap:4px 12px}.chk{font-size:14px}.chk input{width:20px;height:20px;min-height:0}
+.pres{display:grid;gap:6px}.prow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:#aab4c0}
+.prow .pr-name{flex:1;min-width:120px}.prow input[type=number]{width:74px}
+.cocard .iconbtn{min-width:40px;min-height:40px}
+.setgrid{display:grid;gap:8px}
+.setgrid label{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:14px}
+.setgrid input{width:90px}
+/* company board */
+.colist{display:grid;gap:8px}
+.corow2{border:1px solid #2c323b;border-radius:10px;padding:8px 10px;background:#12161b;display:grid;gap:6px}
+.cohead{display:flex;gap:8px;align-items:center}.cohead .coname{flex:1;color:#cfd6df;font-size:14px}
+.cost{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap}
+.s-en{background:#2a2f37;color:#aab4c0}.s-st{background:#173049;color:#90caf9}.s-wk{background:#4a3410;color:#ffcc80}.s-av{background:#163a22;color:#a5d6a7}
+.cometa{font-size:13px;color:#aab4c0}
+.cotasks{display:grid;gap:4px}.cot{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:13px;background:#0d1014;border-radius:8px;padding:4px 6px 4px 10px}
+.cot small{color:#aab4c0;display:block}
+.coassign{display:flex;flex-wrap:wrap;gap:6px}.coassign select{flex:1 1 140px;min-height:44px;max-width:100%}
+.co-go.warn{border-color:#ffb300;color:#ffcc80}
+@media (max-width:480px){.coassign select{flex-basis:100%}.corow input[type=number]{width:72px}}
+.cocard select,.cocard input,.setgrid input,#presetName{width:auto}
+#presetName{flex:1;min-height:44px;border-radius:8px;border:1px solid #333a44;background:#0d1014;color:#e8eef6;padding:4px 10px;font-size:15px}
+.cocard>summary{cursor:pointer;list-style:none;font-size:14px;color:#e8eef6;display:flex;gap:8px;align-items:baseline;min-height:32px}
+.cocard>summary::-webkit-details-marker{display:none}
+.cocard>summary::before{content:'▸';color:#aab4c0}.cocard[open]>summary::before{content:'▾'}
+.cot-type{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#90caf9;background:#173049;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.cocard:not([open]){gap:0}
+.prow select{width:auto}.coassign select{width:auto}
 
 </style>
 </head>
@@ -265,7 +304,7 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
 <nav class="steps" id="steps">
   <button data-go="1"><i>1</i><span>Capture</span></button>
   <button data-go="2"><i>2</i><span>Fire origin</span></button>
-  <button data-go="3"><i>3</i><span>Fire &amp; smoke</span></button>
+  <button data-go="3"><i>3</i><span>Set up</span></button>
   <button data-go="4"><i>4</i><span>Command board</span></button>
 </nav>
 <main>
@@ -325,6 +364,8 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
    <div class="reading" id="reading" style="margin-top:12px"></div>
   </div>
   <div class="sheet">
+   <div class="tabs" id="setupTabs" role="tablist" aria-label="Setup sections"><button role="tab" data-tab="cond" class="on" aria-selected="true">Fire &amp; smoke</button><button role="tab" data-tab="wx" aria-selected="false">Time &amp; weather</button><button role="tab" data-tab="disp" aria-selected="false">Dispatch</button><button role="tab" data-tab="times" aria-selected="false">Task times</button></div>
+   <div class="tabp on" id="tab-cond">
     <div class="ctl"><div class="lbl">Contents (fuel) <span class="val" id="vFuel"></span></div>
       <div class="seg red" data-key="fuel"><button data-v="modern">Modern synthetic</button><button data-v="legacy">Legacy</button></div></div>
     <div class="ctl"><div class="lbl">Time since ignition at arrival <span class="val" id="vPre"></span></div>
@@ -337,12 +378,30 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
     <div class="ctl"><div class="lbl">Doors &amp; windows at arrival <span class="val">tap the photo too</span></div><div class="olist" id="olist"></div></div>
     <div class="ctl"><div class="lbl">Interior doors</div><div class="olist" id="dlist"></div></div>
     <div class="ctl"><div class="lbl">Occupant</div><select id="occSel" aria-label="Occupant"></select></div>
+   </div>
+   <div class="tabp" id="tab-wx">
+    <div class="ctl"><div class="lbl">Time of day <span class="val" id="vTod"></span></div>
+      <div class="seg" data-key="tod"><button data-v="day">Day</button><button data-v="dusk">Dusk</button><button data-v="night">Night</button></div>
+      <div class="hint" id="todHint"></div></div>
+    <div class="ctl"><div class="lbl">Precipitation &amp; visibility <span class="val" id="vPrecip"></span></div>
+      <div class="seg" data-key="precip"><button data-v="none">Clear</button><button data-v="rain">Rain</button><button data-v="snow">Snow</button><button data-v="fog">Fog</button></div></div>
+    <div class="ctl"><div class="lbl">Temperature <span class="val" id="vTemp"></span></div>
+      <div class="seg" data-key="temp"><button data-v="mild">Mild</button><button data-v="cold">Cold &amp; icy</button><button data-v="hot">Hot</button></div>
+      <div class="hint" id="tempHint"></div></div>
     <div class="ctl"><div class="lbl">Wind <span class="val" id="vWind"></span></div>
       <div class="seg" data-key="windDir"><button data-v="calm">Calm</button><button data-v="A">From A</button><button data-v="B">From B</button><button data-v="C">From C</button><button data-v="D">From D</button></div>
       <div class="seg" data-key="windSpd" data-num style="margin-top:8px"><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div></div>
+    <div class="ctl"><div class="lbl">Scheduled wind shift <span class="val" id="vShift"></span></div>
+      <div class="seg" data-key="shiftAt" data-num><button data-v="0">None</button><button data-v="180">At T+3</button><button data-v="360">At T+6</button><button data-v="600">At T+10</button></div>
+      <div class="seg" data-key="shiftDir" style="margin-top:8px"><button data-v="A">From A</button><button data-v="B">From B</button><button data-v="C">From C</button><button data-v="D">From D</button></div>
+      <div class="seg" data-key="shiftSpd" data-num style="margin-top:8px"><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div>
+      <div class="hint">The shift happens on the drill clock, so it replays exactly. Wind into an open window of a burning room drives heat and smoke along the flow path (NIST wind-driven fire experiments).</div></div>
+   </div>
+   <div class="tabp" id="tab-disp"><div id="dispatch"></div></div>
+   <div class="tabp" id="tab-times"><div id="settings"></div></div>
     <div class="ctl" style="border:0;padding-bottom:0;display:grid;gap:10px"><button class="btn primary" id="toBoard">Run size-up drill
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-      <button class="btn ghost" id="surprise">Surprise me: random conditions, answers hidden</button></div>
+      <button class="btn ghost" id="surprise">Surprise me: random conditions, answers hidden</button><div class="hint" id="setupSum"></div></div>
   </div>
  </div>
 </section>
@@ -382,14 +441,16 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
         <div class="elements">Commonly includes: unit on scene · building description · conditions · actions / strategy · command · needs</div></div>
       <div><span class="l">Strategy</span>
         <div class="seg red" data-key="strategy"><button data-v="Offensive">Offensive</button><button data-v="Defensive">Defensive</button></div></div>
-      <div><span class="l">Orders <span class="muted" style="text-transform:none;letter-spacing:0">(take effect at the current time)</span></span>
+      <div><span class="l">Companies <span class="muted" style="text-transform:none;letter-spacing:0">(assign a task to a specific company)</span></span>
+        <div class="colist" id="coList"></div></div>
+      <div><span class="l">Quick orders <span class="muted" style="text-transform:none;letter-spacing:0">(auto-assigned to the soonest company that can do it)</span></span>
         <div style="display:grid;gap:8px">
           <div class="row2"><select id="lineSel" aria-label="Attack line"></select><button class="btn ghost sm" id="lineGo">Line</button></div>
           <div class="quick" id="lineQuick" aria-label="Quick line orders for burning rooms"></div>
           <div class="row2"><select id="ventSel" aria-label="Ventilation"></select><button class="btn ghost sm" id="ventGo">Vent</button></div>
           <div class="row2"><select id="searchSel" aria-label="Primary search"></select><button class="btn ghost sm" id="searchGo">Search</button></div>
           <div class="btnrow"><button class="toggle" id="dcToggle" aria-pressed="false"><span><b>Door control</b><small>Entry door held to hose width</small></span><span class="sw"></span></button>
-            <button class="btn ghost" id="supplyGo">Establish water supply</button></div>
+            <button class="btn ghost" id="supplyGo">Establish water supply</button><button class="btn ghost" id="lightsGo" hidden>Scene lighting</button></div>
           <div class="statline" id="opsStat"></div>
           <div class="lines" id="linesList"></div>
         </div></div>
@@ -436,6 +497,8 @@ const SIZEUP_SOURCES={
  'FSRI-CFA':{title:'Study of Coordinated Fire Attack Utilizing Acquired Structures',url:'https://fsri.org/research/study-coordinated-fire-attack-utilizing-acquired-structures'},
  'FSRI-FA':{title:'Study of the Impact of Fire Attack Utilizing Interior and Exterior Streams on Firefighter Safety and Occupant Survival',url:'https://fsri.org/research/study-impact-fire-attack-utilizing-interior-and-exterior-streams-firefighter-safety-and'},
  'FSRI-CBYD':{title:'Close Before You Doze: Before & After (closed vs open bedroom experiment)',url:'https://fsri.org/program-update/close-you-doze-series-after'},
+ 'NIST-WD':{title:'NIST TN 1618: Fire Fighting Tactics under Wind Driven Conditions: Laboratory Experiments (Madrzykowski & Kerber, 2009)',url:'https://www.nist.gov/publications/fire-fighting-tactics-under-wind-driven-conditions-laboratory-experiments'},
+ 'NIST-WD7':{title:'NIST TN 1629: Fire Fighting Tactics Under Wind Driven Fire Conditions: 7-Story Building Experiments (Madrzykowski & Kerber, 2009)',url:'https://www.nist.gov/publications/fire-fighting-tactics-under-wind-driven-fire-conditions-7-story-building-experiments'},
  'FSRI-ACAD':{title:'FSRI Fire Safety Academy (free online courses, e.g. "Understanding Flow Paths: Low-Intake, High-Exhaust", "Impact of Horizontal Ventilation on Fire Behavior", "Residential Attic and Exterior Fires")',url:'https://training.fsri.org/'}};
 /* Behind-the-behavior rules: what the model does, and where it comes from. kind: 'fsri' (backed by a quote) or 'simplification'. */
 const SIZEUP_RULES=[
@@ -471,8 +534,13 @@ const SIZEUP_RULES=[
   quote:'“in experiments where the apartment door was left open, temperatures and carbon monoxide exposures increased throughout the common stairwell.”'},
  {id:'smokecolor',name:'Smoke color, volume, velocity, density',kind:'simplification',src:[],does:'Uses the widely taught Reading Smoke cues: white for steam or early heating, gray for mixed, brown when structural wood is burning, and black for fuel-rich, ventilation-limited modern contents. Velocity follows heat and pressure, density follows smoke filling, and volume follows production. These mappings are generic teaching cues, not FSRI measurements.'},
  {id:'numbers',name:'Model numbers and task times',kind:'simplification',src:[],does:'Heat and smoke are relative 0–1 scores, not temperatures. Assumed task times: stretching a line about 45 s plus 30 s per floor, about 4 min to a water supply, 5 min for roof work, 15 s to take a window, and a 500 gal tank at 150 gpm. Window-failure timing, exterior extension, and the occupant tenability dose are simplifications. Set your own department numbers in your head. This is not a fire model and not for operational use.'},
- {id:'lines',name:'Hoselines, knockdown, overhaul and under control',kind:'simplification',src:[],does:'Up to 3 hoselines can work at once (a stand-in for the crews on scene; staffing is not modeled). New orders add a line; you can reassign or withdraw any line. A room is knocked down once it has stayed wet, low and cool for about 10 s; water removes the post-flashover boost, so flashed rooms can be knocked down. A line with no fire within its reach stands by instead of flowing, and restarts if fire returns. Each flowing line draws 150 gpm from the tank until a supply is in. To reach the attic or cockloft, send a line to a room below it and pull the ceiling, or put an exterior stream through an open roof vent. A knocked-down room left dry, with no line standing by, can rekindle once, slowly. When no room is still burning, the fire is under control. All of these thresholds and times are teaching values.'},
-{id:'wind',name:'Wind',kind:'simplification',src:[],does:'Wind into an open opening on the windward side adds air and bends the plume. The strength values are simplifications.'},
+ {id:'lines',name:'Hoselines, knockdown, overhaul and under control',kind:'simplification',src:[],does:'Each line is a real preconnect from an engine (diameter, length and gpm from the Dispatch tab), stretched by a company with enough free members (2, or 3 for a 2½ in. line). There is no fixed cap: the number of lines is limited by the crews and preconnects on scene. Water on a room scales with the line\'s gpm (150 gpm = 1). New orders add a line; you can reassign or withdraw any line. A room is knocked down once it has been wet and cool for a short hold; a flashed-over room loses its post-flashover boost once water darkens it. A knocked-down room left dry with fuel and no line nearby can rekindle once. When every room that ignited is knocked down, the fire is under control.'},
+ {id:'companies',name:'Companies, crews and tasks',kind:'simplification',src:[],does:'Companies arrive at their dispatch times (T+0 is the first arrival) and are staged until assigned. A company works one task at a time, and can split to take a second only if it has enough members left over; an engine always keeps 1 member at the pump. Tasks need a minimum crew (line 2, 2½ in. line 3, search 2, horizontal vent 1, vertical vent 2, PPV 1, door control 1, pull ceiling 2, ladder 2, RIT 2+, lighting 1, rehab 1) and the right equipment (vertical vent needs saws and a ladder or aerial; PPV needs a fan; upper-floor windows need ground ladders or a side already laddered). Quick orders pick the soonest company that can do the task. Releasing or withdrawing frees the crew at once. These are teaching rules, not any department\'s SOP.'},
+ {id:'water',name:'Tank water, supply lines and hose reach',kind:'simplification',src:[],does:'Each engine\'s tank feeds only its own lines, at their gpm, until a supply line connects to that engine; the pump rating caps the flow. A supply lay (forward or reverse) needs at least the hydrant distance of supply hose and takes lay base + per-foot × distance + hookup. A line must be at least as long as the hose needed: engine setback + the run inside to the room (+ per floor), or around the building to an exterior opening. All distances and times are editable teaching values.'},
+ {id:'tasktimes',name:'Task times and modifiers',kind:'simplification',src:[],does:'Every task time is built from the editable values on the Task times tab, then multiplied by the company factor: +15% per member below 4 (short staffing), ×1.2 in cold and icy conditions, and in the heat +10% per 10 minutes a company has been working (cap +30%; rehab halves the build-up). These multipliers are simplifications for teaching, not measured values.'},
+ {id:'night',name:'Night, dusk and scene lighting',kind:'simplification',src:[],does:'At dusk and night the photo is darkened and tinted, fire glow lights the windows, the smoke and the nearby facade, and smoke colour is hard to read (lower contrast) until a company sets up scene lighting. With the “likely by time of day” occupant option, homes are most likely occupied at night (residents asleep, usually in bedrooms) and businesses are closed after hours. The probabilities are teaching values.'},
+ {id:'weather',name:'Rain, snow and fog',kind:'simplification',src:[],does:'Rain and snow are drawn over the scene, and fog adds a haze that hides smoke and scatters fire glow, so the building is harder to read. Cold and icy conditions slow every task. Precipitation does not change the fire model itself.'},
+ {id:'wind',name:'Wind-driven fire',kind:'nist',src:['NIST-WD','NIST-WD7'],does:'Wind blowing into an open window or door adds air to that room, and when that room is burning the model pushes more heat and smoke from it along the flow path toward the exhaust openings, with a crew warning. A scheduled wind shift changes the wind on the drill clock. The size of the push is a simplification; the behaviour follows the NIST experiments.',quote:'Wind created conditions that rapidly caused conditions in the structure to deteriorate by forcing fire gases through the apartment of origin and into the public corridor and stairwell. These conditions would be untenable for advancing fire fighters. (NIST TN 1629 abstract)'},
  {id:'glass',name:'Window glass failing on its own',kind:'simplification',src:[],does:'Glass in a room with a hot gas layer collects heat and fails after a seeded, variable time. Once it fails it vents the fire like any opening, which is why an un-attacked fire can regrow and flash over. The failure timing is a teaching value, not an FSRI measurement. Choose "Holds" to keep the glass intact and see the closed-house ventilation-limited decay described in the FSRI vertical ventilation summary.'},
  {id:'pressure',name:'Smoke pushing from gaps (building pressure)',kind:'simplification',src:[],does:'A growing fire in a closed-up building pressurizes it, so smoke pushes out around closed windows, doors and at the eaves. Open or failed openings relieve that pressure. How much smoke shows from closed gaps is a teaching value; the gap limits the volume and velocity shown.'}];
 if(typeof module!=='undefined')module.exports={SIZEUP_SOURCES,SIZEUP_RULES};
@@ -571,31 +639,102 @@ const FUEL={modern:{tg:250,tau:22,tauT:50,smoke:1.35,load:1000,label:'Modern syn
             legacy:{tg:1400,tau:100,tauT:190,smoke:.85,load:2600,label:'Legacy (natural-material) contents'}};
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004};
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
-const TASK={stretch:45,perFloor:30,supplyDelay:240,vertical:300,horizontal:15,ppv:60,searchBase:60,searchPerFloor:120,tankGal:500,gpm:150,
-  // simplifications (not FSRI values): hoseline cap stands in for staffing (not modeled), repositioning/pull-ceiling times,
-  // knockdown hold, low-tank warning level, and how long a knocked-down room must sit dry before it can rekindle.
-  lineCap:3,reposition:30,pullCeiling:30,kdHold:10,lowTank:150,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20};
+const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,
+  // simplifications (not FSRI values): knockdown hold, low-tank warning level (fraction of each engine's tank),
+  // and how long a knocked-down room must sit dry before it can rekindle. Task times live in DEF_SET (editable per drill).
+  gpm:150};
+/* Editable TEACHING VALUES for task times and distances (not SOP, not FSRI). Each drill carries its own copy in scn.settings. */
+const DEF_SET={stretchBase:35,stretchPerFt:.08,perFloor:30,charge:15,reposition:30,layBase:45,layPerFt:.15,hookup:45,
+  horizontal:15,vertical:300,aerialFactor:.8,ppv:60,searchBase:60,searchPerFloor:120,secondaryFactor:1.3,pullCeiling:30,ladder:45,rit:60,lights:90,rehab:60,
+  setback:50,hydrantDist:400,roomRun:25,floorRun:20,sideRunBD:40,sideRunC:80,
+  refStaff:4,shortStaff:.15,cold:1.2,heatPer10:.1,heatCap:.3};
+const CO_TYPES={engine:'Engine',ladder:'Ladder/Truck',rescue:'Rescue/Squad',medic:'Medic',chief:'Battalion Chief'};
+const TYPE_CH={engine:'e',ladder:'l',rescue:'r',medic:'m',chief:'c'};
+// generic, editable equipment defaults (NOT any department's SOP)
+function preDefault(){return[{name:'Preconnect 1',dia:'1.75',len:200,gpm:150},{name:'Preconnect 2',dia:'1.75',len:200,gpm:150},{name:'2½ in. preconnect',dia:'2.5',len:200,gpm:250}];}
+function eqDefault(type){return type==='engine'?{tank:1000,pump:1500,pre:preDefault(),supplyHose:1000,groundLadders:true,hooks:true}
+  :type==='ladder'?{groundLadders:true,aerial:true,fan:true,tools:true,hooks:true}:type==='rescue'?{groundLadders:true,aerial:false,fan:true,tools:true,hooks:true}:{};}
+function newCompany(type,id,name,staff,arrive){return{id,type,name,staff,arrive,eq:eqDefault(type)};}
+// arrival = seconds after dispatch; T+0 in the drill is when the first company arrives
+const PRESETS={generic:{name:'Generic first alarm (residential)',companies:()=>[newCompany('engine','E1','Engine 1',4,240),newCompany('medic','M1','Medic 1',2,330),
+  newCompany('engine','E2','Engine 2',3,360),newCompany('chief','BC1','Battalion 1',1,390),newCompany('ladder','L1','Ladder 1',4,420),newCompany('engine','E3','Engine 3',3,480),newCompany('rescue','R1','Rescue 1',3,540)]}};
+const TASKDEF={
+  line:{label:'Stretch a hoseline',need:2,types:'elr',pref:'elr'},
+  supply:{label:'Lay a supply line',need:1,types:'e',pref:'e'},
+  hvent:{label:'Horizontal vent',need:1,types:'elr',pref:'lre'},
+  vvent:{label:'Vertical vent (roof)',need:2,types:'elr',pref:'lre',eq:c=>c.eq.tools&&(c.eq.aerial||c.eq.groundLadders),why:'needs saws/hooks and a ladder or aerial'},
+  ppv:{label:'PPV fan at the entry',need:1,types:'elr',pref:'lre',eq:c=>c.eq.fan,why:'needs a fan'},
+  doorcontrol:{label:'Door control at the entry',need:1,types:'elr',pref:'elr'},
+  search1:{label:'Primary search',need:2,types:'elr',pref:'rle'},
+  search2:{label:'Secondary search',need:2,types:'elr',pref:'rle'},
+  pullceiling:{label:'Pull ceiling',need:2,types:'elr',pref:'lre',eq:c=>c.eq.hooks||c.eq.tools,why:'needs hooks'},
+  ladder:{label:'Ladder the building',need:2,types:'elr',pref:'lre',eq:c=>c.eq.groundLadders||c.eq.aerial,why:'needs ground ladders or an aerial'},
+  rit:{label:'RIT (rapid intervention)',need:2,types:'elr',pref:'rle'},
+  lights:{label:'Scene lighting',need:1,types:'elr',pref:'lre'},
+  rehab:{label:'Rehab / EMS standby',need:1,types:'m',pref:'m'}};
+const CONT={doorcontrol:1,rit:1,rehab:1,supply:1}; // tasks that keep their crew committed until released
+function diaTxt(d){return({'1.5':'1½','1.75':'1¾','2':'2','2.5':'2½','3':'3'})[String(d)]||String(d);}
+function coById(S,id){return S.cos.find(c=>c.id===id);}
+function crewUsed(S,c){let n=c.type==='engine'?1:0;for(const l of S.water.lines)if(l.co===c.id)n+=l.crew;for(const t of S.tasks)if(t.co===c.id&&t.active)n+=t.crew;return n;}
+function freeCrew(S,c){return Math.max(0,c.staff-crewUsed(S,c));}
+// time multiplier for a company: short staffing, cold/ice, heat fatigue (all simplifications)
+function coF(S,c){const st=S.set,e=S.scn.env||{};let f=1+st.shortStaff*Math.max(0,st.refStaff-c.staff);if(e.temp==='cold')f*=st.cold;
+  if(e.temp==='hot')f*=1+Math.min(st.heatCap,st.heatPer10*(c.work||0)/600);return f;}
+function canDo(c,kind){const d=TASKDEF[kind];if(!d)return'unknown task';if(!d.types.includes(TYPE_CH[c.type]))return`a ${CO_TYPES[c.type]} doesn't take that task here`;if(d.eq&&!d.eq(c))return d.why;return null;}
+function coTasks(S,c){return[...S.water.lines.filter(l=>l.co===c.id).map(l=>({line:l,label:`Line ${l.id}: ${l.label}`,crew:l.crew})),...S.tasks.filter(t=>t.co===c.id&&t.active).map(t=>({task:t,label:t.label,crew:t.crew}))];}
+// hose needed from the engine to the target: setback + run inside (or around the building) + floors (teaching values)
+function hoseNeed(S,spec){const st=S.set;let ft=st.setback;
+  if(spec.ext){const o=S.o[spec.opening];const side=o?o.side:'A';ft+=side==='C'?st.sideRunC:(side==='B'||side==='D')?st.sideRunBD:0;
+    if(spec.roof)ft+=st.floorRun*S.B.stories+20;else{const z=S.B.zones.find(z=>z.id===spec.zone);const f=z?floorNum(z.floor):1;ft+=15+st.floorRun*Math.max(0,Math.min(f,9)-1);}}
+  else{const z=S.B.zones.find(z=>z.id===(spec.via||spec.zone));const f=z?floorNum(z.floor):1;ft+=st.roomRun+st.floorRun*Math.max(0,f-1)+(z&&z.hidden?20:0)+(spec.via?10:0);}
+  return Math.round(ft);}
+function lineTimes(S,c,spec,need){const st=S.set,f=coF(S,c),up=Math.max(0,lineFloor(S,spec)-1);
+  if(spec.ext)return{enter:null,ready:(st.stretchBase+st.stretchPerFt*need+st.charge+(spec.roof?st.perFloor*S.B.stories:0))*f};
+  const enter=(st.stretchBase+st.stretchPerFt*need)*f;return{enter,ready:enter+(st.perFloor*up+st.charge+(spec.via?st.pullCeiling:0))*f};}
+function engAvail(S,eng,tA){return S.cos.find(c=>c.id===eng&&c.type==='engine'&&c.arriveAt<=tA);}
+function preUsed(S,eng,i){return S.water.lines.some(l=>l.eng===eng&&l.pre===i);}
+// pick a preconnect this company can stretch: its own engine first, then any engine on scene by then
+function pickPre(S,c,need,tA,want){const engs=[...(c.type==='engine'?[c]:[]),...S.cos.filter(e=>e.type==='engine'&&e!==c&&e.arriveAt<=tA)];let longest=0,any=false;
+  for(const big of want==='big'?[true]:want==='small'?[false]:[false,true])for(const e of engs)(e.eq.pre||[]).forEach((p,i)=>{if(preUsed(S,e.id,i))return;any=true;longest=Math.max(longest,p.len);});
+  for(const big of want==='big'?[true]:want==='small'?[false]:[false,true])for(const e of engs){const ps=e.eq.pre||[];for(let i=0;i<ps.length;i++){const p=ps[i];if(preUsed(S,e.id,i)||p.len<need)continue;if((+p.dia>=2.5)!==big)continue;return{eng:e.id,pre:i,p};}}
+  return{none:true,any,longest};}
+function lineCrew(p){return +p.dia>=2.5?3:2;}
 function floorNum(f){return f==='B'?0:f==='Attic'?99:f==='Roof'?100:+f;}
 
 function create(B,scn){
   const R=rng(scn.seed||1);
   const S={B,scn,t:0,tArr:scn.preburn||360,z:{},o:{},c:{},events:[],fan:null,doorControl:false,
-    water:{tank:TASK.tankGal,supplyAt:null,supply:false,lines:[],nextId:1},crews:[],searches:[],ext:[],pending:[],flags:{},victim:null,rnd:R,hist:[]};
+    water:{tank:0,supplyAt:null,supply:false,lines:[],nextId:1},tasks:[],taskLog:[],nextTask:1,laddered:{},lights:false,rehab:false,wind:{...(scn.wind||{dir:'calm',spd:0})},set:{...DEF_SET,...(scn.settings||{})},crews:[],searches:[],ext:[],pending:[],flags:{},victim:null,rnd:R,hist:[]};
   for(const z of B.zones)S.z[z.id]={id:z.id,ign:false,tIgn:0,q:0,T:0,s:0,R:1,fuel:1,flashed:false,tFlash:null,vl:false,out:false,wet:0,wetRegrow:600,water:0,steam:0,decay:false,breached:false,dose:0,kd:0,suppressed:false,smold:0,extOnly:true,vf:z.vol||1,attic:!!z.attic,floor:z.floor,showT:0};
   for(const o of B.openings)S.o[o.id]={id:o.id,state:(scn.openings&&scn.openings[o.id])||o.init||'closed',fail:0,failAt:40+R()*50,zone:o.zone,type:o.type,side:o.side,dyn:false};
   for(const c of B.conns){let st=c.type==='door'?((scn.doors&&scn.doors[c.id])||c.init||'closed'):c.type;S.c[c.id]={id:c.id,a:c.a,b:c.b,type:c.type,state:st};}
   // occupant (hidden from the player)
   const occ=scn.occupant||'none';
-  if(occ!=='none'){let zid=occ;if(occ==='random'){const cand=B.zones.filter(z=>!z.attic&&z.floor!=='1'&&z.id!=='stair'&&!/^h\d|hall/.test(z.id));zid=cand[Math.floor(R()*cand.length)].id;}S.victim={zone:zid,status:'inside',dose:0};}
+  if(occ!=='none'){let zid=occ;if(occ==='random'){const cand=B.zones.filter(z=>!z.attic&&z.floor!=='1'&&z.id!=='stair'&&!/^h\d|hall/.test(z.id));zid=cand[Math.floor(R()*cand.length)].id;}
+    else if(occ==='bytime')zid=occByTime(B,(scn.env||{}).tod||'day',R);
+    if(zid)S.victim={zone:zid,status:'inside',dose:0};}
+  // companies on the assignment (generic first alarm if the drill has none); T+0 = first arrival
+  const cos=(scn.companies&&scn.companies.length?scn.companies:PRESETS.generic.companies());const first=Math.min(...cos.map(c=>+c.arrive||0));
+  S.cos=cos.map(c=>{const eq={...eqDefault(c.type),...JSON.parse(JSON.stringify(c.eq||{}))};const o={id:c.id,type:c.type,name:c.name||c.id,staff:Math.max(1,Math.min(6,+c.staff||1)),arrive:+c.arrive||0,eq,
+    arriveAt:S.tArr+((+c.arrive||0)-first),arrived:false,work:0,tankLeft:c.type==='engine'?+eq.tank||0:0,supplied:false};return o;});
+  const ws=scn.windShift;if(ws&&ws.at>0&&ws.dir)S.pending.push({t:S.tArr+ws.at,kind:'wind',dir:ws.dir,spd:ws.spd||0,sched:true});
   const o0=S.z[scn.origin];if(o0){o0.ign=true;o0.tIgn=0;}
   return S;
 }
+// occupancy likelihood by time of day (simplification, not sourced): homes are most likely occupied (asleep, in bedrooms) at night;
+// a business is occupied during the day and closed after hours.
+const OCC_P={home:{day:.35,dusk:.6,night:.9},biz:{day:.7,dusk:.35,night:0}};
+function occByTime(B,tod,R){const zs=B.zones.filter(z=>!z.attic&&!z.hidden&&z.id!=='stair'&&!/garage|stair|foyer|landing|hall/i.test(z.name));
+  const biz=zs.filter(z=>/store|shop|office|business/i.test(z.name)),home=zs.filter(z=>!biz.includes(z));const pick=a=>a[Math.floor(R()*a.length)];
+  if(biz.length&&R()<OCC_P.biz[tod]){return pick(biz).id;}
+  if(home.length&&R()<OCC_P.home[tod]){const beds=home.filter(z=>/bed|apartment/i.test(z.name));return pick(tod==='night'&&beds.length?beds:home).id;}
+  return null;}
 function front(S){return S.B.openings.find(o=>o.front);}
 function connK(S,c){if(c.type==='door')return c.state==='open'?CONN_K.door_open:CONN_K.door_closed;if(c.type==='ceiling')return c.state==='breached'?CONN_K.ceiling_breached:CONN_K.ceiling;return CONN_K[c.type]||0;}
 function openK(S,o){const st=o.state;let k=OPEN_K[o.type]||.5;
   if(st==='closed')return o.type==='window'?.004:.007;
   if(st==='controlled')return .15; // door control: pulled closed to the width of a hoseline [FSRI-VV 4.2]
-  let w=1;const wd=S.scn.wind;if(wd&&wd.dir&&wd.dir!=='calm'&&wd.dir===o.side&&o.type!=='roof')w=1+[.4,.9,1.6][wd.spd||0]; // wind into an opening (simplification)
+  let w=1;const wd=S.wind||S.scn.wind;if(wd&&wd.dir&&wd.dir!=='calm'&&wd.dir===o.side&&o.type!=='roof')w=1+[.4,.9,1.6][wd.spd||0]; // wind into an opening (simplification)
   return k*w;}
 // air available to each zone: own openings + neighbors through connections (flow path) — relaxation over the graph
 function airMap(S){const own={},hi={};for(const id in S.z){own[id]=0;hi[id]=0;}
@@ -624,62 +763,173 @@ function lineSpec(S,t){t=String(t||'');
   return{ext:false,zone:t,via:null,opening:null,key:t,label:z.name,desc:`interior line to ${z.name}`,time:TASK.stretch+TASK.perFloor*up+15};}
 function lineFloor(S,l){const z=S.B.zones.find(z=>z.id===(l.via||l.zone));return z?floorNum(z.floor):1;}
 // zones a flowing line puts water on, and how much (1 = full stream). Spill into open-connected areas is a simplification.
-function lineReach(S,l){const r={};const add=(id,w)=>{if(S.z[id])r[id]=Math.max(r[id]||0,w);};
+function lineReach(S,l){const r={};const k=l.w||1;const add=(id,w)=>{if(S.z[id])r[id]=Math.max(r[id]||0,w*k);};
   if(l.ext)add(l.zone,.85); // exterior: limited to line of sight into the room through that opening [FSRI-FA water mapping]
   else if(l.via){add(l.zone,.8);add(l.via,.6);} // through a pulled ceiling into the attic/cockloft (simplification)
   else{add(l.zone,1);for(const cid in S.c){const c=S.c[cid];if(connK(S,c)>=.85){if(c.a===l.zone)add(c.b,.45);if(c.b===l.zone)add(c.a,.45);}}}
   return r;}
 
+/* ---------- companies & tasks ---------- */
+function busyMsg(S,c,need,what){const tk=coTasks(S,c).map(x=>x.label).join('; ');const free=freeCrew(S,c);
+  return `${c.name} is busy${tk?' ('+tk+')':''}: ${free} of ${c.staff} member${c.staff===1?'':'s'} free${c.type==='engine'?' (1 stays at the pump)':''}, and ${what} needs ${need}. Release or reassign a task, or pick another company.`;}
+function autoPick(S,kind,fit){const d=TASKDEF[kind];let best=null;
+  for(const c of S.cos){if(canDo(c,kind))continue;const tA=Math.max(S.t,c.arriveAt);const r=fit(c,tA);if(!r)continue;
+    const k=[tA,d.pref.indexOf(TYPE_CH[c.type]),c.arriveAt];if(!best||k[0]<best.k[0]||(k[0]===best.k[0]&&(k[1]<best.k[1]||(k[1]===best.k[1]&&k[2]<best.k[2]))))best={c,r,k};}
+  return best;}
+function addTask(S,c,kind,p,base,label){const tA=Math.max(S.t,c.arriveAt);const d=base*coF(S,c);
+  const t={id:S.nextTask++,co:c.id,kind,crew:TASKDEF[kind].need,start:tA,end:Math.round(tA+d),active:true,done:false,label,...p};S.tasks.push(t);S.taskLog.push(t);c.everWorked=true;
+  S.pending.push({t:t.end,kind:'_task',task:t.id});S.pending.sort((x,y)=>x.t-y.t);return t;}
+function addLine(S,c,spec,pk,need){const W=S.water;const tA=Math.max(S.t,c.arriveAt);const tm=lineTimes(S,c,spec,need);const E=coById(S,pk.eng);
+  const l={id:W.nextId++,...spec,co:c.id,eng:pk.eng,pre:pk.pre,gpm:+pk.p.gpm||150,dia:String(pk.p.dia),len:+pk.p.len,preName:pk.p.name,crew:lineCrew(pk.p),need,start:tA,readyAt:tA+tm.ready,flowing:false};
+  if(!spec.ext)l.entering=tA+tm.enter;W.lines.push(l);S.taskLog.push(l);c.everWorked=true;
+  ev(S,'order',`Line ${l.id} ordered: ${spec.desc} (${c.name}, ${E.id===c.id?'':E.name+' '}${pk.p.name}: ${diaTxt(l.dia)} in., ${l.len} ft, ${l.gpm} gpm; needs about ${need} ft${tA>S.t?'; starts when '+c.name+' arrives':''}; in position in about ${fmtS(tA-S.t+tm.ready)}).`);
+  if(spec.ext)S.flags.extOrdered=true;return l;}
+function releaseTask(S,t,log){t.active=false;t.released=S.t;const c=coById(S,t.co);
+  if(t.kind==='doorcontrol'&&!S.tasks.some(x=>x.kind==='doorcontrol'&&x.active)){S.doorControl=false;const F=front(S);const fo=F&&S.o[F.id];if(fo&&fo.state==='controlled')fo.state='open';}
+  if(t.kind==='search1'||t.kind==='search2'){const s=S.searches.find(s=>s.task===t.id);if(s&&!s.done){s.done=true;s.aborted=true;s.released=true;}}
+  if(t.kind==='supply'&&!t.done){const to=coById(S,t.to);if(to)to.supplyBy=null;}
+  if(t.kind==='rehab')S.rehab=S.tasks.some(x=>x.kind==='rehab'&&x.active&&x.done);
+  if(log)ev(S,'order',`${c.name} released from ${t.label}${t.done||CONT[t.kind]?'':' (not finished)'}.`);}
+function releaseAll(S,c){let n=0;for(const t of S.tasks)if(t.co===c.id&&t.active){releaseTask(S,t,true);n++;}
+  const ls=S.water.lines.filter(l=>l.co===c.id);for(const l of ls){doAction(S,{kind:'withdraw',line:l.id});n++;}return n;}
+function coStatus(S,c){if(S.t<c.arriveAt)return{k:'enroute',txt:`En route · ${fmtS(c.arriveAt-S.t)}`};
+  const tk=coTasks(S,c);if(!tk.length)return{k:c.everWorked?'available':'staged',txt:c.everWorked?'Available':'Staged'};
+  const parts=tk.map(x=>{if(x.line){const l=x.line;return S.t<l.readyAt?`${x.label} · ${fmtS(l.readyAt-S.t)}`:`${x.label} · ${l.flowing?'flowing':'in position'}`;}
+    const t=x.task;return !t.done&&t.end>S.t?`${t.label} · ${fmtS(t.end-S.t)}`:`${t.label}${CONT[t.kind]?' · in place':''}`;});
+  return{k:'working',txt:'Working: '+parts.join(' + ')};}
+function openEntryNow(S,why){const F=front(S);const fdo=F&&S.o[F.id];if(fdo&&fdo.state==='closed'){fdo.state=S.doorControl?'controlled':'open';ev(S,'vent',`${F.name} opened for ${why}${S.doorControl?' (door controlled)':''}. Opening a door is a ventilation action.`,{src:'FSRI-CFA'});S.flags.entryOpenedAt=S.flags.entryOpenedAt??S.t;}}
 /* ---------- actions ---------- */
 function act(S,a){a={...a,t:a.t==null?S.t:a.t};S.pending.push(a);S.pending.sort((x,y)=>x.t-y.t);}
 function doAction(S,a){const F=front(S);const fdo=F&&S.o[F.id];
-  const openEntry=(why)=>{if(fdo&&fdo.state==='closed'){fdo.state=S.doorControl?'controlled':'open';ev(S,'vent',`${F.name} opened for ${why}${S.doorControl?' (door controlled)':''}. Opening a door is a ventilation action.`,{src:'FSRI-CFA'});S.flags.entryOpenedAt=S.flags.entryOpenedAt??S.t;}};
+  const openEntry=(why,at)=>{if(at!=null&&at>S.t){S.pending.push({t:at,kind:'_open',why});S.pending.sort((x,y)=>x.t-y.t);return;}openEntryNow(S,why);};
   switch(a.kind){
-  case 'strategy':S.strategy=a.v;ev(S,'order',`Strategy: ${a.v}.`);if(a.v==='Defensive'){const gone=S.water.lines.filter(l=>!l.ext);S.water.lines=S.water.lines.filter(l=>l.ext);S.searches.forEach(s=>{if(!s.done){s.done=true;s.aborted=true;}});ev(S,'order','Interior crews withdrawn'+(gone.length?` (${gone.map(l=>'Line '+l.id).join(', ')} pulled out)`:'')+'.');}break;
+  case 'strategy':S.strategy=a.v;ev(S,'order',`Strategy: ${a.v}.`);if(a.v==='Defensive'){const gone=S.water.lines.filter(l=>!l.ext);gone.forEach(l=>l.withdrawnAt=S.t);S.water.lines=S.water.lines.filter(l=>l.ext);S.searches.forEach(s=>{if(!s.done){s.done=true;s.aborted=true;const t=S.tasks.find(t=>t.id===s.task);if(t)t.active=false;}});ev(S,'order','Interior crews withdrawn'+(gone.length?` (${gone.map(l=>'Line '+l.id).join(', ')} pulled out)`:'')+'.');}break;
   case 'line':{const W=S.water;
-    if(a.target==='none'){if(W.lines.length){W.lines=[];ev(S,'order','All hoselines withdrawn.');}break;}
+    if(a.target==='none'){if(W.lines.length){W.lines.forEach(l=>l.withdrawnAt=S.t);W.lines=[];ev(S,'order','All hoselines withdrawn.');}break;}
     const spec=lineSpec(S,a.target);if(!spec)break;
     if(!spec.ext&&S.strategy==='Defensive'){ev(S,'note','Interior line not deployed: strategy is defensive.');break;}
     if(W.lines.some(l=>l.key===spec.key)){ev(S,'note',`A line is already assigned to ${spec.label}.`);break;}
-    if(W.lines.length>=TASK.lineCap){ev(S,'note',`All ${TASK.lineCap} hoselines are committed. Reassign or withdraw a line first. (Simplification: staffing is not modeled; the cap stands in for the crews on scene.)`);break;}
-    const l={id:W.nextId++,...spec,readyAt:S.t+spec.time,flowing:false};if(!spec.ext)l.entering=S.t+TASK.stretch;W.lines.push(l);
-    ev(S,'order',`Line ${l.id} ordered: ${spec.desc}.`);if(spec.ext)S.flags.extOrdered=true;break;}
+    const need=hoseNeed(S,spec);
+    if(a.co){const c=coById(S,a.co);if(!c)break;const why=canDo(c,'line');if(why){ev(S,'note',`${c.name} can't stretch a line: ${why}.`);break;}
+      if(a.replace)releaseAll(S,c);
+      const tA=Math.max(S.t,c.arriveAt);let pk;
+      if(a.pre){const [eng,ix]=String(a.pre).split(':');const E=engAvail(S,eng,tA);const p=E&&(E.eq.pre||[])[+ix];
+        if(!p){ev(S,'note',`${c.name} can't use that preconnect: ${eng} is not on scene${tA>S.t?' when '+c.name+' arrives':''}.`);break;}
+        if(preUsed(S,eng,+ix)){ev(S,'note',`${E.name}'s ${p.name} is already stretched.`);break;}
+        if(p.len<need){ev(S,'note',`Hose too short: ${E.name}'s ${p.name} is ${p.len} ft, but ${spec.label} needs about ${need} ft (setback ${S.set.setback} ft + the run to the room). Pick a longer line or change the setback.`,{hose:true});break;}
+        pk={eng,pre:+ix,p};}
+      else{pk=pickPre(S,c,need,tA,a.big?'big':null);if(pk.none){ev(S,'note',pk.any?`Hose too short: no free preconnect reaches ${spec.label} (needs about ${need} ft; longest free line is ${pk.longest} ft).`:`No free preconnect for ${c.name}: every engine line on scene is already stretched.`,{hose:pk.any});break;}}
+      const crew=lineCrew(pk.p);if(freeCrew(S,c)<crew){ev(S,'note',busyMsg(S,c,crew,'a '+diaTxt(pk.p.dia)+' in. line'),{busy:c.id});break;}
+      addLine(S,c,spec,pk,need,a.reassignOf);break;}
+    // quick order: the soonest company that can staff it
+    const best=autoPick(S,'line',(c,tA)=>{const pk=pickPre(S,c,need,tA,a.big?'big':null);if(pk.none)return null;return freeCrew(S,c)>=lineCrew(pk.p)?pk:null;});
+    if(!best){const pk=pickPre(S,{type:'x'},need,1e9,null);
+      ev(S,'note',pk.none&&pk.any?`Hose too short: no free preconnect reaches ${spec.label} (needs about ${need} ft; longest free line is ${pk.longest} ft).`:`No company available to stretch a line to ${spec.label}: every crew on the assignment is committed or no engine line is free. Release a task, or add companies on the Dispatch tab.`,{hose:pk.none&&pk.any});break;}
+    addLine(S,best.c,spec,best.r,need);break;}
   case 'reassign':{const W=S.water;const l=W.lines.find(l=>l.id===+a.line);if(!l)break;const spec=lineSpec(S,a.target);if(!spec)break;
     if(!spec.ext&&S.strategy==='Defensive'){ev(S,'note','Line not moved inside: strategy is defensive.');break;}
     if(W.lines.some(x=>x!==l&&x.key===spec.key)){ev(S,'note',`A line is already assigned to ${spec.label}.`);break;}
-    if(l.key===spec.key)break;
-    const from=l.label;let time;
-    if(!l.ext&&!spec.ext&&l.entered)time=TASK.reposition+TASK.perFloor*Math.abs(lineFloor(S,spec)-lineFloor(S,l))+(spec.via?TASK.pullCeiling:0);
-    else if(l.ext&&spec.ext)time=TASK.reposition+(spec.roof?TASK.perFloor*S.B.stories:0);else time=spec.time;
-    const keepEntered=!l.ext&&!spec.ext&&l.entered;
-    Object.assign(l,spec,{readyAt:S.t+time,flowing:false,since:null,inPos:false,noFire:null,pulled:false,warned:false,flowedOnce:false});
-    if(spec.ext){l.entering=null;l.entered=false;}else if(!keepEntered){l.entered=false;l.entering=S.t+TASK.stretch;}
-    ev(S,'order',`Line ${l.id} reassigned from ${from} to ${spec.label} (in position in about ${fmtS(time)}).`);if(spec.ext)S.flags.extOrdered=true;break;}
-  case 'withdraw':{const W=S.water;const i=W.lines.findIndex(l=>l.id===+a.line);if(i<0)break;const l=W.lines[i];W.lines.splice(i,1);ev(S,'order',`Line ${l.id} withdrawn from ${l.label}.`);break;}
-  case 'supply':if(!S.water.supplyAt){S.water.supplyAt=S.t+TASK.supplyDelay;ev(S,'order','Water supply ordered (hydrant/supply line).');}break;
-  case 'doorcontrol':S.doorControl=!!a.on;if(fdo&&fdo.state!=='closed')fdo.state=a.on?'controlled':'open';ev(S,'order',a.on?`Door control at ${F.name}: door pulled closed to the width of the hoseline.`:'Door control released: entry door fully open.',{src:'FSRI-VV'});break;
-  case 'vent':{if(a.type==='horizontal'){const o=S.o[a.opening];if(!o)break;S.pending.push({t:S.t+TASK.horizontal,kind:'_ventdone',opening:a.opening});ev(S,'order',`Horizontal ventilation ordered: ${oname(S,a.opening)}.`);}
-    else if(a.type==='vertical'){S.pending.push({t:S.t+TASK.vertical,kind:'_roofdone',zone:a.zone});ev(S,'order',`Vertical ventilation ordered over ${zname(S,a.zone)} (roof operations take time).`,{src:'FSRI-VV'});}
-    else if(a.type==='ppv'){openEntry('the fan');S.pending.push({t:S.t+TASK.ppv,kind:'_fanon'});ev(S,'order','PPV/PPA fan ordered at the entry door.',{src:'FSRI-PPV'});}
-    else if(a.type==='none'){if(S.fan){S.fan.on=false;ev(S,'order','Fan shut down.');}}
-    S.pending.sort((x,y)=>x.t-y.t);break;}
-  case '_ventdone':{const o=S.o[a.opening];if(o.state==='closed'||o.state==='controlled'){o.state=o.type==='window'?'failed':'open';ev(S,'vent',`${oname(S,a.opening)} vented.`);S.flags.vents=(S.flags.vents||[]);S.flags.vents.push({t:S.t,kind:'horizontal',zone:o.zone,id:a.opening});}break;}
+    if(l.key===spec.key)break;const need=hoseNeed(S,spec);
+    if(l.len<need){ev(S,'note',`Hose too short: Line ${l.id} is ${l.len} ft, but ${spec.label} needs about ${need} ft. Withdraw it and stretch a longer line.`,{hose:true});break;}
+    const c=coById(S,l.co);const st=S.set,f=coF(S,c);const from=l.label;let time;
+    if(!l.ext&&!spec.ext&&l.entered)time=(st.reposition+st.perFloor*Math.abs(lineFloor(S,spec)-lineFloor(S,l))+(spec.via?st.pullCeiling:0))*f;
+    else if(l.ext&&spec.ext)time=(st.reposition+(spec.roof?st.perFloor*S.B.stories:0))*f;else time=lineTimes(S,c,spec,need).ready;
+    const keepEntered=!l.ext&&!spec.ext&&l.entered;const tA=Math.max(S.t,l.start||S.t);
+    Object.assign(l,spec,{need,readyAt:tA+time,flowing:false,since:null,inPos:false,noFire:null,pulled:false,warned:false,flowedOnce:false});
+    if(spec.ext){l.entering=null;l.entered=false;}else if(!keepEntered){l.entered=false;l.entering=tA+lineTimes(S,c,spec,need).enter;}
+    ev(S,'order',`Line ${l.id} reassigned from ${from} to ${spec.label} (${c.name}; in position in about ${fmtS(tA-S.t+time)}).`);if(spec.ext)S.flags.extOrdered=true;break;}
+  case 'withdraw':{const W=S.water;const i=W.lines.findIndex(l=>l.id===+a.line);if(i<0)break;const l=W.lines[i];W.lines.splice(i,1);l.withdrawnAt=S.t;const c=coById(S,l.co);ev(S,'order',`Line ${l.id} withdrawn from ${l.label}${c?' ('+c.name+' crew freed)':''}.`);break;}
+  case 'supply':{// a supply line from the hydrant to an engine. Quick order: the next engine lays in to the attack engine.
+    const st=S.set;const engs=S.cos.filter(c=>c.type==='engine');if(!engs.length){ev(S,'note','No engine on the assignment to take a water supply.');break;}
+    const attack=()=>{const n=e=>S.water.lines.filter(l=>l.eng===e.id).length;return engs.filter(e=>!e.supplied&&!e.supplyBy).sort((x,y)=>n(y)-n(x)||x.arriveAt-y.arriveAt)[0];};
+    let to=a.to?coById(S,a.to):attack();if(!to){ev(S,'note','Every engine already has a supply line (or one is on the way).');break;}
+    if(to.supplied||to.supplyBy){ev(S,'note',`${to.name} already has a supply line${to.supplyBy?' on the way':''}.`);break;}
+    let c=a.co?coById(S,a.co):null;
+    if(c){const why=canDo(c,'supply');if(why){ev(S,'note',`${c.name} can't lay supply: ${why}.`);break;}
+      if((+c.eq.supplyHose||0)<st.hydrantDist){ev(S,'note',`Not enough supply hose: ${c.name} carries ${c.eq.supplyHose||0} ft, the hydrant is ${st.hydrantDist} ft away.`,{hose:true});break;}
+      if(a.replace)releaseAll(S,c);if(freeCrew(S,c)<1){ev(S,'note',busyMsg(S,c,1,'a supply lay'),{busy:c.id});break;}}
+    else{const ok=e=>(+e.eq.supplyHose||0)>=st.hydrantDist&&freeCrew(S,e)>=1;const b=autoPick(S,'supply',(e)=>e!==to&&ok(e)?true:null);c=b?b.c:(ok(to)?to:null);
+      if(!c){ev(S,'note',engs.some(e=>(+e.eq.supplyHose||0)>=st.hydrantDist)?'No engine has a free member to lay the supply line. Release a task first.':`Not enough supply hose: no engine carries ${st.hydrantDist} ft to reach the hydrant.`,{hose:true});break;}}
+    const mode=a.mode==='reverse'?'reverse':'forward';const base=st.layBase+st.layPerFt*st.hydrantDist+st.hookup+(mode==='reverse'?30:0);
+    const t=addTask(S,c,'supply',{to:to.id,mode},base,`${mode==='reverse'?'Reverse':'Forward'} lay: hydrant ↔ ${to.name}`);to.supplyBy=c.id;
+    S.water.supplyAt=S.water.supplyAt==null?t.end:Math.min(S.water.supplyAt,t.end);
+    ev(S,'order',`Water supply ordered: ${c.name} ${mode} lay${c===to?'':' to '+to.name} from the hydrant (${st.hydrantDist} ft)${t.start>S.t?', starting when '+c.name+' arrives':''}; connected in about ${fmtS(t.end-S.t)}.`);break;}
+  case 'doorcontrol':{if(a.on){if(S.tasks.some(t=>t.kind==='doorcontrol'&&t.active)){S.doorControl=true;break;}
+      const c=a.co?coById(S,a.co):(autoPick(S,'doorcontrol',c=>freeCrew(S,c)>=1?true:null)||{}).c;
+      if(!c){ev(S,'note','No member free for door control. Release a task first.',{busy:true});break;}
+      if(a.co){const why=canDo(c,'doorcontrol');if(why){ev(S,'note',`${c.name}: ${why}.`);break;}if(a.replace)releaseAll(S,c);if(freeCrew(S,c)<1){ev(S,'note',busyMsg(S,c,1,'door control'),{busy:c.id});break;}}
+      const t=addTask(S,c,'doorcontrol',{},0,'Door control at the entry');
+      ev(S,'order',`Door control at ${F.name} (${c.name}, 1 member): door pulled closed to the width of the hoseline${t.start>S.t?' once '+c.name+' arrives':''}.`,{src:'FSRI-VV'});break;}
+    S.tasks.filter(t=>t.kind==='doorcontrol'&&t.active).forEach(t=>t.active=false);S.doorControl=false;if(fdo&&fdo.state!=='closed')fdo.state='open';ev(S,'order','Door control released: entry door fully open.',{src:'FSRI-VV'});break;}
+  case 'vent':{if(a.type==='none'){if(S.fan){S.fan.on=false;ev(S,'order','Fan shut down.');}break;}
+    const kind=a.type==='horizontal'?'hvent':a.type==='vertical'?'vvent':'ppv';const st=S.set;
+    const ladderOk=c=>{if(kind!=='hvent')return true;const o=S.B.openings.find(o=>o.id===a.opening);const z=o&&S.B.zones.find(z=>z.id===o.zone);return !z||floorNum(z.floor)<2||c.eq.groundLadders||c.eq.aerial||S.laddered[o.side];};
+    const base=c=>kind==='hvent'?st.horizontal:kind==='ppv'?st.ppv:st.vertical*(c.eq.aerial?st.aerialFactor:1);
+    let c;if(a.co){c=coById(S,a.co);const why=canDo(c,kind)||(ladderOk(c)?null:'an upper-floor window needs a ladder (or ladder that side first)');if(why){ev(S,'note',`${c.name} can't do that: ${why}.`);break;}
+      if(a.replace)releaseAll(S,c);if(freeCrew(S,c)<TASKDEF[kind].need){ev(S,'note',busyMsg(S,c,TASKDEF[kind].need,TASKDEF[kind].label.toLowerCase()),{busy:c.id});break;}}
+    else{const b=autoPick(S,kind,c=>freeCrew(S,c)>=TASKDEF[kind].need&&ladderOk(c)?true:null);c=b&&b.c;
+      if(!c){ev(S,'note',`No company available for ${TASKDEF[kind].label.toLowerCase()}: ${S.cos.some(x=>!canDo(x,kind))?'the companies that can do it are committed':'no company on the assignment '+(TASKDEF[kind].why||'can do it')}.`,{busy:true});break;}}
+    if(kind==='hvent'){if(!S.o[a.opening])break;const t=addTask(S,c,'hvent',{opening:a.opening},base(c),`Horizontal vent: ${oname(S,a.opening)}`);ev(S,'order',`Horizontal ventilation ordered: ${oname(S,a.opening)} (${c.name}${t.start>S.t?', on arrival':''}).`);}
+    else if(kind==='vvent'){const t=addTask(S,c,'vvent',{zone:a.zone},base(c),`Vertical vent over ${zname(S,a.zone)}`);ev(S,'order',`Vertical ventilation ordered over ${zname(S,a.zone)} (${c.name}${c.eq.aerial?', from the aerial':', off ground ladders'}; about ${fmtS(t.end-S.t)}; roof operations take time).`,{src:'FSRI-VV'});}
+    else{const t=addTask(S,c,'ppv',{},base(c),'PPV fan at the entry');openEntry('the fan',t.start);ev(S,'order',`PPV/PPA fan ordered at the entry door (${c.name}).`,{src:'FSRI-PPV'});}
+    break;}
+  case 'search':{if(S.strategy==='Defensive'){ev(S,'note','Primary search not started: strategy is defensive.');break;}
+    const kind=a.secondary?'search2':'search1';const st=S.set;const nm=a.secondary?'Secondary search':'Primary search';
+    let c;if(a.co){c=coById(S,a.co);const why=canDo(c,kind);if(why){ev(S,'note',`${c.name}: ${why}.`);break;}if(a.replace)releaseAll(S,c);if(freeCrew(S,c)<2){ev(S,'note',busyMsg(S,c,2,nm.toLowerCase()),{busy:c.id});break;}}
+    else{const b=autoPick(S,kind,c=>freeCrew(S,c)>=2?true:null);c=b&&b.c;if(!c){ev(S,'note',`No company available for a ${nm.toLowerCase()} of floor ${a.floor}: every crew is committed. Release a task first.`,{busy:true});break;}}
+    const up=Math.max(0,floorNum(a.floor)-1);const base=(st.searchBase+st.perFloor*up+st.searchPerFloor)*(a.secondary?st.secondaryFactor:1);
+    const t=addTask(S,c,kind,{floor:a.floor},base,`${nm}: floor ${a.floor}`);S.pending=S.pending.filter(p=>p.task!==t.id);
+    S.searches.push({floor:a.floor,start:t.start,end:t.end,done:false,task:t.id,co:c.id,secondary:!!a.secondary});openEntry('the search crew',t.start);
+    ev(S,'order',`${nm} ordered: floor ${a.floor}. (${c.name}${t.start>S.t?', on arrival':''})`);break;}
+  case 'assign':{// IC assigns a task to a specific company
+    const c=coById(S,a.co);if(!c)break;const k=a.task;
+    if(k==='line'){doAction(S,{...a,kind:'line'});break;}
+    if(k==='supply'){doAction(S,{...a,kind:'supply'});break;}
+    if(k==='doorcontrol'){doAction(S,{...a,kind:'doorcontrol',on:true});break;}
+    if(k==='hvent'||k==='vvent'||k==='ppv'){doAction(S,{...a,kind:'vent',type:k==='hvent'?'horizontal':k==='vvent'?'vertical':'ppv'});break;}
+    if(k==='search1'||k==='search2'){doAction(S,{...a,kind:'search',secondary:k==='search2'});break;}
+    const why=canDo(c,k);if(why){ev(S,'note',`${c.name} can't do that: ${why}.`);break;}
+    if(a.replace)releaseAll(S,c);
+    const d=TASKDEF[k];const st=S.set;const free=freeCrew(S,c);const crew=k==='rit'?Math.max(2,free):d.need;
+    if(free<crew||free<d.need){ev(S,'note',busyMsg(S,c,d.need,d.label.toLowerCase()),{busy:c.id});break;}
+    if(k==='pullceiling'){const att=S.B.zones.find(z=>z.attic);if(!att||!S.B.conns.some(q=>q.type==='ceiling'&&(q.a===a.zone||q.b===a.zone))){ev(S,'note',`No ceiling to the ${att?att.name:'attic'} in ${zname(S,a.zone)}.`);break;}
+      const t=addTask(S,c,k,{zone:a.zone},st.pullCeiling,`Pull ceiling: ${zname(S,a.zone)}`);ev(S,'order',`${c.name}: pull the ceiling in ${zname(S,a.zone)} to open up the ${att.name}.`);break;}
+    if(k==='ladder'){const side=a.side||'A';const t=addTask(S,c,k,{side},st.ladder*(c.eq.aerial?.9:1),`Ladder Side ${side}`);ev(S,'order',`${c.name}: ladder Side ${side} (ground ladders to the upper-floor windows${c.eq.aerial?' and the aerial':''}).`);break;}
+    if(k==='rit'){const t=addTask(S,c,k,{crew},st.rit,'RIT (rapid intervention)');ev(S,'order',`${c.name} assigned as RIT (${crew} members).`);break;}
+    if(k==='lights'){const t=addTask(S,c,k,{},st.lights,'Scene lighting');ev(S,'order',`${c.name}: set up scene lighting.`);break;}
+    if(k==='rehab'){const t=addTask(S,c,k,{},st.rehab,'Rehab / EMS standby');ev(S,'order',`${c.name}: set up rehab and EMS standby.`);break;}
+    break;}
+  case 'release':{const t=S.tasks.find(t=>t.id===+a.task);if(t&&t.active){releaseTask(S,t,true);break;}
+    if(a.co&&!a.task){const c=coById(S,a.co);if(c){const n=releaseAll(S,c);if(n)ev(S,'order',`${c.name} released from all tasks and available.`);}}break;}
+  case '_open':openEntryNow(S,a.why);break;
+  case '_task':{const t=S.tasks.find(t=>t.id===a.task);if(!t||!t.active)break;const c=coById(S,t.co);t.done=true;t.doneAt=S.t;if(!CONT[t.kind])t.active=false;
+    if(t.kind==='hvent'){const o=S.o[t.opening];if(o&&(o.state==='closed'||o.state==='controlled')){o.state=o.type==='window'?'failed':'open';ev(S,'vent',`${oname(S,t.opening)} vented (${c.name}).`);S.flags.vents=(S.flags.vents||[]);S.flags.vents.push({t:S.t,kind:'horizontal',zone:o.zone,opening:t.opening});}}
+    else if(t.kind==='vvent')doAction(S,{kind:'_roofdone',zone:t.zone,by:c.name});
+    else if(t.kind==='ppv')doAction(S,{kind:'_fanon',by:c.name});
+    else if(t.kind==='doorcontrol'){S.doorControl=true;if(fdo&&fdo.state!=='closed')fdo.state='controlled';}
+    else if(t.kind==='supply'){const to=coById(S,t.to);to.supplied=true;to.supplyBy=null;if(t.mode==='reverse')c.supplied=true;S.water.supply=true;
+      ev(S,'water',`Water supply established: ${c.name} ${t.mode} lay to ${to.name} is charged. ${to.name}'s lines no longer draw on its tank.`);}
+    else if(t.kind==='pullceiling'){const att=S.B.zones.find(z=>z.attic);for(const cid in S.c){const q=S.c[cid];if(q.type==='ceiling'&&((q.a===t.zone&&q.b===att.id)||(q.b===t.zone&&q.a===att.id)))q.state='breached';}
+      ev(S,'vent',`${c.name}: ceiling pulled in ${zname(S,t.zone)}. The ${att.name} is open above it (a line in that room can now reach it), and heat and smoke from the void can come down.`,{src:'FSRI-VV'});}
+    else if(t.kind==='ladder'){S.laddered[t.side]=true;ev(S,'order',`${c.name}: Side ${t.side} laddered (secondary egress and access to upper-floor windows).`);}
+    else if(t.kind==='rit')ev(S,'order',`${c.name} in place as RIT at the command post.`);
+    else if(t.kind==='lights'){S.lights=true;ev(S,'order',`${c.name}: scene lighting is up. Smoke color and the building are easier to read.`);}
+    else if(t.kind==='rehab'){S.rehab=true;ev(S,'order',`${c.name}: rehab is set up (crews recover faster in the heat).`);}
+    break;}
   case '_roofdone':{let zid=a.zone;const z=S.B.zones.find(z=>z.id===zid);let target=zid;
     if(!z.attic&&!isTop(S,zid)){const top=S.B.zones.find(q=>q.floor===String(S.B.stories)&&q.x0<=(z.x0+z.x1)/2&&q.x1>=(z.x0+z.x1)/2&&!q.hidden);target=top?top.id:zid;}
     const id='roof:'+target;S.o[id]={id,state:'open',zone:target,type:'roof',side:'Roof',dyn:true,fail:0,failAt:1e9};
     // pushing the ceiling below a roof vent opens the void space [FSRI-VV 4.7]
     for(const cid in S.c){const c=S.c[cid];if(c.type==='ceiling'&&((c.a===target&&c.b==='attic')||(c.b===target&&c.a==='attic')))c.state='breached';}
     S.o[id].over=target;if(target!=='attic')S.o[id].zone=S.z.attic?'attic':target;
-    ev(S,'vent',`Roof opened over ${zname(S,target)}; ceiling pushed below it.`,{src:'FSRI-VV'});S.flags.vents=(S.flags.vents||[]);S.flags.vents.push({t:S.t,kind:'vertical',zone:target});break;}
-  case '_fanon':S.fan={on:true,at:F.id};ev(S,'vent','Fan running at the entry door (positive pressure).',{src:'FSRI-PPV'});S.flags.vents=(S.flags.vents||[]);S.flags.vents.push({t:S.t,kind:'ppv'});break;
-  case 'search':{if(S.strategy==='Defensive'){ev(S,'note','Primary search not started: strategy is defensive.');break;}
-    openEntry('the search crew');const up=Math.max(0,floorNum(a.floor)-1);S.searches.push({floor:a.floor,start:S.t,end:S.t+TASK.searchBase+TASK.perFloor*up+TASK.searchPerFloor,done:false});ev(S,'order',`Primary search ordered: floor ${a.floor}.`);break;}
+    ev(S,'vent',`Roof opened over ${zname(S,target)}; ceiling pushed below it${a.by?' ('+a.by+')':''}.`,{src:'FSRI-VV'});S.flags.vents=(S.flags.vents||[]);S.flags.vents.push({t:S.t,kind:'vertical',zone:target});break;}
+  case '_fanon':S.fan={on:true,at:F.id};ev(S,'vent',`Fan running at the entry door (positive pressure)${a.by?' ('+a.by+')':''}.`,{src:'FSRI-PPV'});S.flags.vents=(S.flags.vents||[]);S.flags.vents.push({t:S.t,kind:'ppv'});break;
   // instructor injects
   case 'fail':{const o=S.o[a.opening];if(o){o.state=o.type==='window'?'failed':'open';ev(S,'inject',`${oname(S,a.opening)} ${o.type==='window'?'fails':'is opened'}.`);}break;}
   case 'open':{const o=S.o[a.opening];if(o){o.state='open';ev(S,'inject',`${oname(S,a.opening)} opened.`);}break;}
   case 'close':{const o=S.o[a.opening];if(o){o.state='closed';ev(S,'inject',`${oname(S,a.opening)} closed.`);}break;}
   case 'idoor':{const c=S.c[a.conn];if(c){c.state=a.state;const nm=(S.B.conns.find(x=>x.id===a.conn)||{}).name||a.conn;ev(S,'inject',`${nm} ${a.state==='open'?'opened':'closed'}.`);}break;}
-  case 'wind':S.scn.wind={dir:a.dir,spd:a.spd};ev(S,'inject',a.dir==='calm'?'Wind is now calm.':`Wind shifts: now from Side ${a.dir}.`);break;
+  case 'wind':S.wind={dir:a.dir,spd:a.spd||0};ev(S,a.sched?'wind':'inject',a.dir==='calm'?'Wind is now calm.':`Wind shift: now ${['light','moderate','strong'][a.spd||0]} from Side ${a.dir}.${a.sched?' (scheduled in the drill)':''}`,a.sched?{src:'NIST-WD'}:{});break;
   case 'note':ev(S,'inject',a.text);break;
   }}
 /* ---------- one simulation second ---------- */
@@ -687,25 +937,41 @@ function step(S){const dt=1;
   while(S.pending.length&&S.pending[0].t<=S.t)doAction(S,S.pending.shift());
   const {air,own,hi}=airMap(S);S._air=air;S._own=own;
   // water
-  const W=S.water;if(W.supplyAt!=null&&!W.supply&&S.t>=W.supplyAt){W.supply=true;ev(S,'water','Water supply established.');}
-  let flowing=0;const hasWater=W.supply||W.tank>0;
-  for(const l of W.lines){if(!l.ext&&l.entering!=null&&S.t>=l.entering&&!l.entered){l.entered=true;const F=front(S);const fo=F&&S.o[F.id];if(fo&&fo.state==='closed'){fo.state=S.doorControl?'controlled':'open';S.flags.entryOpenedAt=S.flags.entryOpenedAt??S.t;ev(S,'vent',`${F.name} opened for the hoseline${S.doorControl?' (door controlled)':''}. Opening the door is a ventilation action.`,{src:'FSRI-CFA'});}}
+  const W=S.water;
+  // companies: arrival, work time (heat fatigue), aggregate tank/supply for the board
+  for(const c of S.cos){if(!c.arrived&&S.t>=c.arriveAt){c.arrived=true;if(c.arriveAt>S.tArr){const tk=coTasks(S,c);
+      ev(S,'company',`${c.name} on scene (${c.staff} ${c.staff===1?'member':'members'})${tk.length?': starting '+tk.map(x=>x.label).join(' + '):', staged and awaiting assignment'}.`,{co:c.id});}}
+    if(c.arrived&&coTasks(S,c).length)c.work+=S.rehab?.5:1;else if(c.arrived&&S.rehab)c.work=Math.max(0,c.work-1);}
+  const engs=S.cos.filter(c=>c.type==='engine');
+  for(const e of engs){e.flowGpm=0;}
+  for(const l of W.lines){const E=coById(S,l.eng);const hasWater=E&&(E.supplied||E.tankLeft>0)&&S.t>=E.arriveAt;
+    if(!l.ext&&l.entering!=null&&S.t>=l.entering&&!l.entered){l.entered=true;const F=front(S);const fo=F&&S.o[F.id];if(fo&&fo.state==='closed'){fo.state=S.doorControl?'controlled':'open';S.flags.entryOpenedAt=S.flags.entryOpenedAt??S.t;ev(S,'vent',`${F.name} opened for the hoseline${S.doorControl?' (door controlled)':''}. Opening the door is a ventilation action.`,{src:'FSRI-CFA'});}}
     const r=lineReach(S,l);const fire=Object.keys(r).some(id=>S.z[id].ign&&!S.z[id].out);
     if(S.t>=l.readyAt&&!l.inPos){l.inPos=true;
-      if(l.via&&!l.pulled){l.pulled=true;for(const cid in S.c){const c=S.c[cid];if(c.type==='ceiling'&&((c.a===l.via&&c.b===l.zone)||(c.b===l.via&&c.a===l.zone)))c.state='breached';}
-        ev(S,'vent',`Line ${l.id}: ceiling pulled in ${zname(S,l.via)} to reach the ${zname(S,l.zone)}. The opening also lets heat and smoke from the void into that room.`,{src:'FSRI-VV'});}
+      if(l.via&&!l.pulled){l.pulled=true;const was=S.B.conns.some(q=>q.type==='ceiling'&&S.c[q.id].state==='breached'&&((q.a===l.via&&q.b===l.zone)||(q.b===l.via&&q.a===l.zone)));
+        for(const cid in S.c){const c=S.c[cid];if(c.type==='ceiling'&&((c.a===l.via&&c.b===l.zone)||(c.b===l.via&&c.a===l.zone)))c.state='breached';}
+        if(!was)ev(S,'vent',`Line ${l.id}: ceiling pulled in ${zname(S,l.via)} to reach the ${zname(S,l.zone)}. The opening also lets heat and smoke from the void into that room.`,{src:'FSRI-VV'});}
       if(!fire)ev(S,'water',`Line ${l.id} in position: ${l.label}. No fire within reach, so it stands by without flowing.`);}
     if(fire)l.noFire=null;else if(l.noFire==null)l.noFire=S.t;
     const want=l.inPos&&hasWater&&(fire||(l.flowing&&S.t-l.noFire<TASK.noFireShutdown));
     if(want){if(!l.flowing){l.flowing=true;l.since=S.t;
-        ev(S,'water',l.flowedOnce?`Line ${l.id} flowing again: fire within reach of ${l.label}.`:l.ext?`Line ${l.id}: water applied from outside through ${oname(S,l.opening)}.`:`Line ${l.id} in position and flowing: ${l.label}.`,{src:l.ext?'FSRI-VV':'FSRI-FA'});
-        l.flowedOnce=true;if(S.flags.firstWater==null)S.flags.firstWater=S.t;}flowing++;}
+        ev(S,'water',l.flowedOnce?`Line ${l.id} flowing again: fire within reach of ${l.label}.`:l.ext?`Line ${l.id}: water applied from outside through ${oname(S,l.opening)} (${l.gpm} gpm).`:`Line ${l.id} in position and flowing: ${l.label} (${l.gpm} gpm).`,{src:l.ext?'FSRI-VV':'FSRI-FA'});
+        l.flowedOnce=true;if(l.firstFlow==null)l.firstFlow=S.t;if(S.flags.firstWater==null)S.flags.firstWater=S.t;}E.flowGpm+=l.gpm;}
     else if(l.flowing){l.flowing=false;
-      if(!hasWater){if(!S.flags.dryMsg){S.flags.dryMsg=true;ev(S,'water','Tank water exhausted: lines have stopped flowing. No supply established.');}}
+      if(!hasWater){if(!E.dryMsg){E.dryMsg=true;ev(S,'water',`Tank water exhausted on ${E.name}: its lines have stopped flowing. No supply line connected to it.`,{co:E.id});}}
       else ev(S,'water',`Line ${l.id} shut down: no fire left within reach of ${l.label}. It stands by and restarts if fire returns there.`);}}
-  // tank: each flowing line draws its own flow until a supply is established (simplification)
-  if(flowing&&!W.supply){W.tank=Math.max(0,W.tank-TASK.gpm/60*dt*flowing);
-    if(W.tank<TASK.lowTank&&W.tank>0&&!S.flags.lowTank){S.flags.lowTank=true;ev(S,'water',`Tank water low: about ${Math.round(W.tank)} gal left, roughly ${fmtS(W.tank/(TASK.gpm*flowing/60))} at the current flow.${W.supplyAt!=null?' Supply is on the way.':' No water supply has been ordered.'}`);}}
+  // tanks: each engine's tank feeds its own lines (at their gpm) until a supply line connects to it; pump capacity caps the flow (simplification)
+  for(const e of engs){const pump=+e.eq.pump||1500;e.pumpF=e.flowGpm>pump?pump/e.flowGpm:1;
+    if(e.pumpF<1&&!e.pumpMsg){e.pumpMsg=true;ev(S,'water',`${e.name}'s pump is rated ${pump} gpm but its lines call for ${e.flowGpm} gpm: every line on it flows less.`);}
+    if(e.flowGpm&&!e.supplied){const tank=+e.eq.tank||0;e.tankLeft=Math.max(0,e.tankLeft-Math.min(e.flowGpm,pump)/60*dt);
+      if(e.tankLeft<tank*TASK.lowTankFrac&&e.tankLeft>0&&!e.lowWarned){e.lowWarned=true;ev(S,'water',`Tank water low: ${e.name} has about ${Math.round(e.tankLeft)} gal left, roughly ${fmtS(e.tankLeft/(Math.min(e.flowGpm,pump)/60))} at its current flow (${e.flowGpm} gpm).${e.supplyBy?' A supply line is on the way.':' No supply line has been ordered to it.'}`,{co:e.id});}}}
+  W.tank=engs.filter(e=>S.t>=e.arriveAt).reduce((a,e)=>a+e.tankLeft,0);W.supply=engs.some(e=>e.supplied);
+  for(const l of W.lines){const E=coById(S,l.eng);l.w=Math.max(.4,Math.min(1.7,(l.gpm||150)/TASK.gpm*(E&&E.pumpF||1)));}
+  // wind-driven conditions: wind entering an open opening pushes heat and smoke along the flow path [NIST-WD]
+  const wz={};{const wd=S.wind;if(wd&&wd.dir&&wd.dir!=='calm')for(const oid in S.o){const o=S.o[oid];if(o.type!=='roof'&&o.side===wd.dir&&o.state!=='closed'&&o.state!=='controlled')wz[o.zone]=Math.max(wz[o.zone]||0,(wd.spd||0)+1);}}
+  S._wz=wz;
+  for(const id in wz){const z=S.z[id];if(S.t>=S.tArr&&z.ign&&!z.out&&z.q>.5&&!S.flags['wd_'+id]){S.flags['wd_'+id]=S.t;const inside=W.lines.some(l=>!l.ext&&l.entered)||S.searches.some(s=>!s.done&&S.t>=s.start);
+    ev(S,'crew',`Wind-driven conditions: wind entering ${zname(S,id)} is pushing heat and smoke through the flow path toward the exhaust openings${inside?'. Crews inside are in that path':''}. Consider exterior water into the windward opening or closing the flow path.`,{src:'NIST-WD',zone:id});}}
   const waterOn={},intOn={};for(const l of W.lines)if(l.flowing){if(l.ext){const o=S.o[l.opening];if(o&&o.state==='closed')o.state='failed';}
     const r=lineReach(S,l);for(const id in r){waterOn[id]=Math.max(waterOn[id]||0,r[id]);if(!l.ext)intOn[id]=true;}}
   // an interior line in position that covers a room keeps watch on it: no rekindle there (simplification)
@@ -763,7 +1029,8 @@ function step(S){const dt=1;
     ds=clamp(ds,-.05,.05);Bz.s=clamp(Bz.s+ds/Bz.vf,0,1);A.s=clamp(A.s-ds/A.vf,0,1);
     let dT=(A.T-Bz.T)*k*.018;dT*=dT>0?up(A,Bz)*(1+1.6*exB):up(Bz,A)*(1+1.6*exA);
     if(S.fan&&S.fan.on){dT*=1.6;}
-    dT=clamp(dT,-.03,.03);Bz.T+=dT/Bz.vf*.9;A.T-=dT/A.vf*.25;}
+    const wa=dT>0?wz[c.a]:wz[c.b];if(wa){dT*=1+.45*wa;ds*=1;} // wind-driven push along the flow path (magnitude is a simplification)
+    dT=clamp(dT,wa?-.045:-.03,wa?.045:.03);Bz.T+=dT/Bz.vf*.9;A.T-=dT/A.vf*.25;}
   // ignition of other compartments
   for(const id in zs){const z=zs[id];if(z.ign||z.out)continue;
     if(z.T>(z.attic?.6:.82)&&z.wet<.2){z.ign=true;z.tIgn=S.t-FUEL[S.scn.fuel].tg*.55;ev(S,'spread',`Fire has extended into ${zname(S,id)}.`,{zone:id});}}
@@ -782,11 +1049,11 @@ function step(S){const dt=1;
   // occupant tenability (FED-like dose; simplification of tenability criteria) [FSRI-VV 4.9, CBYD]
   if(S.victim&&S.victim.status==='inside'){const z=zs[S.victim.zone];S.victim.dose+=dt*(Math.max(0,z.T-.25)*.012+Math.max(0,z.s-.4)*.009);if(S.victim.dose>=1&&!S.victim.untenable){S.victim.untenable=S.t;}}
   // searches
-  for(const s of S.searches){if(s.done)continue;
+  for(const s of S.searches){if(s.done)continue;if(S.t<s.start)continue;const st_=S.tasks.find(t=>t.id===s.task);const fin=()=>{if(st_){st_.active=false;st_.done=true;st_.doneAt=S.t;}};
     const zonesF=S.B.zones.filter(z=>z.floor===s.floor);const worst=Math.max(...zonesF.filter(z=>!z.hidden||true).map(z=>zs[z.id].T*(S.c[connOf(S,z.id)]?.state==='closed'?.2:1)));
-    if(worst>.75&&!s.warned){s.warned=true;ev(S,'crew',`Search crew on floor ${s.floor} is in untenable heat in the flow path. Crew must retreat.`,{src:'FSRI-VV'});s.done=true;s.aborted=true;continue;}
-    if(S.t>=s.end){s.done=true;let found=false;if(S.victim&&S.victim.status==='inside'&&S.B.zones.find(z=>z.id===S.victim.zone).floor===s.floor){found=true;S.victim.status=S.victim.untenable?'found-late':'rescued';S.victim.foundAt=S.t;}
-      ev(S,'search',`Primary search floor ${s.floor} complete: ${found?(S.victim.status==='rescued'?`occupant found in ${zname(S,S.victim.zone)} and removed`:`occupant found in ${zname(S,S.victim.zone)}; conditions there had already exceeded tenability`):'negative'}.`,{src:'FSRI-VV'});}}
+    if(worst>.75&&!s.warned){s.warned=true;ev(S,'crew',`Search crew on floor ${s.floor}${s.co?' ('+coById(S,s.co).name+')':''} is in untenable heat in the flow path. Crew must retreat.`,{src:'FSRI-VV'});s.done=true;s.aborted=true;fin();continue;}
+    if(S.t>=s.end){s.done=true;fin();let found=false;if(S.victim&&S.victim.status==='inside'&&S.B.zones.find(z=>z.id===S.victim.zone).floor===s.floor){found=true;S.victim.status=S.victim.untenable?'found-late':'rescued';S.victim.foundAt=S.t;}
+      ev(S,'search',`${s.secondary?'Secondary':'Primary'} search floor ${s.floor} complete${s.co?' ('+coById(S,s.co).name+')':''}: ${found?(S.victim.status==='rescued'?`occupant found in ${zname(S,S.victim.zone)} and removed`:`occupant found in ${zname(S,S.victim.zone)}; conditions there had already exceeded tenability`):'negative'}.`,{src:'FSRI-VV'});}}
   // crew safety for interior lines
   for(const l of W.lines){if(l.ext||!l.entered)continue;const z=zs[l.zone];const path=zs[S.B.openings.find(o=>o.front).zone];
     if(Math.max(path.T,l.flowing?0:z.T)>.85&&!l.warned){l.warned=true;ev(S,'crew','Attack crew is between the fire and the exhaust: rapid heat increase in their flow path.',{src:'FSRI-VV'});}}
@@ -863,7 +1130,7 @@ function flowPath(S){const intake=[],exhaust=[];const vis=openingVis(S);
     if(o.type==='roof'){exhaust.push(nm);continue;}
     const z=S.z[o.zone];if(v.rate>.05){if(o.type==='door'||o.type==='garage'){exhaust.push(nm+' (top)');intake.push(nm+' (bottom)');}else exhaust.push(nm);} else intake.push(nm);}
   return{intake,exhaust};}
-return{bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;
 
@@ -882,12 +1149,13 @@ function makeNoise(N){// tileable value-noise FBM in 4 channels
   const px=new Uint8Array(N*N*4);for(let c=0;c<4;c++){let mn=1,mx=0;for(const v of ch[c]){mn=Math.min(mn,v);mx=Math.max(mx,v);}for(let i=0;i<N*N;i++)px[i*4+c]=Math.round((ch[c][i]-mn)/(mx-mn)*255);}
   return px;}
 const VS_PHOTO=`attribute vec2 a;uniform vec4 u_view;varying vec2 v;void main(){v=a;gl_Position=vec4((u_view.xy+a*u_view.zw)*vec2(2.,-2.)+vec2(-1.,1.),0.,1.);}`;
-const FS_PHOTO=`precision mediump float;varying vec2 v;uniform sampler2D u_img,u_noise;uniform vec2 u_size;uniform float u_time,u_dim;
+const FS_PHOTO=`precision mediump float;varying vec2 v;uniform sampler2D u_img,u_noise;uniform vec2 u_size;uniform float u_time,u_dim,u_gk,u_fog,u_flood;uniform vec3 u_amb,u_fogc;
 uniform vec4 u_L[8];uniform vec4 u_W[24];uniform vec4 u_WP[24];uniform int u_nL,u_nW;
-void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*(1.-u_dim);
+void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*u_amb*(1.-u_dim);
+ col+=base*vec3(.86,.9,1.)*u_flood*(.25+.75*smoothstep(.2,1.,v.y)); // apparatus scene lighting, strongest low on the facade
  vec3 light=vec3(0.);
  for(int i=0;i<8;i++){if(i>=u_nL)break;vec4 L=u_L[i];vec2 d=(p-L.xy)/L.z;d.y*=d.y<0.?.75:1.25;float r2=dot(d,d);float fl=.82+.18*sin(u_time*11.+float(i)*3.1)*sin(u_time*6.3+float(i));light+=vec3(1.,.42,.12)*L.w*fl/(1.+r2*12.)*smoothstep(1.6,0.,r2);}
- col+=base*light*1.1+light*.02;
+ col+=base*light*1.1*u_gk+light*.02*u_gk*u_gk; // fire light on the facade reads much stronger after dark
  for(int i=0;i<24;i++){if(i>=u_nW)break;vec4 R=u_W[i];vec4 P=u_WP[i];if(P.z<.5||P.x<.25)continue;
    // soot/heat staining on the wall above a vented, burning opening
    vec2 s=(p-vec2(R.x,R.y-R.w*.5))/vec2(R.z*.5,R.w);float up=-s.y;if(up<-.05||up>2.2)continue;
@@ -913,12 +1181,15 @@ void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*(1.-u
    vec3 room=mix(upper,lower,m);
    vec3 inside;
    if(P.z>.5)inside=mix(vec3(.03,.025,.02),room,clamp(g*1.4+.25,0.,1.));
-   else{vec3 glass=base*(1.-P.y*.85);vec3 behind=mix(upper,lower,m)*.8;inside=mix(glass,behind+glass*.12,clamp(g*.75*(1.-P.y*.5),0.,1.));}
+   else{vec3 glass=base*(u_amb+u_flood*.4)*(1.-P.y*.85)+light*.18*u_gk;vec3 behind=mix(upper,lower,m)*.8;inside=mix(glass,behind+glass*.12,clamp(g*.75*(1.-P.y*.5),0.,1.));}
    float edge=smoothstep(1.,.9,max(abs(q.x),abs(q.y)));col=mix(col,inside,edge);}
+
+ // fog / precipitation haze: scatters the fire glow into a halo
+ float fg=u_fog*(.8+.2*(1.-v.y));col=mix(col,u_fogc+light*.35*u_gk,fg);
  gl_FragColor=vec4(col,1.);}`;
 const VS_P=`attribute vec2 a_pos;attribute vec2 a_uv;attribute vec4 a_col;attribute vec3 a_p;uniform vec4 u_view;uniform vec2 u_size;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;
 void main(){v_uv=a_uv;v_col=a_col;v_p=a_p;vec2 n=a_pos/u_size;gl_Position=vec4((u_view.xy+n*u_view.zw)*vec2(2.,-2.)+vec2(-1.,1.),0.,1.);}`;
-const FS_SMOKE=`precision mediump float;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;uniform sampler2D u_noise;uniform float u_time;
+const FS_SMOKE=`precision mediump float;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;uniform sampler2D u_noise;uniform float u_time,u_sfog;uniform vec3 u_samb,u_fogc;
 float D(vec2 b,float ev){float d1=texture2D(u_noise,b+vec2(ev*.03,-ev*.05)).b;float d2=texture2D(u_noise,b*2.6+vec2(-ev*.05,ev*.02)+d1*.18).b;float d3=texture2D(u_noise,b*5.3+d2*.1).r;return d1*.55+d2*.3+d3*.15;}
 void main(){float r=length(v_uv);if(r>1.)discard;
  float ev=v_p.y;vec2 b=v_uv*.42+vec2(v_p.x*3.1,v_p.x*1.37);
@@ -931,8 +1202,10 @@ void main(){float r=length(v_uv);if(r>1.)discard;
  float top=clamp(-v_uv.y*.5+.5,0.,1.);
  vec3 c=v_col.rgb*(.42+.95*lit)*(.85+.3*top);
  c+=vec3(.08)*lit*top*(1.-dot(v_col.rgb,vec3(.33))); // sky light catching the tops of dark billows
- c+=vec3(.9,.38,.1)*v_p.z*.55*smoothstep(-.2,1.,v_uv.y)*lit;
- float a=dens*v_col.a;gl_FragColor=vec4(c*a,a);}`;
+ c*=u_samb; // ambient light: at night smoke colour is hard to read without scene lighting
+ c+=vec3(.9,.38,.1)*v_p.z*.55*smoothstep(-.2,1.,v_uv.y)*lit; // under-lit by the fire
+ c=mix(c,u_fogc,u_sfog);
+ float a=dens*v_col.a*(1.-u_sfog*.45);gl_FragColor=vec4(c*a,a);}`;
 const FS_FIRE=`precision mediump float;varying vec2 v_uv;varying vec4 v_col;varying vec3 v_p;uniform sampler2D u_noise;uniform float u_time;
 // quad: base at the neutral plane inside the opening; hv = fraction of quad height that is inside the opening (base..head); ow = opening half-width in quad units
 void main(){vec2 uv=v_uv;float h=clamp(uv.y,0.,1.);
@@ -1004,19 +1277,20 @@ function create(canvas){
     const L=new Float32Array(32),Wd=new Float32Array(96),WP=new Float32Array(96);let nL=0,nW=0,dim=0;
     if(vis){(vis.lights||[]).slice(0,8).forEach((l,i)=>{L.set([l.x,l.y,l.r,l.i],i*4);nL++;});(vis.windows||[]).slice(0,24).forEach((w,i)=>{Wd.set([w.x,w.y,w.w,w.h],i*4);WP.set([w.glow,w.stain,w.broken?1:0,w.seed],i*4);nW++;});dim=vis.dim||0;}
     gl.uniform4fv(pr.u.u_L,L);gl.uniform4fv(pr.u.u_W,Wd);gl.uniform4fv(pr.u.u_WP,WP);gl.uniform1i(pr.u.u_nL,nL);gl.uniform1i(pr.u.u_nW,nW);gl.uniform1f(pr.u.u_dim,dim);
+    const E=(vis&&vis.env)||{};gl.uniform3fv(pr.u.u_amb,E.amb||[1,1,1]);gl.uniform1f(pr.u.u_gk,E.gk||1);gl.uniform1f(pr.u.u_fog,E.fog||0);gl.uniform3fv(pr.u.u_fogc,E.fogc||[.7,.72,.75]);gl.uniform1f(pr.u.u_flood,E.flood||0);
     gl.drawArrays(gl.TRIANGLES,0,6);
     if(!vis)return;
     // smoke particles (premultiplied alpha), sorted: older (higher) first so fresh dense smoke sits in front at the opening
-    const U=H/800;let n=0;const sm=R.smoke.slice().sort((a,b)=>b.age/b.life-a.age/a.life);
+    const EV=vis.env||{};const LT=vis.lights||[];const U=H/800;let n=0;const sm=R.smoke.slice().sort((a,b)=>b.age/b.life-a.age/a.life);
     for(const p of sm){const k=p.age/p.life;const sz=(p.s0+(p.s1-p.s0)*Math.sqrt(k))*.5;const a=p.a*Math.min(1,k/.12)*(k>.3?Math.pow((1-k)/.7,1.5):1);if(a<.01)continue;
       const fade=Math.min(1,k*p.cool*2.2);const g=[.47,.46,.45];const c=p.rgb.map((v,j)=>v+(g[j]-v)*fade*.45);
-      const glow=p.glow*Math.max(0,1-k*3.5);
+      let glow=p.glow*Math.max(0,1-k*3.5);if(EV.ug>0&&LT.length){let li=0;for(const l of LT){const dx=p.x-l.x,dy=p.y-l.y;const d2=(dx*dx+dy*dy)/(l.r*l.r*6);li+=l.i/(1+d2*3);}glow+=Math.min(1.7,li*EV.ug);}
       const cs=Math.cos(p.rot)*sz,sn=Math.sin(p.rot)*sz;const corners=[[-1,-1],[1,-1],[-1,1],[-1,1],[1,-1],[1,1]];
       for(const[u,v]of corners){const o=n*FL;vb[o]=p.x+u*cs-v*sn;vb[o+1]=p.y+u*sn+v*cs;vb[o+2]=u;vb[o+3]=v;vb[o+4]=c[0];vb[o+5]=c[1];vb[o+6]=c[2];vb[o+7]=a;vb[o+8]=p.seed;vb[o+9]=p.ev;vb[o+10]=glow;n++;}}
     const drawBatch=(prog,count)=>{gl.useProgram(prog.p);gl.bindBuffer(gl.ARRAY_BUFFER,pbuf);gl.bufferData(gl.ARRAY_BUFFER,vb.subarray(0,count*FL),gl.DYNAMIC_DRAW);const S=FL*4;
       gl.enableVertexAttribArray(prog.a.a_pos);gl.vertexAttribPointer(prog.a.a_pos,2,gl.FLOAT,false,S,0);gl.enableVertexAttribArray(prog.a.a_uv);gl.vertexAttribPointer(prog.a.a_uv,2,gl.FLOAT,false,S,8);
       gl.enableVertexAttribArray(prog.a.a_col);gl.vertexAttribPointer(prog.a.a_col,4,gl.FLOAT,false,S,16);gl.enableVertexAttribArray(prog.a.a_p);gl.vertexAttribPointer(prog.a.a_p,3,gl.FLOAT,false,S,32);
-      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,noise);gl.uniform1i(prog.u.u_noise,1);gl.uniform4fv(prog.u.u_view,vw);gl.uniform2f(prog.u.u_size,W,H);gl.uniform1f(prog.u.u_time,t);gl.drawArrays(gl.TRIANGLES,0,count);};
+      gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,noise);gl.uniform1i(prog.u.u_noise,1);if(prog.u.u_samb){const E=vis.env||{};gl.uniform3fv(prog.u.u_samb,E.samb||[1,1,1]);gl.uniform1f(prog.u.u_sfog,E.sfog||0);gl.uniform3fv(prog.u.u_fogc,E.fogc||[.7,.72,.75]);}gl.uniform4fv(prog.u.u_view,vw);gl.uniform2f(prog.u.u_size,W,H);gl.uniform1f(prog.u.u_time,t);gl.drawArrays(gl.TRIANGLES,0,count);};
     // fire quads (additive). Built first so smoke can be split into behind/in-front sets.
     const fires=vis.flames||[];
     gl.enable(gl.BLEND);
@@ -1033,7 +1307,18 @@ return{create};})();
 /* Maps model state -> renderer inputs (windows, lights, flames, smoke emitters). */
 const SizeupVisual=(()=>{
 function windPx(w){if(!w||w.dir==='calm')return 0;const s=[14,34,62][w.spd||0];return w.dir==='B'?s:w.dir==='D'?-s:0;}
-function build(S,B,M){const vis={windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.scn.wind),dim:0};const ov=M.openingVis(S);const U=B.H/800;const lean=vis.wind/90;
+// time of day & weather -> lighting/haze parameters for the renderer (look-tuned, not physical)
+function envOf(S){const e=S.scn.env||{};const tod=e.tod||'day',pr=e.precip||'none',lit=!!S.lights;
+  const T={day:{amb:[1,1,1],gk:1,samb:[1,1,1],fogc:[.74,.76,.79],ug:0},
+    dusk:{amb:[.5,.45,.56],gk:1.7,samb:[.52,.5,.58],fogc:[.36,.34,.42],ug:.9},
+    night:{amb:[.075,.09,.15],gk:2.6,samb:[.16,.17,.22],fogc:[.05,.06,.08],ug:2.2}}[tod]||{};
+  const o={amb:T.amb.slice(),gk:T.gk,samb:T.samb.slice(),fogc:T.fogc.slice(),ug:T.ug,fog:0,flood:0,sfog:0,tod,precip:pr,lit};
+  if(lit&&tod!=='day'){o.flood=tod==='night'?.42:.22;o.samb=o.samb.map(v=>Math.max(v,tod==='night'?.62:.72));o.fogc=o.fogc.map(v=>v+(tod==='night'?.16:.08));}
+  if(pr==='rain'){o.amb=o.amb.map((v,i)=>v*[.78,.81,.88][i]);o.samb=o.samb.map(v=>v*.92);o.fog=.12;}
+  if(pr==='snow'){o.amb=o.amb.map((v,i)=>v*[.9,.93,1][i]);o.fog=.2;o.fogc=o.fogc.map(v=>tod==='day'?v+.08:v+.03);}
+  if(pr==='fog'){o.fog=tod==='day'?.52:.45;}
+  o.sfog=o.fog*.85;return o;}
+function build(S,B,M){const vis={windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.wind||S.scn.wind),dim:0,env:envOf(S)};const ov=M.openingVis(S);const U=B.H/800;const lean=vis.wind/90;
   let total=0;
   B.openings.forEach((o,i)=>{const v=ov[o.id];if(!v)return;const seed=(i*0.137)%1;
     if(o.hidden){if(v.rate>.05&&B.ridge){const z=B.zones.find(z=>z.id===o.zone);vis.emitters.push({key:'r'+o.id,kind:'rear',x:(z.x0+z.x1)/2,y:B.ridge.y+30*U,w:Math.min(240*U,(z.x1-z.x0)),hgt:10*U,rate:v.rate*16,vel:Math.min(2,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,alpha:.85,cool:.5});total+=v.rate*.6;}return;}
@@ -1060,7 +1345,7 @@ function build(S,B,M){const vis={windows:[],lights:[],flames:[],emitters:[],wind
   vis.lights.sort((a,b)=>b.i-a.i);vis.lights=vis.lights.slice(0,8);
   vis.dim=Math.min(.28,total*.06);
   return vis;}
-return{build,windPx};})();
+return{build,windPx,envOf};})();
 
 (()=>{
 'use strict';
@@ -1104,8 +1389,8 @@ function photoBuilding(W,H,mk){const n=mk.stories,eave=mk.eave,grade=mk.grade,bh
     facts:{occupancy:'Residential (confirm)',construction:'Unknown, confirm on 360',stories:String(n),exposures:'B: ? · D: ?',life:'Unknown, not yet confirmed'},suggested:{origin:'L1',fuel:'modern',preburn:210}};}
 
 /* ---------- scenario & sim ---------- */
-function newScenario(B){const sg=B.suggested||{};return{format:'sizeup-scenario',v:2,sceneId:B.id,origin:sg.origin||B.zones[0].id,fuel:sg.fuel||'modern',preburn:sg.preburn||360,
-  openings:{...(sg.openings||{})},doors:{...(sg.doors||{})},occupant:'random',wind:{dir:'calm',spd:0},glass:'fails',seed:(Math.random()*1e9)|0,actions:[],tNow:0};}
+function newScenario(B){const sg=B.suggested||{};return ensureScn({format:'sizeup-scenario',v:2,sceneId:B.id,origin:sg.origin||B.zones[0].id,fuel:sg.fuel||'modern',preburn:sg.preburn||360,
+  openings:{...(sg.openings||{})},doors:{...(sg.doors||{})},occupant:'random',wind:{dir:'calm',spd:0},glass:'fails',seed:(Math.random()*1e9)|0,actions:[],tNow:0});}
 function rebuild(){const sc=A.scn;const S=M.create(A.B,JSON.parse(JSON.stringify(sc)));M.run(S,sc.preburn);S.tArr=sc.preburn;
   const evs=S.events.length;A.preEvents=S.events.slice();
   for(const a of sc.actions)M.act(S,{...a,t:sc.preburn+a.t});M.run(S,sc.tNow);A.S=S;A.lastEvN=evs;A.visT=-1;A.simAcc=0;}
@@ -1152,13 +1437,14 @@ function drawOverlay(){const c=octx;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,
       B.openings.filter(o=>!o.hidden).forEach(o=>markRect(o,o.type==='door'?'#90caf9':'#ffb300',false));}
     const o=A.originPt;if(o){const r=20*U*(1+.12*Math.sin(performance.now()/180));c.fillStyle='rgba(211,47,47,.3)';c.beginPath();c.arc(o.x,o.y,r*1.6,0,7);c.fill();c.lineWidth=5*U;c.strokeStyle='#fff';c.beginPath();c.arc(o.x,o.y,r,0,7);c.stroke();c.fillStyle='#fff';c.beginPath();c.arc(o.x,o.y,6*U,0,7);c.fill();}}
   if(A.screen===3&&A.S){B.openings.filter(o=>!o.hidden).forEach(o=>{const st=A.S.o[o.id].state;if(st!=='closed')markRect(o,'#ffb300',true);else{c.globalAlpha=.25;markRect(o,'#fff',true);c.globalAlpha=1;}});}
+  drawWeather(c);
   if(A.screen===4&&A.S&&A.showFlow&&!isHidden()){const v=curVis();const ov_=M.openingVis(A.S);
     for(const o of B.openings){if(o.hidden)continue;const st=A.S.o[o.id];if(!st||st.state==='closed')continue;const vv=ov_[o.id];const out=vv.rate>.05,inn=vv.inflow||(A.S.fan&&A.S.fan.at===o.id);
       const arrow=(x,y,dir,col)=>{const s=16*U;c.fillStyle=col;c.strokeStyle='rgba(0,0,0,.6)';c.lineWidth=2*U;c.beginPath();if(dir<0){c.moveTo(x,y-s);c.lineTo(x+s*.8,y+s*.4);c.lineTo(x-s*.8,y+s*.4);}else{c.moveTo(x,y+s);c.lineTo(x+s*.8,y-s*.4);c.lineTo(x-s*.8,y-s*.4);}c.closePath();c.fill();c.stroke();};
       if(out)arrow(o.x,o.y-o.h/2-12*U,-1,'#ff7043');if(inn)arrow(o.x,o.y+o.h/2-14*U,1,'#64b5f6');}}}
 
 /* ---------- navigation ---------- */
-const TITLES={1:['SizeUp','Capture the building'],2:['Tap where the fire starts','Set the fire origin'],3:['Dial in fire & smoke','Set the conditions at arrival'],4:['Command board','Size-up drill']};
+const TITLES={1:['SizeUp','Capture the building'],2:['Tap where the fire starts','Set the fire origin'],3:['Set up the drill','Fire, weather and the assignment'],4:['Command board','Size-up drill']};
 function show(n){if(n>A.maxScreen)return;const prev=A.screen;A.screen=n;$$('.screen').forEach(s=>s.classList.toggle('on',s.id==='s'+n));
   const slot=$('#s'+n+' .slot');if(slot){slot.appendChild(stage);stage.style.display='';}else{document.body.appendChild(stage);stage.style.display='none';}
   $('#ttl').textContent=TITLES[n][0];$('#sub').textContent=`Step ${n} of 4 · ${TITLES[n][1]}`;$('#backBtn').hidden=n===1;stage.classList.toggle('tapmode',n===2||n===3);
@@ -1202,7 +1488,7 @@ function fireRoomConn(){const z=A.scn.origin;return A.B.conns.find(c=>c.type==='
 function renderSetup(){if(!A.B)return;const sc=A.scn;
   $('#olist').innerHTML=A.B.openings.map(o=>{const st=sc.openings[o.id]||o.init||'closed';return `<div class="oitem"><span>${esc(o.name)}</span><div class="seg" data-op="${o.id}"><button data-v="closed" class="${st==='closed'?'on':''}">Closed</button><button data-v="${o.type==='window'?'failed':'open'}" class="${st!=='closed'?'on':''}">${o.type==='window'?'Broken/open':'Open'}</button></div></div>`;}).join('');
   $('#dlist').innerHTML=A.B.conns.filter(c=>c.type==='door').map(c=>{const st=sc.doors[c.id]||c.init||'closed';return `<div class="oitem"><span>${esc(c.name||c.id)}</span><div class="seg" data-dr="${c.id}"><button data-v="open" class="${st==='open'?'on':''}">Open</button><button data-v="closed" class="${st==='closed'?'on':''}">Closed</button></div></div>`;}).join('');
-  const occ=sc.occupant;$('#occSel').innerHTML=`<option value="none">No occupant reported</option><option value="random">Occupant reported, location unknown (random, hidden)</option>`+A.B.zones.filter(z=>!z.attic).map(z=>`<option value="${z.id}">Occupant in ${esc(z.name)}</option>`).join('');$('#occSel').value=occ;
+  const occ=sc.occupant;$('#occSel').innerHTML=`<option value="none">No occupant reported</option><option value="random">Occupant reported, location unknown (random, hidden)</option><option value="bytime">Unknown: likely by time of day (hidden, simplification)</option>`+A.B.zones.filter(z=>!z.attic).map(z=>`<option value="${z.id}">Occupant in ${esc(z.name)}</option>`).join('');$('#occSel').value=occ;
   const frc=fireRoomConn();$('#vFrd').textContent=frc?frc.name:'(no door: open to the rest of the floor)';$$('.seg[data-key=frdoor] button').forEach(b=>{b.disabled=!frc;b.classList.toggle('on',!!frc&&(sc.doors[frc.id]||frc.init)===b.dataset.v);});
   $('#reading').innerHTML=readingHTML();
   if(A.S){const nf=Object.values(A.S.o).filter(o=>o.state!=='closed'&&o.type==='window').length;$('#preHint').textContent=`At arrival: ${M.stageOf(A.S,A.scn.origin).toLowerCase()}${nf?` · ${nf} window${nf>1?'s':''} already open/failed`:''}. The clock starts running at arrival.`;}syncUI();}
@@ -1220,18 +1506,26 @@ $$('.seg[data-key]').forEach(seg=>seg.addEventListener('click',e=>{const b=e.tar
   switch(key){case 'markMode':A.markMode=v;break;case 'side':A.side=v;break;
    case 'fuel':sc.fuel=v;rebuild();warm(3);break;case 'glass':sc.glass=v;rebuild();warm(3);break;case 'preburn':sc.preburn=v;rebuild();warm(3);break;
    case 'frdoor':{const c=fireRoomConn();if(c){sc.doors[c.id]=v;rebuild();warm(3);}break;}
-   case 'windDir':sc.wind={...sc.wind,dir:v};if(A.S)A.S.scn.wind={...sc.wind};A.visT=-1;break;case 'windSpd':sc.wind={...sc.wind,spd:v};if(A.S)A.S.scn.wind={...sc.wind};A.visT=-1;break;
+   case 'windDir':sc.wind={...sc.wind,dir:v};if(A.S){A.S.scn.wind={...sc.wind};A.S.wind={...sc.wind};}A.visT=-1;break;case 'windSpd':sc.wind={...sc.wind,spd:v};if(A.S){A.S.scn.wind={...sc.wind};A.S.wind={...sc.wind};}A.visT=-1;break;
+   case 'tod':case 'precip':case 'temp':sc.env={...sc.env,[key]:v};rebuild();warm(3);break;
+   case 'shiftAt':sc.windShift=v?{at:v,dir:(sc.windShift&&sc.windShift.dir)||'C',spd:(sc.windShift&&sc.windShift.spd!=null)?sc.windShift.spd:2}:null;rebuild();break;
+   case 'shiftDir':case 'shiftSpd':sc.windShift={at:(sc.windShift&&sc.windShift.at)||360,dir:(sc.windShift&&sc.windShift.dir)||'C',spd:(sc.windShift&&sc.windShift.spd!=null)?sc.windShift.spd:2,[key==='shiftDir'?'dir':'spd']:v};rebuild();break;
    case 'strategy':order({kind:'strategy',v});break;
    case 'speed':A.speed=v;break;case 'stepSize':A.stepSize=v;break;
    default:if(key.startsWith('call_')){A.calls[key.slice(5)]=v;renderCalls();}}
   if(A.screen===3)renderSetup();syncUI();}));
 function syncUI(){const sc=A.scn;
   $$('.seg[data-key]').forEach(seg=>{const k=seg.dataset.key;let v;
-    if(k==='markMode')v=A.markMode;else if(k==='side')v=A.side;else if(!sc)return;else if(k==='fuel')v=sc.fuel;else if(k==='glass')v=sc.glass||'fails';else if(k==='preburn')v=sc.preburn;else if(k==='windDir')v=sc.wind.dir;else if(k==='windSpd')v=sc.wind.spd;else if(k==='strategy')v=A.S&&A.S.strategy;else if(k==='speed')v=A.speed;else if(k==='stepSize')v=A.stepSize;else if(k.startsWith('call_'))v=A.calls[k.slice(5)];else return;
+    if(k==='markMode')v=A.markMode;else if(k==='side')v=A.side;else if(!sc)return;else if(k==='fuel')v=sc.fuel;else if(k==='glass')v=sc.glass||'fails';else if(k==='preburn')v=sc.preburn;else if(k==='windDir')v=sc.wind.dir;else if(k==='windSpd')v=sc.wind.spd;else if(k==='tod'||k==='precip'||k==='temp')v=(sc.env||{})[k];else if(k==='shiftAt')v=sc.windShift?sc.windShift.at:0;else if(k==='shiftDir')v=sc.windShift&&sc.windShift.dir;else if(k==='shiftSpd')v=sc.windShift&&sc.windShift.spd;else if(k==='strategy')v=A.S&&A.S.strategy;else if(k==='speed')v=A.speed;else if(k==='stepSize')v=A.stepSize;else if(k.startsWith('call_'))v=A.calls[k.slice(5)];else return;
     seg.querySelectorAll('button').forEach(b=>b.classList.toggle('on',String(v)===b.dataset.v));});
   if(!sc)return;
   $('#vFuel').textContent=M.FUEL[sc.fuel].label;$('#vPre').textContent=`${+(sc.preburn/60).toFixed(1)} min`;$('#vGlass').textContent=(sc.glass||'fails')==='hold'?'Glass holds: closed fires starve':'Glass can fail on its own';$('#vWind').textContent=windText();
   $$('.seg[data-key=windSpd] button').forEach(b=>b.disabled=sc.wind.dir==='calm');
+  {const e=sc.env||{};$('#vTod').textContent=({day:'Day',dusk:'Dusk',night:'Night'})[e.tod];$('#vPrecip').textContent=({none:'Clear',rain:'Rain',snow:'Snow',fog:'Fog'})[e.precip];$('#vTemp').textContent=({mild:'Mild',cold:'Cold & icy',hot:'Hot'})[e.temp];
+   $('#todHint').textContent=e.tod==='day'?'Daylight: smoke colour reads normally.':`${e.tod==='night'?'Night':'Dusk'}: the photo is darkened, fire glow lights the windows, smoke and facade, and smoke colour is hard to read until a company sets up scene lighting. With “Likely by time of day” occupancy, homes are more likely occupied (asleep) at night and businesses are closed after hours (simplification).`;
+   $('#tempHint').textContent=e.temp==='cold'?`Cold & icy: every task takes ×${sc.settings.cold} as long (simplification).`:e.temp==='hot'?`Hot: crews slow down with work time, +${Math.round(sc.settings.heatPer10*100)}% per 10 min up to +${Math.round(sc.settings.heatCap*100)}%; rehab halves it (simplification).`:'';
+   const ws=sc.windShift;$('#vShift').textContent=ws?`T+${fmt(ws.at)} → ${['light','moderate','strong'][ws.spd]} from Side ${ws.dir}`:'None';$$('.seg[data-key=shiftDir] button,.seg[data-key=shiftSpd] button').forEach(b=>b.disabled=!ws);
+   const ss=$('#setupSum');if(ss)ss.textContent=setupSummary();}
   const isPhoto=A.B&&A.B.id==='photo';$('#markCtl').hidden=!isPhoto;$('#storiesCtl').hidden=!isPhoto;
   if(isPhoto){const mk=A.photoMarks;$('#markStat').textContent=`${mk.openings.filter(o=>o.type==='window').length} windows, ${mk.openings.filter(o=>o.type==='door').length} doors marked. Tap a marked one again to remove it.`;$('#markHint').textContent={origin:'Tap the fire room',window:'Tap each window',door:'Tap each door',eave:'Tap the eave line',grade:'Tap the ground line'}[A.markMode];$('#stOut').textContent=mk.stories;}
   const z=zoneOf(sc.origin);$('#floorAuto').textContent=A.originSet?`${z.name} · ${floorLabel(z.floor)}`:'Tap the photo or pick a room';
@@ -1250,14 +1544,14 @@ function syncUI(){const sc=A.scn;
 $$('.modesw button').forEach(b=>b.onclick=()=>{A.mode=b.dataset.mode;if(A.mode==='crew')A.hidden=true;layout();syncUI();renderBoard();});
 function isHidden(){return A.mode==='crew'?A.hidden:(A.hidden&&!A.locked);}
 function floorLabel(f){if(f==='Attic')return A.B.atticName||'Attic';if(f==='B')return'Basement';return'Floor '+f;}
-function windText(){const w=A.scn.wind;return w.dir==='calm'?'Calm':`${['Light','Moderate','Strong'][w.spd]} from Side ${w.dir}`;}
+function windText(){const w=(A.S&&A.screen===4&&A.S.wind)||A.scn.wind;return w.dir==='calm'?'Calm':`${['Light','Moderate','Strong'][w.spd]} from Side ${w.dir}`;}
 
 /* ---------- readings ---------- */
 function dominant(){const S=A.S;const v=M.openingVis(S);let best=null;for(const o of A.B.openings){const x=v[o.id];if(!x)continue;const sc=x.rate+x.flame*.5;if(sc>.01&&(!best||sc>best.sc))best={...x,sc,name:o.name,id:o.id};}
   const e=M.eavesVis(S);if(e&&e.rate>.04&&(!best||e.rate*1.2>best.sc))best={...e,sc:e.rate,name:'eaves / cornice',id:'eaves'};return best;}
 function smokeWhere(){const S=A.S;const v=M.openingVis(S);const list=A.B.openings.filter(o=>v[o.id]&&v[o.id].rate>.01).sort((a,b)=>v[b.id].rate-v[a.id].rate).map(o=>(o.hidden?o.name:o.name.replace(/ \(.+\)/,''))+(v[o.id].state==='closed'?' (around the closed '+o.type+')':''));const e=M.eavesVis(S);if(e&&e.rate>.02)list.push(A.B.id==='mixed'?'cornice':'eaves');for(const id in S.o)if(S.o[id].type==='roof'&&S.o[id].state!=='closed'&&v[id]&&v[id].rate>.02)list.push('roof vent');return [...new Set(list)];}
 function fireShowing(){const S=A.S;const v=M.openingVis(S);return A.B.openings.filter(o=>v[o.id]&&v[o.id].flame>.05).map(o=>o.name);}
-function smokeText(){const d=dominant();if(!d)return'Nothing showing';const w=smokeWhere();return `${M.VOLN[d.vol]} ${d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
+function smokeText(){const d=dominant();if(!d)return'Nothing showing';const w=smokeWhere();const e=A.S.scn.env||{};const dark=e.tod==='night'&&!A.S.lights,fogv=e.precip==='fog';return `${dark?'(hard to read in the dark) ':fogv?'(partly hidden by fog) ':''}${M.VOLN[d.vol]} ${dark?'dark-looking, colour uncertain':d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
 function burningText(){const S=A.S;const b=Object.values(S.z).filter(z=>z.ign&&!z.out);if(!b.length)return underControl()?'Under control: all fire knocked down':Object.values(S.z).some(z=>z.out)?'Knocked down':'No fire';return b.map(z=>`${zname(z.id)}: ${M.stageOf(S,z.id).toLowerCase()}`).join(' · ');}
 function hostile(){const S=A.S,o=S.z[A.scn.origin];let s=0,why=[];
   if(o.vl&&!o.flashed&&o.T>.3){s+=3;why.push('ventilation-limited and hot: new air will speed it up');}
@@ -1288,13 +1582,14 @@ function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,
   const ed=(k,ic,label)=>`<div class="frow">${svg(ic)}<span class="k">${label}<span class="tag">EDIT</span></span><span class="v ed" contenteditable="true" role="textbox" data-f="${k}" aria-label="${label}">${esc(F[k]||'')}</span></div>`;
   const au=(ic,label,v,stack)=>`<div class="frow${stack?' stack':''}">${svg(ic)}<span class="k">${label}</span><span class="v${hid?' hidev':''}">${v}</span></div>`;
   const fs=fireShowing();const fp=M.flowPath(S);const W=S.water;
-  const occ=A.scn.occupant==='none'?'':' · occupant reported'+(A.scn.occupant==='random'?', location unknown':'');
+  const occ=A.scn.occupant==='none'?'':' · occupant reported'+(A.scn.occupant==='random'?', location unknown':'');const occ2=A.scn.occupant==='bytime'?' · occupancy unknown':'';
   $('#facts').innerHTML=(hid?`<div class="frow"><span class="hiddenNote">Answers hidden. Call out what you see: smoke, stage and flow path.</span></div>`:'')+ed('occupancy','home','Occupancy')+ed('construction','brick','Construction')
    +au('flame','Showing',esc(fs.length?'Fire from '+fs.join(', '):'No visible fire from Side A'))+au('cloud','Smoke',esc(smokeText()))+au('wind','Wind',windText())
    +au('stage','Fire stage',esc(burningText()))+ed('stories','layers','Stories')+ed('exposures','bldgs','Exposures')+ed('life','users','Life hazard')
    +au('flow','Flow path',`${esc('Exhaust: '+(fp.exhaust.join(', ')||'none open (leakage only)'))}<br>${esc('Intake: '+(fp.intake.join(', ')||'none'))} <button class="btn ghost sm" id="flowTog" style="min-height:34px;margin-left:6px">${A.showFlow?'Hide arrows':'Show arrows'}</button>`,true)
    +au('gauge','Hostile-event indicators',`${meter()} <span class="muted" style="font-size:13px">${esc(hostile().why.join('; '))}</span>`,true)
-   +`<div class="frow">${svg('drop')}<span class="k">Water</span><span class="v">${W.supply?'Supply established':W.supplyAt!=null?`Supply in ${fmt(W.supplyAt-S.t)}`:'Tank only'} · <span class="${!W.supply&&W.tank<M.TASK.lowTank?'water-low':''}">tank ${Math.round(W.tank)} gal${!W.supply&&W.tank<M.TASK.lowTank?' (low)':''}</span> · ${W.lines.length}/${M.TASK.lineCap} lines${occ}</span></div>`;
+   +`<div class="frow">${svg('drop')}<span class="k">Water</span><span class="v">${waterText()} · ${W.lines.length} line${W.lines.length===1?'':'s'}${occ}${occ2}</span></div>`
+   +`<div class="frow">${svg('wind')}<span class="k">Light &amp; weather</span><span class="v">${esc(envText())}</span></div>`;
   $$('#facts .ed').forEach(i=>{i.oninput=()=>{A.facts[i.dataset.f]=i.textContent.trim();};i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();i.blur();}};});
   const ft=$('#flowTog');if(ft)ft.onclick=()=>{A.showFlow=!A.showFlow;renderBoard();syncUI();};
   const t=now();$('#pT').textContent=`T+${fmt(t)}`;$('#prompt').classList.toggle('changing',t>0&&A.latest.length>0);
@@ -1302,7 +1597,9 @@ function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,
   else if(underControl()){$('#pH').textContent='Fire under control.';$('#pP').textContent='No room is still burning. Open the debrief, or keep the clock running: a room left dry with no line nearby can rekindle.';}
   else if(A.latest.length){$('#pH').textContent='Conditions changing.';$('#pP').textContent=A.latest.slice(-3).join(' ')+' Update your report, strategy and assignments.';}
   else{$('#pH').textContent='Reassess.';$('#pP').textContent='No major change in this interval. Does your plan still match conditions?';}
-  renderOrders();renderLog();renderCalls();syncUI();}
+  renderCompanies();renderOrders();renderLog();renderCalls();syncUI();}
+function waterText(){const S=A.S;return S.cos.filter(e=>e.type==='engine'&&S.t>=e.arriveAt).map(e=>{const low=!e.supplied&&e.tankLeft<(+e.eq.tank||0)*M.TASK.lowTankFrac;return `${esc(e.id)} ${e.supplied?'supplied':`<span class="${low?'water-low':''}">tank ${Math.round(e.tankLeft)} gal${low?' (low)':''}</span>${e.supplyBy?' (supply coming)':''}`}`;}).join(' · ')||'No engine on scene';}
+function envText(){const S=A.S,e=S.scn.env||{};return [({day:'Daylight',dusk:'Dusk',night:'Night'})[e.tod]+(e.tod!=='day'?(S.lights?', scene lighting up':', no scene lighting'):''),e.precip!=='none'?({rain:'rain',snow:'snow',fog:'fog: reduced visibility'})[e.precip]:'',e.temp==='cold'?'cold & icy (tasks slower)':e.temp==='hot'?'hot (crew fatigue)':''].filter(Boolean).join(' · ');}
 // rebuild a <select> only when its options change, and keep the user's pick across board refreshes
 function setOpts(sel,html,def){const v=sel.value;
   if(sel._h!==html){sel.innerHTML=html;sel._h=html;if(sel._touched&&v&&[...sel.options].some(o=>o.value===v&&!o.disabled))sel.value=v;else{sel._touched=false;sel.value=def||'';}}
@@ -1326,17 +1623,18 @@ function defaultLine(T){const def=A.S.strategy==='Defensive';const c=T.filter(t=
   // prefer a room the fire is in, then the attic, then exterior
   const pick=c.find(t=>t.g==='room')||c.find(t=>t.g==='attic')||c[0];return pick?pick.v:'';}
 function lineStatus(l){const S=A.S;if(S.t<l.readyAt)return`en route, in position in ${fmt(l.readyAt-S.t)}`;if(l.flowing)return'flowing';
-  if(!(S.water.supply||S.water.tank>0))return'no water (tank empty)';return'standing by: no fire within reach';}
+  const E=S.cos.find(e=>e.id===l.eng);if(E&&!(E.supplied||E.tankLeft>0))return`no water (${E.id} tank empty)`;return'standing by: no fire within reach';}
 function renderOrders(){const B=A.B,S=A.S;const T=lineTargets();const W=S.water;
   setOpts($('#lineSel'),`<option value="">Attack line…</option>`+lineOptsHTML(T),defaultLine(T));
   const fr=B.openings.find(o=>o.front);
   setOpts($('#ventSel'),`<option value="">Ventilation…</option>`+B.openings.filter(o=>o.type==='window'||(o.type==='door'&&!o.front)).map(o=>`<option value="h:${o.id}">Horizontal: ${esc(o.name)}</option>`).join('')
     +B.zones.filter(z=>z.floor===String(B.stories)&&!z.hidden||z.attic).map(z=>`<option value="v:${z.id}">Vertical: roof over ${esc(z.name)}</option>`).join('')+(fr?`<option value="ppv">PPV/PPA fan at ${esc(fr.name)}</option><option value="fanoff">Fan off</option>`:''),'');
   const floors=[...new Set(B.zones.filter(z=>!z.attic).map(z=>z.floor))].sort();
-  setOpts($('#searchSel'),`<option value="">Primary search…</option>`+floors.map(f=>`<option value="${f}">Primary search: floor ${f}</option>`).join(''),'');
+  setOpts($('#searchSel'),`<option value="">Search…</option>`+floors.map(f=>`<option value="${f}">Primary search: floor ${f}</option>`).join('')+floors.map(f=>`<option value="s2:${f}">Secondary search: floor ${f}</option>`).join(''),'');
+  {const e=S.scn.env||{};const lg=$('#lightsGo');lg.hidden=e.tod==='day'||S.lights||S.tasks.some(t=>t.kind==='lights'&&t.active);}
   // quick one-tap chips for burning places without a line
   const def=S.strategy==='Defensive';let q=[];
-  if(W.lines.length<M.TASK.lineCap){const seen=new Set();for(const t of T){if(!t.burn||t.used||seen.has(t.zone))continue;if(def?t.g!=='ext':t.g==='ext')continue;if(t.g==='attic'&&T.some(x=>x.zone===t.zone&&x.used))continue;seen.add(t.zone);q.push(t);}q=q.slice(0,4);}
+  {const seen=new Set();for(const t of T){if(!t.burn||t.used||seen.has(t.zone))continue;if(def?t.g!=='ext':t.g==='ext')continue;if(t.g==='attic'&&T.some(x=>x.zone===t.zone&&x.used))continue;seen.add(t.zone);q.push(t);}q=q.slice(0,4);}
   const qh=q.map(t=>`<button data-t="${t.v}">＋ ${t.g==='ext'?'Exterior':'Line'} → ${esc(t.short)}</button>`).join('');
   const qe=$('#lineQuick');if(qe._h!==qh){qe.innerHTML=qh;qe._h=qh;}
   // lines list with reassign / withdraw; structure rebuilt only when lines or targets change
@@ -1344,16 +1642,17 @@ function renderOrders(){const B=A.B,S=A.S;const T=lineTargets();const W=S.water;
   if(LL._h!==sig){LL._h=sig;
     LL.innerHTML=W.lines.map(l=>`<div class="lrow" data-id="${l.id}"><div class="lst"><b>Line ${l.id}</b>${l.ext?'Exterior':'Interior'} → ${esc(l.label.replace(/ \(exterior\)$/,''))}<small class="lstat"></small></div><span></span>
       <div class="lctl"><select class="lre" aria-label="Reassign Line ${l.id}"><option value="">Reassign Line ${l.id} to…</option>${lineOptsHTML(T,l.key)}</select><button class="btn ghost sm lwd">Withdraw</button></div></div>`).join('')
-      +(W.lines.length?`<div class="lcap">${W.lines.length} of ${M.TASK.lineCap} hoselines committed. The cap is a simplification: staffing is not modeled. <button class="btn ghost sm" id="lwdAll">Withdraw all</button></div>`:'');}
+      +(W.lines.length?`<div class="lcap">${W.lines.length} hoseline${W.lines.length===1?'':'s'} committed. Lines are limited by the crews and preconnects on scene. <button class="btn ghost sm" id="lwdAll">Withdraw all</button></div>`:'');}
   W.lines.forEach(l=>{const r=LL.querySelector(`.lrow[data-id="${l.id}"]`);if(!r)return;const st=lineStatus(l);const el=r.querySelector('.lstat');if(el.textContent!==st)el.textContent=st;r.classList.toggle('flow',!!l.flowing);r.classList.toggle('idle',!l.flowing);});
-  const lines=W.lines.map(l=>`Line ${l.id} ${l.ext?'exterior → '+M.oname(S,l.opening):'interior → '+l.label} (${lineStatus(l)})`);
+  const lines=W.lines.map(l=>`Line ${l.id} ${l.ext?'exterior → '+M.oname(S,l.opening):'interior → '+l.label} [${l.co}] (${lineStatus(l)})`);
   const srch=S.searches.map(s=>`floor ${s.floor} ${s.done?(s.aborted?'aborted':'done'):`(${fmt(s.end-S.t)} left)`}`);
   $('#opsStat').textContent=`Strategy: ${S.strategy||'not set'} · Lines: ${lines.join('; ')||'none'} · Search: ${srch.join('; ')||'none'}${S.fan&&S.fan.on?' · Fan running':''}`;}
 function needPick(sel){toast('Pick an option from the list first, then press the button.');sel.classList.add('need');sel.focus();setTimeout(()=>sel.classList.remove('need'),2500);}
 function doneSel(sel){sel._touched=false;}
 $('#lineGo').onclick=()=>{const el=$('#lineSel'),v=el.value;if(!v)return needPick(el);doneSel(el);order({kind:'line',target:v});};
 $('#ventGo').onclick=()=>{const el=$('#ventSel'),v=el.value;if(!v)return needPick(el);doneSel(el);if(v.startsWith('h:'))order({kind:'vent',type:'horizontal',opening:v.slice(2)});else if(v.startsWith('v:'))order({kind:'vent',type:'vertical',zone:v.slice(2)});else if(v==='ppv')order({kind:'vent',type:'ppv'});else order({kind:'vent',type:'none'});};
-$('#searchGo').onclick=()=>{const el=$('#searchSel'),v=el.value;if(!v)return needPick(el);doneSel(el);order({kind:'search',floor:v});};
+$('#searchGo').onclick=()=>{const el=$('#searchSel'),v=el.value;if(!v)return needPick(el);doneSel(el);if(v.startsWith('s2:'))order({kind:'search',floor:v.slice(3),secondary:true});else order({kind:'search',floor:v});};
+$('#lightsGo').onclick=()=>{const S=A.S;const best=S.cos.filter(c=>!M.canDo(c,'lights')&&M.freeCrew(S,c)>=1).sort((a,b)=>Math.max(S.t,a.arriveAt)-Math.max(S.t,b.arriveAt))[0];if(!best){toast('No company has a free member for scene lighting. Release a task first.');return;}order({kind:'assign',co:best.id,task:'lights'});};
 $('#lineQuick').onclick=e=>{const b=e.target.closest('button[data-t]');if(b)order({kind:'line',target:b.dataset.t});};
 $('#linesList').addEventListener('change',e=>{const s=e.target.closest('select.lre');if(!s||!s.value)return;const id=+s.closest('.lrow').dataset.id;order({kind:'reassign',line:id,target:s.value});});
 $('#linesList').addEventListener('click',e=>{if(e.target.id==='lwdAll'){order({kind:'line',target:'none'});return;}const b=e.target.closest('.lwd');if(!b)return;order({kind:'withdraw',line:+b.closest('.lrow').dataset.id});});
@@ -1380,7 +1679,7 @@ function buildInjects(){const B=A.B,S=A.S;if(!S)return;let h='<option value="">I
   h+=`<option value="note|Bystander reports someone at a window upstairs.">Report: someone seen at an upper window</option><option value="note|Occupant reported out. Confirm with your search.">Report: occupants say everyone is out</option>`;
   $('#injectSel').innerHTML=h;}
 $('#injectBtn').onclick=()=>{const v=$('#injectSel').value;if(!v)return;const p=v.split('|');let a;
-  if(p[0]==='fail'||p[0]==='open'||p[0]==='close')a={kind:p[0],opening:p[1]};else if(p[0]==='idoor')a={kind:'idoor',conn:p[1],state:p[2]};else if(p[0]==='wind'){a={kind:'wind',dir:p[1],spd:2};A.scn.wind={dir:p[1],spd:2};}else a={kind:'note',text:p[1]};
+  if(p[0]==='fail'||p[0]==='open'||p[0]==='close')a={kind:p[0],opening:p[1]};else if(p[0]==='idoor')a={kind:'idoor',conn:p[1],state:p[2]};else if(p[0]==='wind'){a={kind:'wind',dir:p[1],spd:2};}else a={kind:'note',text:p[1]};
   order(a);A.latest=[A.S.events[A.S.events.length-1].msg];toast(`Inject · ${A.latest[0]}`);buildInjects();renderBoard();};
 
 /* ---------- solo size-up calls ---------- */
@@ -1442,6 +1741,7 @@ function debrief(){const S=A.S,sc=A.scn,ta=S.tArr,items=[];const at=t=>`T+${fmt(
   const S0=S.searches.filter(s=>s.done&&!s.aborted);if(!S.searches.length)add('mid','No primary search ordered','',[]);
   // strategy note
   if(S.strategy==='Defensive'){const o=S.z[sc.origin];const confined=Object.values(S.z).filter(z=>z.ign).length<=1&&!o.flashed;add('mid','Defensive strategy',confined?'At arrival the fire was in one compartment. Compare that with your life-hazard read. The choice is yours; this is just what the model showed.':'Conditions included flashover or extension. The model just shows what the building did.',[]);}
+  companyDebrief(add,at);
   const out=Object.values(S.z).filter(z=>z.ign);const allOut=out.length&&out.every(z=>z.out);add(allOut?'ok':'mid',allOut?`Fire under control at ${at(S.underControl!=null?S.underControl:Math.max(...out.map(z=>z.tOut||0)))}`:`Fire not yet under control at the end of the drill (still burning: ${out.filter(z=>!z.out).map(z=>zname(z.id)).join(', ')})`,`Burned: ${out.map(z=>zname(z.id)).join(', ')||'none'}.`,['push']);
   return items;}
 $('#finishBtn').onclick=()=>{A.playing=false;A.wasPlaying=false;A.finished=true;syncUI();const items=debrief();const ok=items.filter(i=>i.st==='ok').length;
@@ -1450,7 +1750,7 @@ $('#finishBtn').onclick=()=>{A.playing=false;A.wasPlaying=false;A.finished=true;
   A.lastDebrief=items;$('#dbCopy').onclick=()=>copyText(items.map(i=>`[${i.st}] ${i.title}${i.detail?' - '+i.detail:''}`).join('\n'),'#dbCopy');$('#dbShare').onclick=openShare;};
 
 /* ---------- sources panel ---------- */
-$('#rules').innerHTML=RULES.map(r=>`<div class="rule"><b>${esc(r.name)}<span class="tag ${r.kind==='fsri'?'fsri':'simp'}">${r.kind==='fsri'?'FSRI':'SIMPLIFICATION'}</span></b>${esc(r.does)}${r.quote?`<span class="q">${esc(r.quote)}</span>`:''}${r.src.length?`<div class="srcl">${r.src.map(s=>`<a href="${SRC[s].url}" target="_blank" rel="noopener">${esc(SRC[s].title)}</a>`).join('<br>')}</div>`:''}</div>`).join('')
+$('#rules').innerHTML=RULES.map(r=>`<div class="rule"><b>${esc(r.name)}<span class="tag ${r.kind==='fsri'||r.kind==='nist'?'fsri':'simp'}">${r.kind==='fsri'?'FSRI':r.kind==='nist'?'NIST':'SIMPLIFICATION'}</span></b>${esc(r.does)}${r.quote?`<span class="q">${esc(r.quote)}</span>`:''}${r.src.length?`<div class="srcl">${r.src.map(s=>`<a href="${SRC[s].url}" target="_blank" rel="noopener">${esc(SRC[s].title)}</a>`).join('<br>')}</div>`:''}</div>`).join('')
   +`<div class="rule"><b>Further training</b><a href="${SRC['FSRI-ACAD'].url}" target="_blank" rel="noopener">${esc(SRC['FSRI-ACAD'].title)}</a></div>`;
 
 /* ---------- share / export / import ---------- */
@@ -1491,7 +1791,7 @@ $('#shareBtn').onclick=openShare;
 $('#mClose').onclick=closeModal;$('#modal').onclick=e=>{if(e.target.id==='modal')closeModal();};
 async function loadScenario(o){if(!o||o.format!=='sizeup-scenario')throw new Error('Not a SizeUp scenario file');
   let B,img;if(o.sceneId==='photo'){img=await loadImg(o.photo);A.photoData=o.photo;A.photoMarks=o.marks;B=photoBuilding(img.naturalWidth,img.naturalHeight,o.marks);}else{B=BUILDINGS[o.sceneId];img=IMGS[o.sceneId];}
-  A.B=B;A.img=img;setTexture();A.scn={format:o.format,v:o.v,sceneId:o.sceneId,origin:o.origin,fuel:o.fuel,preburn:o.preburn,openings:o.openings||{},doors:o.doors||{},occupant:o.occupant||'none',wind:o.wind||{dir:'calm',spd:0},glass:o.glass||'fails',seed:o.seed,actions:o.actions||[],tNow:o.tNow||0};
+  A.B=B;A.img=img;setTexture();A.scn={format:o.format,v:o.v,sceneId:o.sceneId,origin:o.origin,fuel:o.fuel,preburn:o.preburn,openings:o.openings||{},doors:o.doors||{},occupant:o.occupant||'none',wind:o.wind||{dir:'calm',spd:0},glass:o.glass||'fails',seed:o.seed,actions:o.actions||[],tNow:o.tNow||0,companies:o.companies,presetName:o.presetName||(o.companies?'edited':'generic'),settings:o.settings,env:o.env,windShift:o.windShift||null};ensureScn(A.scn);
   A.mode=o.mode==='crew'?'crew':'solo';A.hidden=!!o.hideAnswers;A.locked=false;A.lockResult=null;A.calls={};A.facts={...B.facts,...(o.facts||{})};$('#radio').value=o.radio||'';A.side=o.side||'A';A.originSet=true;A.latest=[];buildRoomSel();
   A.maxScreen=4;A.screen=3;A.finished=false;rebuild();warm(4);show(4);buildInjects();startClock();toast(`Drill loaded: ${B.name} at T+${fmt(now())}. Clock running.`);}
 $('#fileScn').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const t=await f.text();let o;if(/^\s*</.test(t)){const d=new DOMParser().parseFromString(t,'text/html').getElementById('sizeup-scenario');if(!d)throw new Error('No scenario inside that file');o=JSON.parse(d.textContent);}else o=JSON.parse(t);await loadScenario(o);}catch(err){$('#fileErr').textContent='Could not open that drill: '+err.message;}});
@@ -1506,6 +1806,168 @@ document.addEventListener('keydown',e=>{if(A.screen!==4||$('#modal').classList.c
   const emb=document.getElementById('sizeup-scenario');if(emb){try{await loadScenario(JSON.parse(emb.textContent));}catch(e){console.error(e);$('#fileErr').textContent='Embedded drill could not be loaded.';}}
   window.__sizeup.ready=true;})();
 Object.assign(window.__sizeup,{syncUI,rebuild,advance,order,debrief,scenarioObj,scenarioHTML,loadScenario,truthCalls,summary,exportPNG,buildInjects,smokeText,openShare,layout});
+
+
+/* ---- dispatch.js (same scope as app.js) ---- */
+/* SizeUp: dispatch/assignment setup, task-time settings, time of day & weather, and the company board. */
+const PRESET_KEY='sizeup-presets-v1';
+const EQ_FLAGS={groundLadders:'Ground ladders',aerial:'Aerial',fan:'PPV fan',tools:'Saws',hooks:'Hooks / pike poles'};
+const TYPE_FLAGS={engine:['groundLadders','hooks'],ladder:['groundLadders','aerial','fan','tools','hooks'],rescue:['groundLadders','fan','tools','hooks'],medic:[],chief:[]};
+const DIAS=['1.5','1.75','2','2.5','3'];
+const SET_GROUPS=[
+ ['Hoselines',[['stretchBase','Stretch: base time','s'],['stretchPerFt','Stretch: per foot of hose needed','s/ft'],['perFloor','Each floor above the first','s'],['charge','Charge the line and advance','s'],['reposition','Reposition a line','s']]],
+ ['Water supply',[['layBase','Supply lay: base time','s'],['layPerFt','Supply lay: per foot to the hydrant','s/ft'],['hookup','Hydrant hookup and charge','s']]],
+ ['Truck & support work',[['horizontal','Horizontal vent','s'],['vertical','Vertical vent (roof)','s'],['aerialFactor','Aerial speeds roof work (multiplier)','×'],['ppv','PPV fan set-up','s'],['pullCeiling','Pull ceiling','s'],['ladder','Ladder a side','s'],['lights','Scene lighting set-up','s']]],
+ ['Search, RIT & rehab',[['searchBase','Search: base time','s'],['searchPerFloor','Search: one floor area','s'],['secondaryFactor','Secondary search (multiplier)','×'],['rit','RIT in place','s'],['rehab','Rehab set-up','s']]],
+ ['Distances',[['setback','Engine setback to the front door','ft'],['hydrantDist','Hydrant distance','ft'],['roomRun','Hose run inside to a room','ft'],['floorRun','Hose per floor (stairs)','ft'],['sideRunBD','Extra hose around to Side B/D','ft'],['sideRunC','Extra hose around to Side C','ft']]],
+ ['Modifiers',[['refStaff','Reference staffing (no slow-down at or above)','members'],['shortStaff','Slower per member below reference','×'],['cold','Cold & icy: all tasks take longer','×'],['heatPer10','Heat: fatigue per 10 min of work','×'],['heatCap','Heat: fatigue cap','×']]]];
+function ensureScn(sc){if(!sc.companies||!sc.companies.length){sc.companies=M.PRESETS.generic.companies();sc.presetName=sc.presetName||'generic';}
+  sc.settings={...M.DEF_SET,...(sc.settings||{})};sc.env={tod:'day',precip:'none',temp:'mild',...(sc.env||{})};if(sc.windShift===undefined)sc.windShift=null;return sc;}
+/* ---------- setup tabs ---------- */
+A.tab='cond';
+function showTab(t){A.tab=t;$$('#setupTabs button').forEach(b=>{b.classList.toggle('on',b.dataset.tab===t);b.setAttribute('aria-selected',b.dataset.tab===t);});$$('.tabp').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t));
+  if(t==='disp')renderDispatch();if(t==='times')renderSettings();}
+$('#setupTabs').onclick=e=>{const b=e.target.closest('button[data-tab]');if(b)showTab(b.dataset.tab);};
+function setupSummary(){const sc=A.scn;if(!sc)return'';const cos=sc.companies||[];const e=sc.env||{};const first=Math.min(...cos.map(c=>c.arrive));
+  return `Assignment: ${presetLabel()} · ${cos.length} companies, ${cos.reduce((a,c)=>a+(+c.staff||0),0)} members · first due arrives ${fmt(first)} after dispatch · ${({day:'Day',dusk:'Dusk',night:'Night'})[e.tod]}${e.precip!=='none'?' · '+e.precip:''}${e.temp!=='mild'?' · '+(e.temp==='cold'?'cold & icy':'hot'):''}. Edit on the Dispatch, Time & weather and Task times tabs.`;}
+/* ---------- presets ---------- */
+function loadPresets(){try{return JSON.parse(localStorage.getItem(PRESET_KEY)||'{}')||{};}catch(e){return{};}}
+function savePresets(p){try{localStorage.setItem(PRESET_KEY,JSON.stringify(p));return true;}catch(e){toast('Could not save presets on this device (storage blocked).');return false;}}
+function presetLabel(){const n=A.scn.presetName;if(n==='generic')return M.PRESETS.generic.name;if(n&&n.startsWith('custom:'))return n.slice(7);return'Custom assignment (edited)';}
+function edited(){A.scn.presetName='edited';}
+/* ---------- dispatch tab ---------- */
+function minTxt(sec){return +(sec/60).toFixed(2);}
+function coCardHTML(c,i){const fl=TYPE_FLAGS[c.type]||[];const eq=c.eq||{};
+  const tsel=`<select class="co-type" aria-label="Company type">${Object.entries(M.CO_TYPES).map(([k,v])=>`<option value="${k}"${k===c.type?' selected':''}>${esc(v)}</option>`).join('')}</select>`;
+  const sum=`${esc(c.id)} · ${esc(c.name)} · ${c.staff} staff · arrives ${fmt(c.arrive)}${c.type==='engine'?` · ${eq.tank} gal · ${(eq.pre||[]).length} preconnects`:''}${fl.filter(k=>eq[k]&&c.type!=='engine').length?' · '+fl.filter(k=>eq[k]).map(k=>EQ_FLAGS[k].toLowerCase()).join(', '):''}`;
+  let h=`<details class="cocard" data-i="${i}"${A.openCards&&A.openCards.has(c.id)?' open':''}><summary><span class="cot-type">${esc(M.CO_TYPES[c.type])}</span>${sum}</summary><div class="corow">${tsel}<input class="co-id" value="${esc(c.id)}" aria-label="Unit ID" maxlength="8"><input class="co-name" value="${esc(c.name)}" aria-label="Unit name" maxlength="30"><button class="iconbtn co-del" aria-label="Remove ${esc(c.name)}">✕</button></div>
+   <div class="corow"><label>Staffing <select class="co-staff">${[1,2,3,4,5,6].map(n=>`<option${n===+c.staff?' selected':''}>${n}</option>`).join('')}</select></label>
+   <label>Arrives <input class="co-arr" type="number" min="0" max="60" step="0.5" value="${minTxt(c.arrive)}" aria-label="Arrival, minutes after dispatch"> min after dispatch</label></div>`;
+  if(c.type==='engine'){h+=`<div class="corow"><label>Tank <input class="co-eq" data-k="tank" type="number" min="0" step="50" value="${eq.tank}"> gal</label><label>Pump <input class="co-eq" data-k="pump" type="number" min="0" step="250" value="${eq.pump}"> gpm</label><label>Supply hose <input class="co-eq" data-k="supplyHose" type="number" min="0" step="50" value="${eq.supplyHose}"> ft</label></div>
+    <div class="pres">${(eq.pre||[]).map((p,j)=>`<div class="prow" data-j="${j}"><input class="pr-name" value="${esc(p.name)}" aria-label="Preconnect name"><select class="pr-dia" aria-label="Diameter">${DIAS.map(d=>`<option value="${d}"${d===String(p.dia)?' selected':''}>${M.diaTxt(d)} in.</option>`).join('')}</select><input class="pr-len" type="number" min="50" step="50" value="${p.len}" aria-label="Length, ft">ft<input class="pr-gpm" type="number" min="50" step="10" value="${p.gpm}" aria-label="Flow, gpm">gpm<button class="iconbtn pr-del" aria-label="Remove preconnect">✕</button></div>`).join('')}
+    <button class="btn ghost sm pr-add">+ Preconnect</button></div>`;}
+  if(fl.length)h+=`<div class="corow flags">${fl.map(k=>`<label class="chk"><input type="checkbox" class="co-flag" data-k="${k}"${eq[k]?' checked':''}>${EQ_FLAGS[k]}</label>`).join('')}</div>`;
+  if(c.type==='chief')h+=`<div class="corow muted">Command: arrives, takes command. No crew tasks in this model.</div>`;
+  if(c.type==='medic')h+=`<div class="corow muted">Can set up rehab / EMS standby (helps crews recover in the heat).</div>`;
+  return h+'</details>';}
+function renderDispatch(){const sc=A.scn,el=$('#dispatch');if(!sc||!el)return;const P=loadPresets();
+  const cur=sc.presetName==='generic'?'generic':sc.presetName&&sc.presetName.startsWith('custom:')?sc.presetName:'';
+  const cos=sc.companies.slice().map((c,i)=>[c,i]).sort((a,b)=>a[0].arrive-b[0].arrive);
+  el.innerHTML=`<div class="ctl"><div class="lbl">Assignment preset <span class="val" id="presetVal">${esc(presetLabel())}</span></div>
+    <div class="row2"><select id="presetSel" aria-label="Assignment preset">${cur?'':'<option value="" selected>Custom assignment (edited)</option>'}<option value="generic"${cur==='generic'?' selected':''}>${esc(M.PRESETS.generic.name)}</option>${Object.keys(P).map(n=>`<option value="custom:${esc(n)}"${cur==='custom:'+n?' selected':''}>${esc(n)} (saved)</option>`).join('')}</select>
+    <button class="btn ghost sm" id="presetDel"${cur.startsWith('custom:')?'':' disabled'}>Delete</button></div>
+    <div class="row2" style="margin-top:8px"><input id="presetName" placeholder="Name this assignment" maxlength="40" aria-label="Preset name"><button class="btn ghost sm" id="presetSave">Save preset</button></div>
+    <div class="hint">Generic, editable teaching defaults, <b>not any department's SOP</b>. Saved presets stay on this device; the assignment also travels inside exported drills. T+0 on the drill clock is when the first company arrives.</div></div>
+   <div class="ctl"><div class="lbl">Water &amp; hose distances</div><div class="corow"><label>Hydrant distance <input class="set-in" data-k="hydrantDist" type="number" min="0" step="50" value="${sc.settings.hydrantDist}"> ft</label><label>Engine setback <input class="set-in" data-k="setback" type="number" min="0" step="10" value="${sc.settings.setback}"> ft</label></div>
+    <div class="hint">A line must reach: setback + the run inside (or around the building). A supply lay needs at least the hydrant distance of supply hose on the laying engine.</div></div>
+   <div class="ctl"><div class="lbl">Companies <span class="val">${sc.companies.length} units · ${sc.companies.reduce((a,c)=>a+(+c.staff||0),0)} members</span></div>
+    <div class="cocards">${cos.map(([c,i])=>coCardHTML(c,i)).join('')}</div>
+    <div class="btnrow" style="margin-top:10px">${Object.entries(M.CO_TYPES).map(([k,v])=>`<button class="btn ghost sm co-add" data-type="${k}">+ ${esc(v)}</button>`).join('')}</div>
+    <div class="hint">Each company works one task at a time. It can split and take a second task only if it has enough members left over (a hoseline needs 2, or 3 for a 2½ in. line; an engine always keeps 1 at the pump). Lines on scene are limited by crews and preconnects, not by a fixed cap.</div></div>`;}
+$('#dispatch').addEventListener('toggle',e=>{const d=e.target;if(!d.classList||!d.classList.contains('cocard'))return;A.openCards=A.openCards||new Set();const c=A.scn.companies[+d.dataset.i];if(!c)return;if(d.open)A.openCards.add(c.id);else A.openCards.delete(c.id);},true);
+function coAt(t){const card=t.closest('.cocard');return card?A.scn.companies[+card.dataset.i]:null;}
+function dispatchChanged(full){edited();rebuild();warm(2);if(full)renderDispatch();else{const v=$('#presetVal');if(v)v.textContent=presetLabel();const ps=$('#presetSel');if(ps&&!ps.querySelector('option[value=""]'))ps.insertAdjacentHTML('afterbegin','<option value="">Custom assignment (edited)</option>');if(ps)ps.value='';const d=$('#presetDel');if(d)d.disabled=true;}renderSetup();}
+$('#dispatch').addEventListener('change',e=>{const t=e.target,sc=A.scn;
+  if(t.id==='presetSel'){const v=t.value;if(v==='generic'){sc.companies=M.PRESETS.generic.companies();sc.presetName='generic';}else if(v.startsWith('custom:')){const P=loadPresets()[v.slice(7)];if(!P)return;sc.companies=JSON.parse(JSON.stringify(P.companies));sc.presetName=v;}else return;
+    rebuild();warm(2);renderDispatch();renderSetup();toast(`Assignment loaded: ${presetLabel()}.`);return;}
+  if(t.classList.contains('set-in')){const v=+t.value;if(!isFinite(v)||v<0){t.value=sc.settings[t.dataset.k];return;}sc.settings[t.dataset.k]=v;rebuild();renderSetup();return;}
+  const c=coAt(t);if(!c)return;
+  if(t.classList.contains('co-type')){const ty=t.value;c.type=ty;c.eq=M.eqDefault(ty);dispatchChanged(true);return;}
+  if(t.classList.contains('co-id')){const v=t.value.trim().replace(/[^\w-]/g,'').slice(0,8);if(!v||sc.companies.some(x=>x!==c&&x.id===v)){toast('Each unit needs a unique ID.');t.value=c.id;return;}c.id=v;dispatchChanged(false);return;}
+  if(t.classList.contains('co-name')){c.name=t.value.trim()||c.id;dispatchChanged(false);return;}
+  if(t.classList.contains('co-staff')){c.staff=+t.value;dispatchChanged(false);return;}
+  if(t.classList.contains('co-arr')){const v=+t.value;if(!isFinite(v)||v<0){t.value=minTxt(c.arrive);return;}c.arrive=Math.round(v*60);dispatchChanged(true);return;}
+  if(t.classList.contains('co-eq')){const v=+t.value;if(!isFinite(v)||v<0){t.value=c.eq[t.dataset.k];return;}c.eq[t.dataset.k]=v;dispatchChanged(false);return;}
+  if(t.classList.contains('co-flag')){c.eq[t.dataset.k]=t.checked;dispatchChanged(false);return;}
+  const pr=t.closest('.prow');if(pr){const p=c.eq.pre[+pr.dataset.j];if(t.classList.contains('pr-name'))p.name=t.value.trim()||'Preconnect';
+    else if(t.classList.contains('pr-dia'))p.dia=t.value;else{const v=+t.value;if(!isFinite(v)||v<=0){t.value=t.classList.contains('pr-len')?p.len:p.gpm;return;}if(t.classList.contains('pr-len'))p.len=v;else p.gpm=v;}dispatchChanged(false);}});
+$('#dispatch').addEventListener('click',e=>{const t=e.target,sc=A.scn;
+  if(t.id==='presetSave'){const n=($('#presetName').value||'').trim();if(!n)return needPick($('#presetName'));const P=loadPresets();P[n]={companies:JSON.parse(JSON.stringify(sc.companies)),saved:new Date().toISOString()};if(savePresets(P)){sc.presetName='custom:'+n;renderDispatch();renderSetup();toast(`Preset saved on this device: ${n}.`);}return;}
+  if(t.id==='presetDel'){const v=$('#presetSel').value;if(!v.startsWith('custom:'))return;const P=loadPresets();delete P[v.slice(7)];savePresets(P);sc.presetName='edited';renderDispatch();renderSetup();toast('Preset deleted.');return;}
+  const add=t.closest('.co-add');if(add){const ty=add.dataset.type;const pre={engine:'E',ladder:'L',rescue:'R',medic:'M',chief:'BC'}[ty];let n=1;while(sc.companies.some(c=>c.id===pre+n))n++;
+    const last=Math.max(0,...sc.companies.map(c=>c.arrive));A.openCards=A.openCards||new Set();A.openCards.add(pre+n);sc.companies.push(M.newCompany(ty,pre+n,`${({engine:'Engine',ladder:'Ladder',rescue:'Rescue',medic:'Medic',chief:'Battalion'})[ty]} ${n}`,ty==='chief'?1:ty==='medic'?2:3,last+60));dispatchChanged(true);return;}
+  const c=coAt(t);if(!c)return;
+  if(t.closest('.co-del')){if(sc.companies.length<=1){toast('Keep at least one company on the assignment.');return;}sc.companies.splice(sc.companies.indexOf(c),1);dispatchChanged(true);return;}
+  if(t.closest('.pr-add')){c.eq.pre.push({name:'Preconnect '+(c.eq.pre.length+1),dia:'1.75',len:200,gpm:150});dispatchChanged(true);return;}
+  if(t.closest('.pr-del')){c.eq.pre.splice(+t.closest('.prow').dataset.j,1);dispatchChanged(true);return;}});
+/* ---------- task-time settings tab ---------- */
+function renderSettings(){const sc=A.scn,el=$('#settings');if(!sc||!el)return;
+  el.innerHTML=`<div class="ctl"><div class="hint" style="margin-top:0"><b>Teaching values, editable per drill, not SOP.</b> Each task's time is built from these: e.g. a line's time = (stretch base + per-foot × hose needed) then + per floor + charge, all × the company factor (short staffing, cold, heat fatigue). They are saved and exported with the drill.</div></div>`
+   +SET_GROUPS.map(([g,rows])=>`<div class="ctl"><div class="lbl">${esc(g)}</div><div class="setgrid">${rows.map(([k,l,u])=>`<label><span>${esc(l)}</span><span><input class="set-in" data-k="${k}" type="number" min="0" step="any" value="${sc.settings[k]}" aria-label="${esc(l)}"> ${u}</span></label>`).join('')}</div></div>`).join('')
+   +`<div class="ctl" style="border:0"><button class="btn ghost" id="setReset">Reset to the default teaching values</button></div>`;}
+$('#settings').addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('set-in'))return;const v=+t.value;if(!isFinite(v)||v<0){t.value=A.scn.settings[t.dataset.k];return;}A.scn.settings[t.dataset.k]=v;rebuild();renderSetup();});
+$('#settings').addEventListener('click',e=>{if(e.target.id==='setReset'){A.scn.settings={...M.DEF_SET};rebuild();renderSettings();renderSetup();toast('Task times reset to the default teaching values.');}});
+/* ---------- company board ---------- */
+function coTaskList(c){return Object.keys(M.TASKDEF).filter(k=>!M.canDo(c,k));}
+function needOf(k,c,pre){if(k==='line'){if(pre&&pre!=='auto'){const [e,i]=pre.split(':');const E=A.S.cos.find(x=>x.id===e);const p=E&&E.eq.pre[+i];if(p)return +p.dia>=2.5?3:2;}return 2;}return M.TASKDEF[k].need;}
+function tgtHTML(k,c){const B=A.B,S=A.S;
+  if(k==='line')return`<option value="">Line to…</option>`+lineOptsHTML(lineTargets());
+  if(k==='hvent')return`<option value="">Window or door…</option>`+B.openings.filter(o=>o.type==='window'||(o.type==='door'&&!o.front)).map(o=>`<option value="${o.id}"${S.o[o.id].state!=='closed'?' disabled':''}>${esc(o.name)}${S.o[o.id].state!=='closed'?' (open)':''}</option>`).join('');
+  if(k==='vvent')return`<option value="">Roof over…</option>`+B.zones.filter(z=>z.floor===String(B.stories)&&!z.hidden||z.attic).map(z=>`<option value="${z.id}">${esc(z.name)}</option>`).join('');
+  if(k==='search1'||k==='search2')return`<option value="">Floor…</option>`+[...new Set(B.zones.filter(z=>!z.attic).map(z=>z.floor))].sort().map(f=>`<option value="${f}">Floor ${f}</option>`).join('');
+  if(k==='pullceiling'){const att=B.zones.find(z=>z.attic);return`<option value="">Room…</option>`+(att?B.conns.filter(q=>q.type==='ceiling'&&(q.a===att.id||q.b===att.id)).map(q=>q.a===att.id?q.b:q.a).filter(id=>!zoneOf(id).attic).map(id=>`<option value="${id}">${esc(zname(id))}</option>`).join(''):'');}
+  if(k==='ladder')return`<option value="">Side…</option>`+['A','B','C','D'].map(s=>`<option value="${s}"${S.laddered[s]?' disabled':''}>Side ${s}${S.laddered[s]?' (done)':''}</option>`).join('');
+  if(k==='supply')return S.cos.filter(e=>e.type==='engine').map(e=>`<option value="${e.id}"${e.supplied||e.supplyBy?' disabled':''}>To ${esc(e.name)}${e===c?' (itself)':''}${e.supplied?' (supplied)':e.supplyBy?' (supply coming)':''}</option>`).join('');
+  return null;}
+function optHTML(k,c){const S=A.S;
+  if(k==='line'){const tA=Math.max(S.t,c.arriveAt);let h='<option value="auto">Auto: first free preconnect that reaches</option>';
+    for(const e of S.cos.filter(e=>e.type==='engine'&&(e===c||e.arriveAt<=tA)))(e.eq.pre||[]).forEach((p,i)=>{const used=S.water.lines.find(l=>l.eng===e.id&&l.pre===i);h+=`<option value="${e.id}:${i}"${used?' disabled':''}>${e===c?'':esc(e.id)+' '}${esc(p.name)}: ${M.diaTxt(p.dia)} in. ${p.len} ft ${p.gpm} gpm${used?` (Line ${used.id})`:''}</option>`;});return h;}
+  if(k==='supply')return'<option value="forward">Forward lay (hydrant → engine)</option><option value="reverse">Reverse lay (engine → hydrant)</option>';
+  return null;}
+function stClass(k){return({enroute:'s-en',staged:'s-st',working:'s-wk',available:'s-av'})[k]||'';}
+function renderCompanies(){const S=A.S,el=$('#coList');if(!S||!el)return;const cos=S.cos.slice().sort((a,b)=>a.arriveAt-b.arriveAt);
+  const sig=cos.map(c=>c.id+c.type).join(',');
+  if(el._sig!==sig){el._sig=sig;el.innerHTML=cos.map(c=>{const tk=coTaskList(c);return`<div class="corow2" data-co="${esc(c.id)}"><div class="cohead"><b>${esc(c.id)}</b><span class="coname">${esc(c.name)}</span><span class="cost"></span></div>
+      <div class="cometa"></div><div class="cotasks"></div>
+      ${tk.length?`<div class="coassign"><select class="co-task" aria-label="Task for ${esc(c.name)}"><option value="">Assign ${esc(c.id)} to…</option>${tk.map(k=>`<option value="${k}">${esc(M.TASKDEF[k].label)}</option>`).join('')}</select><select class="co-tgt" aria-label="Target for ${esc(c.name)}" hidden></select><select class="co-opt" aria-label="Option for ${esc(c.name)}" hidden></select><button class="btn ghost sm co-go">Assign</button></div>`:''}</div>`;}).join('');}
+  for(const c of cos){const r=el.querySelector(`.corow2[data-co="${CSS.escape(c.id)}"]`);if(!r)continue;const st=M.coStatus(S,c);const cs=r.querySelector('.cost');
+    if(cs.textContent!==st.txt.split(':')[0]){cs.textContent=st.k==='working'?'Working':st.txt.split(' · ')[0];}cs.className='cost '+stClass(st.k);
+    const free=M.freeCrew(S,c);let meta=`${S.t<c.arriveAt?'Arrives in '+fmt(c.arriveAt-S.t)+' · ':''}${free} of ${c.staff} free`;
+    if(c.type==='engine'){const low=!c.supplied&&c.tankLeft<(+c.eq.tank||0)*M.TASK.lowTankFrac;meta+=` · <span class="${low?'water-low':''}">tank ${Math.round(c.tankLeft)}/${c.eq.tank} gal</span>${c.supplied?' · supplied':c.supplyBy?' · supply coming':''}`;}
+    if(c.type==='chief')meta+=S.t>=c.arriveAt?' · in command':'';
+    const me=r.querySelector('.cometa');if(me._h!==meta){me.innerHTML=meta;me._h=meta;}
+    const tl=M.coTasks(S,c);const th=tl.map(x=>{if(x.line){const l=x.line;return`<div class="cot"><span>${esc(x.label)} <small>${esc(lineStatus(l))} · ${M.diaTxt(l.dia)} in. ${l.len} ft</small></span><button class="btn ghost sm co-wd" data-line="${l.id}">Withdraw</button></div>`;}
+      const t=x.task;const left=!t.done&&t.end>S.t?` · ${fmt(t.end-S.t)}`:t.done&&M.CONT[t.kind]?' · in place':'';return`<div class="cot"><span>${esc(t.label)}<small>${S.t<t.start?' · starts on arrival':left}</small></span><button class="btn ghost sm co-rel" data-task="${t.id}">Release</button></div>`;}).join('');
+    const te=r.querySelector('.cotasks');if(te._h!==th){te.innerHTML=th;te._h=th;}
+    const ts=r.querySelector('.co-task');if(!ts)continue;const k=ts.value;const tg=r.querySelector('.co-tgt'),op=r.querySelector('.co-opt');
+    const th2=k?tgtHTML(k,c):null;tg.hidden=th2==null;if(th2!=null)setOpts(tg,th2,k==='line'?defaultLine(lineTargets()):k==='supply'?(S.cos.find(e=>e.type==='engine'&&!e.supplied&&!e.supplyBy)||{}).id:'');
+    const oh=k?optHTML(k,c):null;op.hidden=oh==null;if(oh!=null)setOpts(op,oh,k==='supply'?'forward':'auto');
+    const need=k?needOf(k,c,op.value):0;const busy=k&&free<need;const go=r.querySelector('.co-go');const lab=busy?'Reassign':'Assign';if(go.textContent!==lab)go.textContent=lab;go.classList.toggle('warn',!!busy);
+    go.title=busy?`${c.name} has ${free} free; this needs ${need}. Reassign releases its current tasks.`:'';}}
+$('#coList').addEventListener('change',e=>{const s=e.target.closest('select');if(!s)return;s._touched=!!s.value;s.classList.remove('need');if(s.classList.contains('co-task')){const r=s.closest('.corow2');r.querySelector('.co-tgt')._touched=false;r.querySelector('.co-opt')._touched=false;r.querySelector('.co-tgt')._h=null;r.querySelector('.co-opt')._h=null;}renderCompanies();});
+$('#coList').addEventListener('click',e=>{const r=e.target.closest('.corow2');if(!r)return;const co=r.dataset.co;
+  const wd=e.target.closest('.co-wd');if(wd){order({kind:'withdraw',line:+wd.dataset.line});return;}
+  const rl=e.target.closest('.co-rel');if(rl){order({kind:'release',task:+rl.dataset.task});return;}
+  if(!e.target.closest('.co-go'))return;const ts=r.querySelector('.co-task'),tg=r.querySelector('.co-tgt'),op=r.querySelector('.co-opt');const k=ts.value;if(!k)return needPick(ts);
+  if(!tg.hidden&&!tg.value)return needPick(tg);const c=A.S.cos.find(x=>x.id===co);const replace=M.freeCrew(A.S,c)<needOf(k,c,op.value);
+  const a={kind:'assign',co,task:k};if(replace)a.replace=true;
+  if(k==='line'){a.target=tg.value;if(op.value&&op.value!=='auto')a.pre=op.value;}else if(k==='hvent')a.opening=tg.value;else if(k==='vvent'||k==='pullceiling')a.zone=tg.value;
+  else if(k==='search1'||k==='search2')a.floor=tg.value;else if(k==='ladder')a.side=tg.value;else if(k==='supply'){a.to=tg.value;a.mode=op.value;}
+  ts._touched=false;tg._touched=false;op._touched=false;ts.value='';order(a);});
+/* ---------- precipitation overlay (drawn over the photo in scene units) ---------- */
+const WX={kind:null,ps:[],t:performance.now()};
+function drawWeather(c){const S=A.S;if(!S||A.screen<3)return;const e=S.scn.env||{};const kind=e.precip;if(kind!=='rain'&&kind!=='snow'){WX.kind=null;return;}
+  const B=A.B,W=B.W,H=B.H,U=H/800;const t=performance.now();const dt=Math.min(.05,(t-WX.t)/1000);WX.t=t;const wind=SizeupVisual.windPx(S.wind)*(kind==='rain'?5:2.2)*U;
+  const N=kind==='rain'?300:240;if(WX.kind!==kind||WX.ps.length!==N){WX.kind=kind;WX.ps=[];for(let i=0;i<N;i++)WX.ps.push({x:Math.random()*W,y:Math.random()*H,z:.5+Math.random()*.9,ph:Math.random()*7});}
+  const night=e.tod==='night',lit=!!S.lights;c.save();c.beginPath();c.rect(0,0,W,H);c.clip();
+  if(kind==='rain'){c.lineCap='round';const a=night?(lit?.34:.2):.3;c.strokeStyle=`rgba(${night?'170,185,210':'215,225,240'},${a})`;c.beginPath();
+    for(const p of WX.ps){const sp=(900+500*p.z)*U;p.y+=sp*dt;p.x+=wind*dt;if(p.y>H){p.y-=H+40*U;p.x=Math.random()*W;}if(p.x>W)p.x-=W;if(p.x<0)p.x+=W;const len=(20+18*p.z)*U;c.lineWidth=(.8+.9*p.z)*U;
+      c.moveTo(p.x,p.y);c.lineTo(p.x-wind/sp*len,p.y-len);}c.stroke();}
+  else{const a=night?(lit?.8:.5):.85;c.fillStyle=`rgba(${night?'200,205,220':'255,255,255'},${a})`;
+    for(const p of WX.ps){p.y+=(55+45*p.z)*U*dt;p.x+=(wind*.6+Math.sin(t/900+p.ph)*14*U)*dt;if(p.y>H){p.y-=H+10*U;p.x=Math.random()*W;}if(p.x>W)p.x-=W;if(p.x<0)p.x+=W;c.beginPath();c.arc(p.x,p.y,(1.3+2.2*p.z)*U,0,7);c.fill();}}
+  c.restore();}
+/* ---------- debrief: companies & tasks ---------- */
+function companyDebrief(add,at){const S=A.S;const log=S.taskLog||[];
+  for(const c of S.cos.slice().sort((a,b)=>a.arriveAt-b.arriveAt)){const mine=log.filter(x=>x.co===c.id);const arr=c.arriveAt<=S.t?`on scene ${at(c.arriveAt)}`:'did not arrive before the drill ended';
+    const parts=mine.map(x=>x.gpm!=null?`Line ${x.id} → ${x.label} (${M.diaTxt(x.dia)} in. ${x.len} ft, ordered ${at(x.start)}${x.firstFlow!=null?', water '+at(x.firstFlow):''}${x.withdrawnAt!=null?', withdrawn '+at(x.withdrawnAt):''})`
+      :`${x.label} (${at(x.start)}${x.doneAt!=null?' → '+(M.CONT[x.kind]?'in place ':'done ')+at(x.doneAt):x.released!=null?' → released '+at(x.released):''})`);
+    add(mine.length?'ok':c.type==='chief'?'ok':'mid',`${c.name} (${c.staff}): ${arr}`,mine.length?parts.join(' · '):c.type==='chief'?'Command.':'Never assigned. Staged companies are resources you could have used.',[]);}
+  const sup=log.filter(x=>x.kind==='supply');const dry=S.events.filter(e=>/^Tank water exhausted/.test(e.msg));
+  if(sup.some(x=>x.done))add('ok',`Water supply: ${sup.filter(x=>x.done).map(x=>`${S.cos.find(c=>c.id===x.co).name} ${x.mode} lay to ${S.cos.find(c=>c.id===x.to).name} at ${at(x.doneAt)}`).join('; ')}`,dry.length?dry.map(e=>`${at(e.t)} ${e.msg}`).join(' · '):'No engine ran its tank dry.',['lines']);
+  else add(dry.length?'no':'mid','No supply line connected',dry.length?dry.map(e=>`${at(e.t)} ${e.msg}`).join(' · '):'Lines ran on tank water only.',['lines']);
+  const rit=log.find(x=>x.kind==='rit');add(rit?'ok':'mid',rit?`RIT: ${S.cos.find(c=>c.id===rit.co).name} assigned at ${at(rit.start)}`:'No RIT assigned','',[]);
+  const e=S.scn.env||{};if(e.tod&&e.tod!=='day'){const li=log.find(x=>x.kind==='lights');add(li&&li.done?'ok':'mid',li&&li.done?`Scene lighting up at ${at(li.doneAt)}`:'No scene lighting',li&&li.done?'Smoke color and the building were easier to read after that.':'At '+e.tod+' smoke color is hard to read without scene lighting.',['night']);}
+  S.events.filter(x=>x.kind==='wind').forEach(x=>add('mid',`Wind shift at ${at(x.t)}`,x.msg,['wind']));}
 
 })();
 

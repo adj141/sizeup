@@ -80,3 +80,42 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
 .ucbanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:none;flex-direction:column;align-items:center;gap:6px;background:rgba(20,60,24,.95);border:2px solid var(--ok);border-radius:12px;padding:10px 14px;text-align:center;z-index:5;max-width:92%}
 .ucbanner.show{display:flex}.ucbanner b{font-size:16px;letter-spacing:.04em}.ucbanner span{font-size:13px}.ucbtns{display:flex;gap:8px}
 .water-low{color:var(--amber);font-weight:700}
+/* setup tabs */
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;position:sticky;top:0;z-index:3;background:var(--bg,#0d0f12)}
+.tabs button{flex:0 0 auto;min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid #2c323b;background:#161a20;color:#cfd6df;font-weight:600;font-size:14px}
+.tabs button.on{background:#e8eef6;color:#0d0f12;border-color:#e8eef6}
+.tabp{display:none}.tabp.on{display:block}
+/* dispatch cards */
+.cocards{display:grid;gap:10px}
+.cocard{border:1px solid #2c323b;border-radius:12px;padding:10px;background:#12161b;display:grid;gap:8px}
+.corow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px}
+.corow label{display:flex;gap:6px;align-items:center}
+.corow input,.corow select,.prow input,.prow select,.setgrid input{min-height:40px;border-radius:8px;border:1px solid #333a44;background:#0d1014;color:#e8eef6;padding:4px 8px;font-size:15px}
+.corow input[type=number]{width:84px}.co-id{width:70px}.co-name{flex:1;min-width:120px}
+.corow.flags{gap:4px 12px}.chk{font-size:14px}.chk input{width:20px;height:20px;min-height:0}
+.pres{display:grid;gap:6px}.prow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:#aab4c0}
+.prow .pr-name{flex:1;min-width:120px}.prow input[type=number]{width:74px}
+.cocard .iconbtn{min-width:40px;min-height:40px}
+.setgrid{display:grid;gap:8px}
+.setgrid label{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:14px}
+.setgrid input{width:90px}
+/* company board */
+.colist{display:grid;gap:8px}
+.corow2{border:1px solid #2c323b;border-radius:10px;padding:8px 10px;background:#12161b;display:grid;gap:6px}
+.cohead{display:flex;gap:8px;align-items:center}.cohead .coname{flex:1;color:#cfd6df;font-size:14px}
+.cost{font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;letter-spacing:.02em;white-space:nowrap}
+.s-en{background:#2a2f37;color:#aab4c0}.s-st{background:#173049;color:#90caf9}.s-wk{background:#4a3410;color:#ffcc80}.s-av{background:#163a22;color:#a5d6a7}
+.cometa{font-size:13px;color:#aab4c0}
+.cotasks{display:grid;gap:4px}.cot{display:flex;gap:8px;align-items:center;justify-content:space-between;font-size:13px;background:#0d1014;border-radius:8px;padding:4px 6px 4px 10px}
+.cot small{color:#aab4c0;display:block}
+.coassign{display:flex;flex-wrap:wrap;gap:6px}.coassign select{flex:1 1 140px;min-height:44px;max-width:100%}
+.co-go.warn{border-color:#ffb300;color:#ffcc80}
+@media (max-width:480px){.coassign select{flex-basis:100%}.corow input[type=number]{width:72px}}
+.cocard select,.cocard input,.setgrid input,#presetName{width:auto}
+#presetName{flex:1;min-height:44px;border-radius:8px;border:1px solid #333a44;background:#0d1014;color:#e8eef6;padding:4px 10px;font-size:15px}
+.cocard>summary{cursor:pointer;list-style:none;font-size:14px;color:#e8eef6;display:flex;gap:8px;align-items:baseline;min-height:32px}
+.cocard>summary::-webkit-details-marker{display:none}
+.cocard>summary::before{content:'▸';color:#aab4c0}.cocard[open]>summary::before{content:'▾'}
+.cot-type{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#90caf9;background:#173049;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.cocard:not([open]){gap:0}
+.prow select{width:auto}.coassign select{width:auto}

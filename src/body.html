@@ -8,7 +8,7 @@
 <nav class="steps" id="steps">
   <button data-go="1"><i>1</i><span>Capture</span></button>
   <button data-go="2"><i>2</i><span>Fire origin</span></button>
-  <button data-go="3"><i>3</i><span>Fire &amp; smoke</span></button>
+  <button data-go="3"><i>3</i><span>Set up</span></button>
   <button data-go="4"><i>4</i><span>Command board</span></button>
 </nav>
 <main>
@@ -68,6 +68,8 @@
    <div class="reading" id="reading" style="margin-top:12px"></div>
   </div>
   <div class="sheet">
+   <div class="tabs" id="setupTabs" role="tablist" aria-label="Setup sections"><button role="tab" data-tab="cond" class="on" aria-selected="true">Fire &amp; smoke</button><button role="tab" data-tab="wx" aria-selected="false">Time &amp; weather</button><button role="tab" data-tab="disp" aria-selected="false">Dispatch</button><button role="tab" data-tab="times" aria-selected="false">Task times</button></div>
+   <div class="tabp on" id="tab-cond">
     <div class="ctl"><div class="lbl">Contents (fuel) <span class="val" id="vFuel"></span></div>
       <div class="seg red" data-key="fuel"><button data-v="modern">Modern synthetic</button><button data-v="legacy">Legacy</button></div></div>
     <div class="ctl"><div class="lbl">Time since ignition at arrival <span class="val" id="vPre"></span></div>
@@ -80,12 +82,30 @@
     <div class="ctl"><div class="lbl">Doors &amp; windows at arrival <span class="val">tap the photo too</span></div><div class="olist" id="olist"></div></div>
     <div class="ctl"><div class="lbl">Interior doors</div><div class="olist" id="dlist"></div></div>
     <div class="ctl"><div class="lbl">Occupant</div><select id="occSel" aria-label="Occupant"></select></div>
+   </div>
+   <div class="tabp" id="tab-wx">
+    <div class="ctl"><div class="lbl">Time of day <span class="val" id="vTod"></span></div>
+      <div class="seg" data-key="tod"><button data-v="day">Day</button><button data-v="dusk">Dusk</button><button data-v="night">Night</button></div>
+      <div class="hint" id="todHint"></div></div>
+    <div class="ctl"><div class="lbl">Precipitation &amp; visibility <span class="val" id="vPrecip"></span></div>
+      <div class="seg" data-key="precip"><button data-v="none">Clear</button><button data-v="rain">Rain</button><button data-v="snow">Snow</button><button data-v="fog">Fog</button></div></div>
+    <div class="ctl"><div class="lbl">Temperature <span class="val" id="vTemp"></span></div>
+      <div class="seg" data-key="temp"><button data-v="mild">Mild</button><button data-v="cold">Cold &amp; icy</button><button data-v="hot">Hot</button></div>
+      <div class="hint" id="tempHint"></div></div>
     <div class="ctl"><div class="lbl">Wind <span class="val" id="vWind"></span></div>
       <div class="seg" data-key="windDir"><button data-v="calm">Calm</button><button data-v="A">From A</button><button data-v="B">From B</button><button data-v="C">From C</button><button data-v="D">From D</button></div>
       <div class="seg" data-key="windSpd" data-num style="margin-top:8px"><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div></div>
+    <div class="ctl"><div class="lbl">Scheduled wind shift <span class="val" id="vShift"></span></div>
+      <div class="seg" data-key="shiftAt" data-num><button data-v="0">None</button><button data-v="180">At T+3</button><button data-v="360">At T+6</button><button data-v="600">At T+10</button></div>
+      <div class="seg" data-key="shiftDir" style="margin-top:8px"><button data-v="A">From A</button><button data-v="B">From B</button><button data-v="C">From C</button><button data-v="D">From D</button></div>
+      <div class="seg" data-key="shiftSpd" data-num style="margin-top:8px"><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div>
+      <div class="hint">The shift happens on the drill clock, so it replays exactly. Wind into an open window of a burning room drives heat and smoke along the flow path (NIST wind-driven fire experiments).</div></div>
+   </div>
+   <div class="tabp" id="tab-disp"><div id="dispatch"></div></div>
+   <div class="tabp" id="tab-times"><div id="settings"></div></div>
     <div class="ctl" style="border:0;padding-bottom:0;display:grid;gap:10px"><button class="btn primary" id="toBoard">Run size-up drill
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-      <button class="btn ghost" id="surprise">Surprise me: random conditions, answers hidden</button></div>
+      <button class="btn ghost" id="surprise">Surprise me: random conditions, answers hidden</button><div class="hint" id="setupSum"></div></div>
   </div>
  </div>
 </section>
@@ -125,14 +145,16 @@
         <div class="elements">Commonly includes: unit on scene · building description · conditions · actions / strategy · command · needs</div></div>
       <div><span class="l">Strategy</span>
         <div class="seg red" data-key="strategy"><button data-v="Offensive">Offensive</button><button data-v="Defensive">Defensive</button></div></div>
-      <div><span class="l">Orders <span class="muted" style="text-transform:none;letter-spacing:0">(take effect at the current time)</span></span>
+      <div><span class="l">Companies <span class="muted" style="text-transform:none;letter-spacing:0">(assign a task to a specific company)</span></span>
+        <div class="colist" id="coList"></div></div>
+      <div><span class="l">Quick orders <span class="muted" style="text-transform:none;letter-spacing:0">(auto-assigned to the soonest company that can do it)</span></span>
         <div style="display:grid;gap:8px">
           <div class="row2"><select id="lineSel" aria-label="Attack line"></select><button class="btn ghost sm" id="lineGo">Line</button></div>
           <div class="quick" id="lineQuick" aria-label="Quick line orders for burning rooms"></div>
           <div class="row2"><select id="ventSel" aria-label="Ventilation"></select><button class="btn ghost sm" id="ventGo">Vent</button></div>
           <div class="row2"><select id="searchSel" aria-label="Primary search"></select><button class="btn ghost sm" id="searchGo">Search</button></div>
           <div class="btnrow"><button class="toggle" id="dcToggle" aria-pressed="false"><span><b>Door control</b><small>Entry door held to hose width</small></span><span class="sw"></span></button>
-            <button class="btn ghost" id="supplyGo">Establish water supply</button></div>
+            <button class="btn ghost" id="supplyGo">Establish water supply</button><button class="btn ghost" id="lightsGo" hidden>Scene lighting</button></div>
           <div class="statline" id="opsStat"></div>
           <div class="lines" id="linesList"></div>
         </div></div>

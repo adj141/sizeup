@@ -5,7 +5,9 @@ root = pathlib.Path(__file__).parent; src = root / 'src'
 r = lambda n: (src / n).read_text()
 b64 = lambda n: 'data:image/jpeg;base64,' + base64.b64encode((root / 'assets' / n).read_bytes()).decode()
 assets = f"window.SIZEUP_ASSETS={{house:'{b64('house.jpg')}',mixed:'{b64('mixed.jpg')}'}};"
-js = '\n'.join([assets] + [r(n) for n in ['sources.js', 'buildings.js', 'model.js', 'render.js', 'visual.js', 'app.js']])
+app = r('app.js'); cut = app.rstrip().rfind('})();')
+app = app[:cut] + '\n/* ---- dispatch.js (same scope as app.js) ---- */\n' + r('dispatch.js') + '\n' + app[cut:]
+js = '\n'.join([assets] + [r(n) for n in ['sources.js', 'buildings.js', 'model.js', 'render.js', 'visual.js']] + [app])
 assert '</script' not in js.lower()
 html = f'''<!DOCTYPE html>
 <html lang="en">

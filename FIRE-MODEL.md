@@ -1,6 +1,6 @@
 # How SizeUp's simulated fire works
 
-*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, updated Oct 9, 2026: knockdown, multiple lines, attic access, under-control state).*
+*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, updated Oct 9, 2026: companies and dispatch, editable task times, per-engine water, time of day and weather, wind-driven fire; earlier the same day: knockdown, multiple lines, attic access, under-control state).*
 
 > **Read this first.** SizeUp uses a **teaching model**, not fire physics. It is not CFAST, FDS or any validated zone/CFD model. Every number in it is a **dimensionless index** (0 = nothing, 1 = "flashover-level"), not °F, kW or ppm. The model's job is to put events in the **right order with roughly the right timing**, and to react to tactics the way the UL FSRI experiments describe. It cannot predict any real building. Training prototype, not for operational use.
 
@@ -16,6 +16,9 @@ FSRI sources referred to:
 - **FA**: *Impact of Fire Attack Utilizing Interior and Exterior Streams*
 - **PPV**: *Effectiveness of Fire Service Positive Pressure Ventilation*
 - **CBYD**: *Close Before You Doze: Before & After*
+
+Other research referred to (wind-driven fire only):
+- **NIST-WD**: NIST TN 1618, *Fire Fighting Tactics under Wind Driven Conditions: Laboratory Experiments* (Madrzykowski & Kerber, 2009), and NIST TN 1629, *… 7-Story Building Experiments* (2009). Read: the NIST publication pages and abstracts.
 
 ---
 
@@ -238,21 +241,70 @@ These come from the room the smoke is leaving. **The cue mapping is the widely t
 
 ## 5. What your orders do to the numbers
 
-Task times are **teaching values**, not SOP or FSRI numbers:
+### 5a. Companies, crews and who does what [Simplification]
 
-| Task | Time | Effect |
+Before the drill, the **Dispatch** tab builds the assignment. The default preset, **Generic first alarm (residential)**, is a set of generic, editable teaching defaults. It is **not any department's SOP**.
+
+| Unit | Staff | Arrives after dispatch | Equipment (editable) |
+|---|---|---|---|
+| Engine 1 | 4 | 4:00 | 1000 gal tank, 1500 gpm pump, 1000 ft supply hose, ground ladder, hooks; preconnects 1¾ in. 200 ft 150 gpm ×2 and 2½ in. 200 ft 250 gpm |
+| Medic 1 | 2 | 5:30 | rehab / EMS standby |
+| Engine 2 | 3 | 6:00 | same as Engine 1 |
+| Battalion 1 | 1 | 6:30 | command only |
+| Ladder 1 | 4 | 7:00 | ground ladders, aerial, PPV fan, saws, hooks |
+| Engine 3 | 3 | 8:00 | same as Engine 1 |
+| Rescue 1 | 3 | 9:00 | ground ladders, PPV fan, saws, hooks |
+
+- **T+0 on the drill clock is when the first company arrives.** Later companies arrive at their dispatch time minus the first company's, and are **staged** until assigned. The board shows each company as *en route* (with a countdown), *staged*, *working* (task and countdown) or *available*.
+- **Crew rules.** Each task needs a minimum crew: hoseline 2 (a 2½ in. line 3), primary or secondary search 2, horizontal vent 1, vertical vent 2, PPV 1, door control 1, pull ceiling 2, ladder a side 2, RIT 2 or more, scene lighting 1, rehab 1. An **engine always keeps 1 member at the pump**. A company works one task at a time, and **splits** to take a second task only if it has enough unassigned members left over. (Example: Engine 1 with 4 has 1 at the pump and 2 on a line, so 1 member is left for door control.)
+- **Equipment rules.** Vertical vent needs saws and a ladder or aerial. PPV needs a fan. Pull ceiling needs hooks. An upper-floor window can only be vented by a company with ground ladders (or an aerial), or after that side has been laddered. A medic only does rehab; the chief only commands.
+- **Assigning.** You can assign a task to a specific company on the board, or use **quick orders**, which pick the company that can start soonest (ties go to the usual type for the task, e.g. a truck for ventilation). A task given to a company that is still en route starts when it arrives. A busy company is refused with the reason: what it is doing, how many members are free, and how many the task needs. **Reassign** releases the company's current tasks and starts the new one. **Release** and **Withdraw** free the crew at once.
+- **Lines are limited by crews and preconnects**, not by a fixed cap. A line uses a specific preconnect on a specific engine (its own, or any engine on scene for a truck or rescue crew).
+
+### 5b. Task times [Teaching values, editable per drill]
+
+Every number below is on the **Task times** tab, saved and exported with the drill. Each time is then multiplied by the **company factor**:
+
+```
+company factor = (1 + 0.15 × members below 4)      short staffing
+               × 1.2 if cold & icy
+               × (1 + 0.10 per 10 min the company has been working, up to +0.30)   if hot; rehab halves the build-up
+```
+
+| Task | Time (before the company factor) | Effect |
 |---|---|---|
-| Interior line | 45 s stretch + 30 s per floor above the 1st + 15 s | When the crew enters (at 45 s) it **opens the entry door** (or *controls* it if door control is on). Water starts at the ready time if there is fire within reach |
-| Line to the attic/cockloft (pull ceiling) | interior line time to the room below + 30 s to pull the ceiling | At the ready time the ceiling between that room and the attic is **breached** (it now passes heat and smoke both ways, k 0.6). Water: **0.8** into the attic, **0.6** into the room below [Simplification; the ceiling-opening behavior follows FSRI: VV] |
-| Exterior line | 45 s | Breaks/opens that opening; water only into that room. Openings on other sides (e.g. a rear slider on Side C) can be used |
-| Exterior line through a roof vent | 45 s + 30 s per story | Only after a vertical vent is open. Water goes into the attic/cockloft (0.85) |
-| Reassign a line | interior → interior: 30 s + 30 s per floor moved (+30 s if pulling a ceiling); exterior → exterior: 30 s; inside ↔ outside: a new stretch | The line stops flowing and moves; the log records from/to |
-| Withdraw a line | immediate | The line is removed; the log records it. "Withdraw all" removes every line |
-| Water supply | 240 s | Until then each flowing line draws **150 gpm from a 500-gal tank** (one line ≈ 3.3 min; three lines ≈ 67 s). A **low-tank warning** is logged below 150 gal; lines stop when it's empty and restart once the supply is in |
+| Interior line | crew **enters** at 35 s + 0.08 s × hose needed (ft); **ready** after another 30 s per floor above the 1st + 15 s | Entering **opens the entry door** (or *controls* it if door control is on). Water starts at the ready time if there is fire within reach |
+| Line to the attic/cockloft (via a room) | interior line time to the room below + 30 s to pull the ceiling | The ceiling between that room and the attic is **breached** (k 0.6). Water: **0.8** into the attic, **0.6** into the room below [Simplification; the ceiling-opening behavior follows FSRI: VV] |
+| Exterior line | 35 s + 0.08 s × hose needed + 15 s | Breaks/opens that opening; water only into that room. Openings on any side can be used |
+| Exterior line through a roof vent | exterior line time + 30 s per story | Only after a vertical vent is open. Water goes into the attic/cockloft |
+| Reassign a line | interior → interior: 30 s + 30 s per floor moved (+30 s if pulling a ceiling); exterior → exterior: 30 s; inside ↔ outside: a new stretch | The line must still be long enough for the new target |
+| Withdraw a line / release a task | immediate | The crew is free again |
+| Supply line (forward or reverse lay) | 45 s + 0.15 s × hydrant distance (ft) + 45 s hookup (+30 s for a reverse lay) | The receiving engine's lines stop drawing on its tank. Default hydrant 400 ft → 150 s, ×1.15 for a 3-member engine |
 | Horizontal vent | 15 s | Opening becomes open/failed |
-| Vertical vent | 300 s | Roof hole + ceiling pushed below it |
-| PPV/PPA fan | entry door opens now; fan on after 60 s | See below |
-| Primary search | 60 s + 30 s per floor above 1st + 120 s | Opens the entry door |
+| Vertical vent | 300 s (×0.8 with an aerial) | Roof hole + ceiling pushed below it |
+| PPV/PPA fan | entry door opens when the crew starts; fan on after 60 s | See below |
+| Primary search | 60 s + 30 s per floor above the 1st + 120 s | Opens the entry door when the crew starts; secondary search ×1.3 |
+| Pull ceiling (a room) | 30 s | Opens that room's ceiling to the attic, so a line in that room can reach it |
+| Ladder a side | 45 s (×0.9 with an aerial) | Upper-floor windows on that side can then be vented by any company |
+| Door control | immediate (1 member stays at the door) | Entry door held to hose width |
+| RIT | 60 s to be in place | Logged; listed in the debrief |
+| Scene lighting | 90 s | At dusk or night, smoke colour becomes readable (see 5d) |
+| Rehab (medic) | 60 s | Heat fatigue builds at half rate while it is set up |
+
+**Hose reach** [Teaching values]: a line must be at least as long as the hose needed:
+
+```
+interior:  setback (50 ft) + 25 ft to the room + 20 ft per floor above the 1st (+20 ft for a rear/hidden room, +10 ft for an attic line)
+exterior:  setback + 15 ft (+40 ft to Side B or D, +80 ft to Side C) + 20 ft per floor above the 1st
+```
+If no free preconnect is long enough the order is refused: "Hose too short: … needs about N ft". A supply lay needs at least the hydrant distance of supply hose on the laying engine.
+
+### 5c. Water: per-engine tanks, supply and gpm [Simplification]
+
+- Each engine's **tank feeds only its own lines** until a supply line connects to that engine. A flowing line draws its own **gpm** (150 gpm = 2.5 gal per second). With the default 1000 gal tank, one 1¾ in. line runs about 6.7 min and a 2½ in. line about 4 min.
+- **Low-tank warning** at 25% of that engine's tank; when it is empty, that engine's lines stop and restart once its supply is connected. Other engines are not affected.
+- The **pump rating** caps an engine's total flow; above it, every line on that engine flows proportionally less (logged).
+- **Water on the room scales with gpm**: a line's water = gpm ÷ 150 (limited to 0.4–1.7), so a 2½ in. line at 250 gpm wets a room about 1.7× faster than a 1¾ in. at 150 gpm. The knockdown thresholds are unchanged, so the FSRI-calibrated fire growth is untouched.
 
 **Water** (rooms that receive it):
 - An interior line gives its room **1.0**, and **0.45** to rooms joined by an open plan, open stair or open door.
@@ -283,9 +335,8 @@ Task times are **teaching values**, not SOP or FSRI numbers:
 - **Defensive strategy** withdraws interior lines (the log names them) and stops searches. In Defensive the line list defaults to exterior streams.
 
 **Multiple lines** [Simplification]:
-- Up to **3 hoselines** can work at once, interior and exterior in any mix. Each is listed on the board with its target and status: en route (with countdown), flowing, standing by, or no water.
-- A new order **adds** a line; it never silently replaces one. When all 3 are committed, the order is refused with a message: reassign or withdraw a line first.
-- The cap of 3 stands in for the crews on scene. **Staffing is not modeled**, and configurable staffing and task times are planned separately.
+- Any number of hoselines can work at once, interior and exterior in any mix, **as long as there are crews and preconnects** (5a). Each is listed on the board with its company, target and status: en route (with countdown), flowing, standing by, or no water (that engine's tank is empty).
+- A new order **adds** a line; it never silently replaces one. When no company can staff it, the order is refused with the reason.
 - Where two lines reach the same room, it gets the larger of their two amounts of water (amounts are not added together).
 
 **Under control**:
@@ -295,9 +346,18 @@ Task times are **teaching values**, not SOP or FSRI numbers:
 
 **Picking orders while the clock runs**: the order dropdowns keep your choice when the board refreshes. The line list puts **burning rooms first** (🔥) and preselects the first burning room that has no line yet. One-tap chips (＋ Line → room) appear for burning rooms. Pressing an order button with nothing picked shows a message.
 
+### 5d. Time of day and weather [Simplification unless marked]
+
+- **Time of day** (day / dusk / night) changes what you see, not the fire. At dusk and night the photo is darkened and tinted, **fire glow lights the windows, the smoke and the nearby facade**, and smoke is drawn with low contrast so its colour is **hard to read**; the board says so. A company assigned to **scene lighting** (90 s) brings the contrast back. The renderer values are look-tuned, not measured.
+- **Occupancy likelihood** (occupant option "likely by time of day"): a home is occupied with probability 0.35 by day, 0.6 at dusk and 0.9 at night (at night, in a bedroom); a business is occupied with probability 0.7 by day, 0.35 at dusk and 0 at night (closed). Teaching values.
+- **Rain, snow and fog** are drawn over the scene; fog adds a haze that hides smoke and scatters fire glow. Precipitation does not change the fire model.
+- **Cold & icy** multiplies every task time by 1.2. **Hot** adds crew fatigue (5b).
+- **Wind and wind-driven fire** [NIST-WD for the behavior; magnitudes are teaching values]: wind blowing into an open window or door on the windward side adds air to that room (×1.4 / 1.9 / 2.6 for light / moderate / strong). When that room is burning hard (q > 0.5), heat moving out of it along the flow path is multiplied by 1 + 0.45 × (wind strength 1–3), with a larger per-second limit, and a crew warning is logged: *"Wind-driven conditions: wind entering … is pushing heat and smoke through the flow path."* This follows the NIST finding that wind *"rapidly caused conditions in the structure to deteriorate by forcing fire gases through the apartment of origin and into the public corridor and stairwell"* (TN 1629 abstract). NIST also found that blocking the wind (wind control devices) and exterior water into the fire-room window from below reduced the hazard; in SizeUp you can close the flow path or put exterior water into the windward opening.
+- A **scheduled wind shift** (Time & weather tab) changes the wind at a set drill time, logged on the timeline. It lives in the scenario, so a replay gets the same shift at the same second. The starting wind saved in the scenario is never overwritten by a shift or an instructor's wind inject.
+
 ## 6. Occupant and crew-safety calculations
 
-**Occupant** (hidden; placed by you or at random in an upper-floor bedroom):
+**Occupant** (hidden; placed by you, at random in an upper-floor bedroom, or by time of day as in 5d):
 ```
 dose += 0.012 × (T − 0.25 if positive) + 0.009 × (smoke − 0.40 if positive)   each second
 untenable when dose ≥ 1
@@ -316,5 +376,8 @@ This is a simplified stand-in for heat and toxic-gas exposure (FED-style), not a
 - **Few calibration points.** Only the modern/legacy timings in section 4b are set to FSRI numbers; most other constants are teaching values.
 - **Coarse building.** One heat value and one smoke value per room: no hot layer vs cool floor inside a room, and no separate doorways. Rooms in an uploaded photo are a generic left room / right room / hall per floor.
 - **Random within the seed.** Window failure timing, occupant placement and similar draws come from the scenario seed. The same seed gives the same drill; a different seed gives slightly different timing.
-- **Generic tactics.** Task times and drill timings are not your department's SOPs.
-- **No staffing model.** The 3-line cap, reassign and pull-ceiling times, knockdown hold and rekindle timing are teaching values. They are not FSRI findings and not SOPs.
+- **Generic tactics.** Task times, crew sizes, equipment and the default first-alarm preset are generic, editable teaching values. They are not your department's SOPs.
+- **Simple crews.** A task needs a fixed minimum crew; extra members don't make it faster (staffing only enters through the short-staffing factor). Crews move instantly when released. Apparatus position is not modeled (every engine is at the setback; a reverse-laying engine still supplies the attack engine). There is no air-supply (SCBA) clock, no command-post or accountability model, and no Mayday.
+- **Weather is mostly visual.** Rain, snow and fog change visibility and task times only; they do not cool the fire. The wind-driven push is a qualitative stand-in for the NIST experiments, not a fitted value.
+- **Night is visual plus occupancy.** Darkness changes what you can read, not how the fire behaves.
+- Reassign and pull-ceiling times, knockdown hold and rekindle timing are teaching values. They are not FSRI findings and not SOPs.
