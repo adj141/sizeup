@@ -10,14 +10,17 @@ const FUEL={modern:{tg:250,tau:22,tauT:50,smoke:1.35,load:1000,label:'Modern syn
             legacy:{tg:1400,tau:100,tauT:190,smoke:.85,load:2600,label:'Legacy (natural-material) contents'}};
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004};
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
-const TASK={stretch:45,perFloor:30,supplyDelay:240,vertical:300,horizontal:15,ppv:60,searchBase:60,searchPerFloor:120,tankGal:500,gpm:150};
+const TASK={stretch:45,perFloor:30,supplyDelay:240,vertical:300,horizontal:15,ppv:60,searchBase:60,searchPerFloor:120,tankGal:500,gpm:150,
+  // simplifications (not FSRI values): hoseline cap stands in for staffing (not modeled), repositioning/pull-ceiling times,
+  // knockdown hold, low-tank warning level, and how long a knocked-down room must sit dry before it can rekindle.
+  lineCap:3,reposition:30,pullCeiling:30,kdHold:10,lowTank:150,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20};
 function floorNum(f){return f==='B'?0:f==='Attic'?99:f==='Roof'?100:+f;}
 
 function create(B,scn){
   const R=rng(scn.seed||1);
   const S={B,scn,t:0,tArr:scn.preburn||360,z:{},o:{},c:{},events:[],fan:null,doorControl:false,
-    water:{tank:TASK.tankGal,supplyAt:null,supply:false,lines:[]},crews:[],searches:[],ext:[],pending:[],flags:{},victim:null,rnd:R,hist:[]};
-  for(const z of B.zones)S.z[z.id]={id:z.id,ign:false,tIgn:0,q:0,T:0,s:0,R:1,fuel:1,flashed:false,tFlash:null,vl:false,out:false,wet:0,wetRegrow:600,water:0,steam:0,decay:false,breached:false,dose:0,vf:z.vol||1,attic:!!z.attic,floor:z.floor,showT:0};
+    water:{tank:TASK.tankGal,supplyAt:null,supply:false,lines:[],nextId:1},crews:[],searches:[],ext:[],pending:[],flags:{},victim:null,rnd:R,hist:[]};
+  for(const z of B.zones)S.z[z.id]={id:z.id,ign:false,tIgn:0,q:0,T:0,s:0,R:1,fuel:1,flashed:false,tFlash:null,vl:false,out:false,wet:0,wetRegrow:600,water:0,steam:0,decay:false,breached:false,dose:0,kd:0,suppressed:false,smold:0,extOnly:true,vf:z.vol||1,attic:!!z.attic,floor:z.floor,showT:0};
   for(const o of B.openings)S.o[o.id]={id:o.id,state:(scn.openings&&scn.openings[o.id])||o.init||'closed',fail:0,failAt:40+R()*50,zone:o.zone,type:o.type,side:o.side,dyn:false};
   for(const c of B.conns){let st=c.type==='door'?((scn.doors&&scn.doors[c.id])||c.init||'closed'):c.type;S.c[c.id]={id:c.id,a:c.a,b:c.b,type:c.type,state:st};}
   // occupant (hidden from the player)
@@ -44,23 +47,54 @@ function airMap(S){const own={},hi={};for(const id in S.z){own[id]=0;hi[id]=0;}
   for(const cid in S.c){const c=S.c[cid],k=connK(S,c);hiAny[c.a]+=hi[c.b]*k;hiAny[c.b]+=hi[c.a]*k;}
   for(const id in air)air[id]*=1+Math.min(.9,hiAny[id]*.7);
   return {own,air,hi:hiAny};}
+function fmtS(s){s=Math.round(s);return s<60?s+' s':`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
 function ev(S,kind,msg,extra){S.events.push({t:S.t,kind,msg,...(extra||{})});}
 function zname(S,id){const z=S.B.zones.find(z=>z.id===id);return z?z.name:id;}
-function oname(S,id){const o=S.B.openings.find(o=>o.id===id);return o?o.name:id;}
+function oname(S,id){const o=S.B.openings.find(o=>o.id===id);if(o)return o.name;if(String(id).startsWith('roof:'))return`Roof vent over ${zname(S,id.slice(5))}`;return id;}
 function isTop(S,zid){const z=S.B.zones.find(z=>z.id===zid);return z&&z.floor===String(S.B.stories);}
+// what a hoseline order means: interior to a room, exterior through an opening, or attic/cockloft through a pulled ceiling
+function lineSpec(S,t){t=String(t||'');
+  if(t.startsWith('ext:')){const oid=t.slice(4);const o=S.o[oid];if(!o)return null;const roof=o.type==='roof';
+    return{ext:true,opening:oid,zone:o.zone,via:null,key:'ext:'+oid,roof,label:`${oname(S,oid)}${roof?' (into '+zname(S,o.zone)+')':''} (exterior)`,desc:`exterior water through ${oname(S,oid)}${roof?' into the '+zname(S,o.zone):''}`,time:TASK.stretch+(roof?TASK.perFloor*S.B.stories:0)};}
+  if(t.startsWith('attic:')){const via=t.slice(6);const vz=S.B.zones.find(z=>z.id===via);const att=S.B.zones.find(z=>z.attic);if(!vz||!att)return null;
+    if(!S.B.conns.some(c=>c.type==='ceiling'&&((c.a===via&&c.b===att.id)||(c.b===via&&c.a===att.id))))return null;const up=Math.max(0,floorNum(vz.floor)-1);
+    return{ext:false,zone:att.id,via,opening:null,key:'attic:'+via,label:`${att.name} via ${vz.name}`,desc:`interior line to ${vz.name}, pull the ceiling to reach the ${att.name}`,time:TASK.stretch+TASK.perFloor*up+15+TASK.pullCeiling};}
+  const z=S.B.zones.find(z=>z.id===t);if(!z||z.attic)return null;const up=Math.max(0,floorNum(z.floor)-1);
+  return{ext:false,zone:t,via:null,opening:null,key:t,label:z.name,desc:`interior line to ${z.name}`,time:TASK.stretch+TASK.perFloor*up+15};}
+function lineFloor(S,l){const z=S.B.zones.find(z=>z.id===(l.via||l.zone));return z?floorNum(z.floor):1;}
+// zones a flowing line puts water on, and how much (1 = full stream). Spill into open-connected areas is a simplification.
+function lineReach(S,l){const r={};const add=(id,w)=>{if(S.z[id])r[id]=Math.max(r[id]||0,w);};
+  if(l.ext)add(l.zone,.85); // exterior: limited to line of sight into the room through that opening [FSRI-FA water mapping]
+  else if(l.via){add(l.zone,.8);add(l.via,.6);} // through a pulled ceiling into the attic/cockloft (simplification)
+  else{add(l.zone,1);for(const cid in S.c){const c=S.c[cid];if(connK(S,c)>=.85){if(c.a===l.zone)add(c.b,.45);if(c.b===l.zone)add(c.a,.45);}}}
+  return r;}
 
 /* ---------- actions ---------- */
 function act(S,a){a={...a,t:a.t==null?S.t:a.t};S.pending.push(a);S.pending.sort((x,y)=>x.t-y.t);}
 function doAction(S,a){const F=front(S);const fdo=F&&S.o[F.id];
   const openEntry=(why)=>{if(fdo&&fdo.state==='closed'){fdo.state=S.doorControl?'controlled':'open';ev(S,'vent',`${F.name} opened for ${why}${S.doorControl?' (door controlled)':''}. Opening a door is a ventilation action.`,{src:'FSRI-CFA'});S.flags.entryOpenedAt=S.flags.entryOpenedAt??S.t;}};
   switch(a.kind){
-  case 'strategy':S.strategy=a.v;ev(S,'order',`Strategy: ${a.v}.`);if(a.v==='Defensive'){S.water.lines=S.water.lines.filter(l=>l.ext);S.searches.forEach(s=>{if(!s.done){s.done=true;s.aborted=true;}});ev(S,'order','Interior crews withdrawn.');}break;
-  case 'line':{if(a.target==='none'){S.water.lines=[];ev(S,'order','Attack line shut down.');break;}
-    if(a.target.startsWith('ext:')){const oid=a.target.slice(4);S.water.lines=S.water.lines.filter(l=>!l.ext);S.water.lines.push({ext:true,opening:oid,zone:S.o[oid].zone,readyAt:S.t+TASK.stretch,flowing:false});ev(S,'order',`Line stretched for exterior application through ${oname(S,oid)}.`);S.flags.extOrdered=true;break;}
-    if(S.strategy==='Defensive'){ev(S,'note','Interior line not deployed: strategy is defensive.');break;}
-    const z=S.B.zones.find(z=>z.id===a.target);const up=Math.max(0,floorNum(z.floor)-1);
-    S.water.lines=S.water.lines.filter(l=>l.ext);S.water.lines.push({ext:false,zone:a.target,readyAt:S.t+TASK.stretch+TASK.perFloor*up+15,flowing:false,entering:S.t+TASK.stretch});
-    ev(S,'order',`Interior line ordered to ${z.name}.`);break;}
+  case 'strategy':S.strategy=a.v;ev(S,'order',`Strategy: ${a.v}.`);if(a.v==='Defensive'){const gone=S.water.lines.filter(l=>!l.ext);S.water.lines=S.water.lines.filter(l=>l.ext);S.searches.forEach(s=>{if(!s.done){s.done=true;s.aborted=true;}});ev(S,'order','Interior crews withdrawn'+(gone.length?` (${gone.map(l=>'Line '+l.id).join(', ')} pulled out)`:'')+'.');}break;
+  case 'line':{const W=S.water;
+    if(a.target==='none'){if(W.lines.length){W.lines=[];ev(S,'order','All hoselines withdrawn.');}break;}
+    const spec=lineSpec(S,a.target);if(!spec)break;
+    if(!spec.ext&&S.strategy==='Defensive'){ev(S,'note','Interior line not deployed: strategy is defensive.');break;}
+    if(W.lines.some(l=>l.key===spec.key)){ev(S,'note',`A line is already assigned to ${spec.label}.`);break;}
+    if(W.lines.length>=TASK.lineCap){ev(S,'note',`All ${TASK.lineCap} hoselines are committed. Reassign or withdraw a line first. (Simplification: staffing is not modeled; the cap stands in for the crews on scene.)`);break;}
+    const l={id:W.nextId++,...spec,readyAt:S.t+spec.time,flowing:false};if(!spec.ext)l.entering=S.t+TASK.stretch;W.lines.push(l);
+    ev(S,'order',`Line ${l.id} ordered: ${spec.desc}.`);if(spec.ext)S.flags.extOrdered=true;break;}
+  case 'reassign':{const W=S.water;const l=W.lines.find(l=>l.id===+a.line);if(!l)break;const spec=lineSpec(S,a.target);if(!spec)break;
+    if(!spec.ext&&S.strategy==='Defensive'){ev(S,'note','Line not moved inside: strategy is defensive.');break;}
+    if(W.lines.some(x=>x!==l&&x.key===spec.key)){ev(S,'note',`A line is already assigned to ${spec.label}.`);break;}
+    if(l.key===spec.key)break;
+    const from=l.label;let time;
+    if(!l.ext&&!spec.ext&&l.entered)time=TASK.reposition+TASK.perFloor*Math.abs(lineFloor(S,spec)-lineFloor(S,l))+(spec.via?TASK.pullCeiling:0);
+    else if(l.ext&&spec.ext)time=TASK.reposition+(spec.roof?TASK.perFloor*S.B.stories:0);else time=spec.time;
+    const keepEntered=!l.ext&&!spec.ext&&l.entered;
+    Object.assign(l,spec,{readyAt:S.t+time,flowing:false,since:null,inPos:false,noFire:null,pulled:false,warned:false,flowedOnce:false});
+    if(spec.ext){l.entering=null;l.entered=false;}else if(!keepEntered){l.entered=false;l.entering=S.t+TASK.stretch;}
+    ev(S,'order',`Line ${l.id} reassigned from ${from} to ${spec.label} (in position in about ${fmtS(time)}).`);if(spec.ext)S.flags.extOrdered=true;break;}
+  case 'withdraw':{const W=S.water;const i=W.lines.findIndex(l=>l.id===+a.line);if(i<0)break;const l=W.lines[i];W.lines.splice(i,1);ev(S,'order',`Line ${l.id} withdrawn from ${l.label}.`);break;}
   case 'supply':if(!S.water.supplyAt){S.water.supplyAt=S.t+TASK.supplyDelay;ev(S,'order','Water supply ordered (hydrant/supply line).');}break;
   case 'doorcontrol':S.doorControl=!!a.on;if(fdo&&fdo.state!=='closed')fdo.state=a.on?'controlled':'open';ev(S,'order',a.on?`Door control at ${F.name}: door pulled closed to the width of the hoseline.`:'Door control released: entry door fully open.',{src:'FSRI-VV'});break;
   case 'vent':{if(a.type==='horizontal'){const o=S.o[a.opening];if(!o)break;S.pending.push({t:S.t+TASK.horizontal,kind:'_ventdone',opening:a.opening});ev(S,'order',`Horizontal ventilation ordered: ${oname(S,a.opening)}.`);}
@@ -93,22 +127,39 @@ function step(S){const dt=1;
   const {air,own,hi}=airMap(S);S._air=air;S._own=own;
   // water
   const W=S.water;if(W.supplyAt!=null&&!W.supply&&S.t>=W.supplyAt){W.supply=true;ev(S,'water','Water supply established.');}
-  let flowing=0;for(const l of W.lines){if(l.entering!=null&&S.t>=l.entering&&!l.entered){l.entered=true;const F=front(S);const fo=F&&S.o[F.id];if(fo&&fo.state==='closed'){fo.state=S.doorControl?'controlled':'open';S.flags.entryOpenedAt=S.flags.entryOpenedAt??S.t;ev(S,'vent',`${F.name} opened for the hoseline${S.doorControl?' (door controlled)':''}. Opening the door is a ventilation action.`,{src:'FSRI-CFA'});}}
-    const can=(W.supply||W.tank>0)&&!(S.z[l.zone].out&&l.since!=null&&S.t-S.z[l.zone].tOut>20);if(S.t>=l.readyAt&&can){if(!l.flowing){l.flowing=true;l.since=S.t;const z=S.z[l.zone];ev(S,'water',l.ext?`Water applied from outside through ${oname(S,l.opening)}.`:`Interior line in position and flowing: ${zname(S,l.zone)}${z.ign&&!z.out?'':' (no fire here; water on smoke)'}.`,{src:l.ext?'FSRI-VV':'FSRI-FA'});if(S.flags.firstWater==null)S.flags.firstWater=S.t;}flowing++;}
-    else if(l.flowing&&!can){l.flowing=false;if(!(W.supply||W.tank>0))ev(S,'water','Tank water exhausted: line has stopped flowing. No supply established.');else ev(S,'water',`Line shut down after knockdown in ${zname(S,l.zone)}.`);}}
-  if(flowing&&!W.supply)W.tank=Math.max(0,W.tank-TASK.gpm/60*dt*Math.min(flowing,1.5));
-  const waterOn={};for(const l of W.lines)if(l.flowing){const add=(id,w)=>waterOn[id]=Math.max(waterOn[id]||0,w);
-    if(l.ext){// exterior: limited to line of sight into the room through that opening [FSRI-FA water mapping]
-      const o=S.o[l.opening];if(o.state==='closed'){o.state='failed';}add(l.zone,.85);}
-    else{add(l.zone,1);for(const cid in S.c){const c=S.c[cid];if(connK(S,c)>=.85){if(c.a===l.zone)add(c.b,.45);if(c.b===l.zone)add(c.a,.45);}}}}
+  let flowing=0;const hasWater=W.supply||W.tank>0;
+  for(const l of W.lines){if(!l.ext&&l.entering!=null&&S.t>=l.entering&&!l.entered){l.entered=true;const F=front(S);const fo=F&&S.o[F.id];if(fo&&fo.state==='closed'){fo.state=S.doorControl?'controlled':'open';S.flags.entryOpenedAt=S.flags.entryOpenedAt??S.t;ev(S,'vent',`${F.name} opened for the hoseline${S.doorControl?' (door controlled)':''}. Opening the door is a ventilation action.`,{src:'FSRI-CFA'});}}
+    const r=lineReach(S,l);const fire=Object.keys(r).some(id=>S.z[id].ign&&!S.z[id].out);
+    if(S.t>=l.readyAt&&!l.inPos){l.inPos=true;
+      if(l.via&&!l.pulled){l.pulled=true;for(const cid in S.c){const c=S.c[cid];if(c.type==='ceiling'&&((c.a===l.via&&c.b===l.zone)||(c.b===l.via&&c.a===l.zone)))c.state='breached';}
+        ev(S,'vent',`Line ${l.id}: ceiling pulled in ${zname(S,l.via)} to reach the ${zname(S,l.zone)}. The opening also lets heat and smoke from the void into that room.`,{src:'FSRI-VV'});}
+      if(!fire)ev(S,'water',`Line ${l.id} in position: ${l.label}. No fire within reach, so it stands by without flowing.`);}
+    if(fire)l.noFire=null;else if(l.noFire==null)l.noFire=S.t;
+    const want=l.inPos&&hasWater&&(fire||(l.flowing&&S.t-l.noFire<TASK.noFireShutdown));
+    if(want){if(!l.flowing){l.flowing=true;l.since=S.t;
+        ev(S,'water',l.flowedOnce?`Line ${l.id} flowing again: fire within reach of ${l.label}.`:l.ext?`Line ${l.id}: water applied from outside through ${oname(S,l.opening)}.`:`Line ${l.id} in position and flowing: ${l.label}.`,{src:l.ext?'FSRI-VV':'FSRI-FA'});
+        l.flowedOnce=true;if(S.flags.firstWater==null)S.flags.firstWater=S.t;}flowing++;}
+    else if(l.flowing){l.flowing=false;
+      if(!hasWater){if(!S.flags.dryMsg){S.flags.dryMsg=true;ev(S,'water','Tank water exhausted: lines have stopped flowing. No supply established.');}}
+      else ev(S,'water',`Line ${l.id} shut down: no fire left within reach of ${l.label}. It stands by and restarts if fire returns there.`);}}
+  // tank: each flowing line draws its own flow until a supply is established (simplification)
+  if(flowing&&!W.supply){W.tank=Math.max(0,W.tank-TASK.gpm/60*dt*flowing);
+    if(W.tank<TASK.lowTank&&W.tank>0&&!S.flags.lowTank){S.flags.lowTank=true;ev(S,'water',`Tank water low: about ${Math.round(W.tank)} gal left, roughly ${fmtS(W.tank/(TASK.gpm*flowing/60))} at the current flow.${W.supplyAt!=null?' Supply is on the way.':' No water supply has been ordered.'}`);}}
+  const waterOn={},intOn={};for(const l of W.lines)if(l.flowing){if(l.ext){const o=S.o[l.opening];if(o&&o.state==='closed')o.state='failed';}
+    const r=lineReach(S,l);for(const id in r){waterOn[id]=Math.max(waterOn[id]||0,r[id]);if(!l.ext)intOn[id]=true;}}
+  // an interior line in position that covers a room keeps watch on it: no rekindle there (simplification)
+  const guarded={};for(const l of W.lines)if(!l.ext&&l.inPos)for(const id in lineReach(S,l))guarded[id]=true;
   // zones
   const zs=S.z,M=FUEL[S.scn.fuel]||FUEL.modern;
   for(const id in zs){const z=zs[id];const w=waterOn[id]||0;z.water=w;
+    if(intOn[id])z.extOnly=false;
     if(w>0){z.wet=Math.min(1,z.wet+w*dt/25);const L=S.water.lines.find(l=>l.flowing&&l.zone===id);
       // exterior water on an upper-floor room cools but regrows without interior follow-up [FSRI-CFA single-family]
       z.wetRegrow=(L&&L.ext&&floorNum(z.floor)>=2)?70:900;}
     else z.wet=Math.max(0,z.wet-dt/z.wetRegrow);
-    if(z.ign&&!z.out){const age=S.t-z.tIgn;let pot=Math.min(1.25,Math.pow(Math.max(0,age)/M.tg,2));if(z.flashed)pot=2;
+    if(z.ign&&!z.out){const age=S.t-z.tIgn;// once water has darkened a flashed room, the post-flashover boost is gone; growth returns to the normal curve (simplification)
+      if(w>0&&z.flashed&&z.wet>.5)z.suppressed=true;
+      let pot=Math.min(1.25,Math.pow(Math.max(0,age)/M.tg,2));if(z.flashed&&!z.suppressed)pot=2;
       if(z.attic)pot=Math.min(1.25,Math.pow(Math.max(0,age)/(M.tg*1.6),2));
       pot*=z.fuel>.25?1:z.fuel/.25;pot*=(1-z.wet*.97);
       const qAir=.03+.62*air[id];
@@ -123,13 +174,26 @@ function step(S){const dt=1;
       z.T+=(Ttarget-z.T)*dt/(Ttarget>z.T?M.tauT:(w>0?6:240));
       if(!z.flashed&&z.T>=1&&z.q>=.75&&!z.attic){z.flashed=true;z.tFlash=S.t;ev(S,'flashover',`Flashover: ${zname(S,id)}.`,{zone:id,src:'FSRI-VV'});}
       if(z.flashed&&!z.vl&&z.fuel<.15&&!z.burnt){z.burnt=true;}
-      if(z.wet>.85&&z.q<.03){z.out=true;z.q=0;z.tOut=S.t;ev(S,'water',`Fire knocked down: ${zname(S,id)}.`,{zone:id});}
-    }else{z.q*=.97;z.vl=false;z.decay=false;}
+      if(z.suppressed&&z.wet<.1&&z.q>.6){z.suppressed=false;ev(S,'spread',`Fire has regrown in ${zname(S,id)}: water was not kept on it.`,{zone:id});}
+      // knockdown: wet, low heat release and cooled gases, held for a few seconds (simplification)
+      if(z.wet>.8&&z.q<.12&&z.T<.3)z.kd+=dt;else z.kd=0;
+      if(z.kd>=TASK.kdHold||(z.wet>.85&&z.q<.03)){z.out=true;z.q=0;z.tOut=S.t;z.kd=0;z.smold=0;ev(S,'water',`Fire knocked down: ${zname(S,id)}.`,{zone:id});}
+      else if(z.fuel<.05&&z.q<.05&&!z.vl){z.out=true;z.burnedOut=true;z.q=0;z.tOut=S.t;ev(S,'water',`Fire in ${zname(S,id)} has burned itself out (fuel consumed).`,{zone:id});}
+    }else{z.q*=.97;z.vl=false;z.decay=false;
+      // overhaul: a knocked-down room with fuel left can rekindle once, slowly, only after it has dried out with no water on it
+      // and no interior line standing by in reach.
+      // Upper-floor rooms knocked down only from outside dry fast and rekindle sooner [FSRI-CFA single-family]. Timing is a simplification.
+      if(z.out&&!z.burnedOut&&!z.rekindled){if(z.wet<.05&&z.fuel>.3&&!w&&!guarded[id])z.smold+=dt;else z.smold=0;
+        const lim=z.extOnly&&floorNum(z.floor)>=2?TASK.rekindleDryExt:TASK.rekindleDry;
+        if(z.smold>lim){z.rekindled=true;z.out=false;z.flashed=false;z.suppressed=false;z.tIgn=S.t;z.q=.03;z.kd=0;z.smold=0;z.R=Math.max(z.R,.5);
+          ev(S,'spread',`Rekindle: ${zname(S,id)} reignited after drying out with no water on it${z.extOnly&&floorNum(z.floor)>=2?' (knocked down from outside only)':''}.`,{zone:id,src:z.extOnly?'FSRI-CFA':undefined});}}}
     if(w>0&&z.T>.1)z.steam=Math.min(1,z.steam+dt*.08);else z.steam=Math.max(0,z.steam-dt*.02);
     if(w>0)z.T=Math.max(0,z.T-z.T*.035*w*dt);
     // smoke production / exhaust
     z.s+=(z.q*.02*M.smoke/z.vf+z.steam*.004)*dt;
-    const exh=own[id]*(.012+.03*Math.min(1.5,z.T))*(S.fan&&S.fan.on?1.8:1);z.s=clamp(z.s-z.s*exh*dt,0,1);}
+    // after knockdown smoke production stops and what is left clears faster (simplification)
+    const clr=z.out||(S.underControl!=null&&!z.ign);
+    const exh=(own[id]*(.012+.03*Math.min(1.5,z.T))*(S.fan&&S.fan.on?1.8:1)+(clr?.004:0))*(clr?3:1);z.s=clamp(z.s-z.s*exh*dt,0,1);}
   // heat & smoke transfer along connections; hot gases move toward low-pressure/exhaust and upward
   for(const cid in S.c){const c=S.c[cid];const k=connK(S,c);if(k<=0)continue;const A=zs[c.a],Bz=zs[c.b];
     const exA=own[c.a],exB=own[c.b];
@@ -165,6 +229,10 @@ function step(S){const dt=1;
   // crew safety for interior lines
   for(const l of W.lines){if(l.ext||!l.entered)continue;const z=zs[l.zone];const path=zs[S.B.openings.find(o=>o.front).zone];
     if(Math.max(path.T,l.flowing?0:z.T)>.85&&!l.warned){l.warned=true;ev(S,'crew','Attack crew is between the fire and the exhaust: rapid heat increase in their flow path.',{src:'FSRI-VV'});}}
+  // under control: every room that ignited is knocked down or burned out
+  {const ign=Object.values(zs).filter(z=>z.ign);const allOut=ign.length>0&&ign.every(z=>z.out);
+   if(allOut&&S.underControl==null&&S.t>=S.tArr){S.underControl=S.t;ev(S,'control','Fire under control: no room is still burning.');}
+   else if(!allOut&&S.underControl!=null){S.underControl=null;ev(S,'control-lost',`Fire is no longer under control: ${ign.filter(z=>!z.out).map(z=>zname(S,z.id)).join(', ')} burning again.`);}}
   S.t+=dt;
   if(S.t%10===0)S.hist.push(snap(S));
 }
@@ -172,9 +240,11 @@ function connOf(S,zid){for(const cid in S.c){const c=S.c[cid];if(c.type==='door'
 function snap(S){const o=S.scn.origin,z=S.z[o];return{t:S.t,q:+z.q.toFixed(3),T:+z.T.toFixed(3),s:+z.s.toFixed(3),vl:z.vl,fl:z.flashed};}
 function run(S,sec){for(let i=0;i<sec;i++)step(S);}
 /* ---------- derived readings ---------- */
-function stageOf(S,id){const z=S.z[id];if(!z.ign)return z.s>.25?'Smoke only':'Not involved';if(z.out)return'Knocked down';
+function stageOf(S,id){const z=S.z[id];if(!z.ign)return z.s>.25?'Smoke only':'Not involved';if(z.out)return z.burnedOut?'Burned out':'Knocked down';
   if(z.water>0&&z.q<.25)return'Decay (water applied)';
+  if(z.wet>.3&&z.q<.25)return'Decay (darkened by water, can regrow)';
   if(z.fuel<.15)return'Decay (fuel consumed)';
+  if(z.flashed&&z.q<.5)return'Decay (after flashover)';
   if(z.flashed)return z.vl?'Fully developed (ventilation-limited)':'Fully developed';
   if(z.decay)return'Decay (ventilation-limited, starved for air)';
   if(z.vl)return'Growth (ventilation-limited)';
@@ -188,7 +258,8 @@ function smokeOf(S,zid,o){const z=S.z[zid];const M=FUEL[S.scn.fuel];const air=S.
   let den=z.s<.3?0:z.s<.55?1:z.s<.8?2:3;if(z.vl&&z.s>.6)den=Math.max(den,2);if(z.flashed&&z.vl)den=3;
   // colour: steam/early heating -> white; mixed -> gray; structural wood -> brown; fuel-rich synthetics -> black
   let col='gray';
-  if(z.steam>.25)col='white';else if(z.T<.25&&z.q<.15)col=z.s<.4?'white':'gray';
+  if(z.out||(S.underControl!=null&&!z.ign)){col='white';vel=Math.min(vel,1);} // cooling smoke and steam after knockdown (simplification)
+  else if(z.steam>.25)col='white';else if(z.T<.25&&z.q<.15)col=z.s<.4?'white':'gray';
   else if(z.attic||(S.B.construction==='wood'&&z.flashed&&S.t-(z.tFlash||0)>420))col='brown';
   else if(z.vl||z.T>.7)col=S.scn.fuel==='modern'?'black':'gray-black';else col='gray';
   return{vol,vel,den,col,P};}
@@ -231,6 +302,6 @@ function flowPath(S){const intake=[],exhaust=[];const vis=openingVis(S);
     if(o.type==='roof'){exhaust.push(nm);continue;}
     const z=S.z[o.zone];if(v.rate>.05){if(o.type==='door'||o.type==='garage'){exhaust.push(nm+' (top)');intake.push(nm+' (bottom)');}else exhaust.push(nm);} else intake.push(nm);}
   return{intake,exhaust};}
-return{bldgPressure,create,step,run,act,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

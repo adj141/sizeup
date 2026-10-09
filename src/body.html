@@ -128,11 +128,13 @@
       <div><span class="l">Orders <span class="muted" style="text-transform:none;letter-spacing:0">(take effect at the current time)</span></span>
         <div style="display:grid;gap:8px">
           <div class="row2"><select id="lineSel" aria-label="Attack line"></select><button class="btn ghost sm" id="lineGo">Line</button></div>
+          <div class="quick" id="lineQuick" aria-label="Quick line orders for burning rooms"></div>
           <div class="row2"><select id="ventSel" aria-label="Ventilation"></select><button class="btn ghost sm" id="ventGo">Vent</button></div>
           <div class="row2"><select id="searchSel" aria-label="Primary search"></select><button class="btn ghost sm" id="searchGo">Search</button></div>
           <div class="btnrow"><button class="toggle" id="dcToggle" aria-pressed="false"><span><b>Door control</b><small>Entry door held to hose width</small></span><span class="sw"></span></button>
             <button class="btn ghost" id="supplyGo">Establish water supply</button></div>
           <div class="statline" id="opsStat"></div>
+          <div class="lines" id="linesList"></div>
         </div></div>
       <div><span class="l">Checklist</span><div class="checks" id="checks"></div></div>
     </div>
@@ -152,6 +154,7 @@
   <canvas id="cv" class="gl"></canvas><canvas id="ov" class="ov"></canvas>
   <div class="chips"><div class="chip" id="chipSide" hidden><small>SIDE</small><b>A</b></div><div class="chip" id="chipFloor" hidden><small>FLOOR</small><b>2</b></div></div>
   <div class="fochip" id="foChip">⚠ FLASHOVER</div>
+  <div class="ucbanner" id="ucBanner" role="status"><b>✓ FIRE UNDER CONTROL</b><span id="ucT"></span><span class="ucbtns"><button class="btn primary sm" id="ucDebrief">Open debrief</button><button class="btn ghost sm" id="ucKeep">Keep playing</button></span></div>
   <div class="clock" id="clock">T+0:00</div>
   <div class="legend" id="legend"><span style="color:#64b5f6">▲ air in</span> · <span style="color:#ff7043">▲ smoke out</span></div>
   <div class="taphint" id="taphint">Tap where the fire starts</div>

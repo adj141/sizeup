@@ -1,6 +1,6 @@
 # How SizeUp's simulated fire works
 
-*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, Oct 2026).*
+*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, updated Oct 9, 2026: knockdown, multiple lines, attic access, under-control state).*
 
 > **Read this first.** SizeUp uses a **teaching model**, not fire physics. It is not CFAST, FDS or any validated zone/CFD model. Every number in it is a **dimensionless index** (0 = nothing, 1 = "flashover-level"), not °F, kW or ppm. The model's job is to put events in the **right order with roughly the right timing**, and to react to tactics the way the UL FSRI experiments describe. It cannot predict any real building. Training prototype, not for operational use.
 
@@ -46,7 +46,11 @@ FSRI sources referred to:
 | `fuel` | Fuel remaining | 1 → 0 |
 | `wet` | How much water has cooled the room and its fuel | 0 → 1 |
 | `steam` | Steam from water application (whitens smoke) | 0 → 1 |
-| flags | ignited, ventilation-limited, decaying, flashed over, knocked out | yes/no |
+| `kd` knockdown hold | Seconds the room has stayed wet, low and cool (see 5) | 0 → 10 s |
+| `smold` dry time | Seconds a knocked-down room has sat dry with no water and no line standing by | 0 → 600 s |
+| flags | ignited, ventilation-limited, decaying, flashed over, **suppressed** (water has taken away the post-flashover boost), knocked out, burned out, rekindled once | yes/no |
+
+The building also tracks **under control** (the time every room that ignited was knocked down or burned out) and each hoseline (id, target, ready time, status).
 
 Each opening also tracks a **glass heat** counter, and the hidden occupant (if any) tracks an exposure **dose** (0 → 1).
 
@@ -61,13 +65,14 @@ Each step runs in this order:
 ```mermaid
 flowchart TD
   A[Apply any orders or injects due now] --> B[Air map: how much air reaches each room<br/>from openings, through connections]
-  B --> C[Water: supply, tank, which lines are flowing,<br/>how much water each room gets]
+  B --> C[Water: supply, tank, each line's status<br/>en route / flowing / standing by,<br/>how much water each room gets]
   C --> D[Each burning room: growth potential vs air cap<br/>→ heat release q, heat T, fuel, smoke]
   D --> E[Heat and smoke move between connected rooms<br/>upward and toward exhaust]
   E --> F[Neighbors hot enough ignite<br/>flames out a window expose the floor above]
   F --> G[Window glass heats and may fail]
   G --> H[Occupant dose, search progress,<br/>crew-safety checks]
-  H --> I[t = t + 1 s]
+  H --> U[Under-control check:<br/>is any room still burning?]
+  U --> I[t = t + 1 s]
   I --> A
 ```
 
@@ -125,7 +130,7 @@ These values were **tuned to FSRI: VVR timing**. FSRI found that a closed house 
 The shape matches; the exact minutes are approximate.
 
 Other rules:
-- After flashover the potential is set to 2, meaning "burn as hard as the air allows."
+- After flashover the potential is set to 2, meaning "burn as hard as the air allows." Once water has cooled a flashed room (water on it and wet > 0.5) it is marked **suppressed** and the boost is removed: the potential goes back to the normal curve. If it dries out (wet < 0.1) and regrows past q 0.6, the boost returns and the log says the fire regrew. [Simplification]
 - An attic grows 1.6× slower.
 - Below 25% fuel remaining, the potential falls with the fuel.
 - Water multiplies the potential by (1 − 0.97 × wet).
@@ -225,7 +230,11 @@ These come from the room the smoke is leaving. **The cue mapping is the widely t
 
 **Fire showing**: flames show at an opening of a flashed room when `q > 0.7` (size `0.6 × q`), or at a window of an unflashed room when `q > 0.6`. Water cuts visible flame to 25%.
 
-**Stage label** (fire room): Incipient (q < 0.12) → Growth → Growth (ventilation-limited) → Decay (starved for air) → Fully developed → Decay (fuel consumed / water applied) → Knocked down.
+**Stage label** (fire room): Incipient (q < 0.12) → Growth → Growth (ventilation-limited) → Decay (starved for air) → Fully developed → Decay (fuel consumed / water applied) → Knocked down (or Burned out).
+- A room that water has darkened (wet > 0.3, q < 0.25) but that is not yet knocked down reads **Decay (darkened by water, can regrow)**, not "Fully developed".
+- A flashed room burning below q 0.5 reads **Decay (after flashover)**.
+
+**After knockdown** (simplification): a knocked-down room makes no new smoke, and what is left clears about 3× faster (plus a small extra clearing term). Its smoke is drawn **white/light** like cooling smoke and steam, with velocity capped at Moderate. Once the fire is under control, rooms that only had smoke clear the same way. Flames and window glow stop at knockdown.
 
 ## 5. What your orders do to the numbers
 
@@ -233,9 +242,13 @@ Task times are **teaching values**, not SOP or FSRI numbers:
 
 | Task | Time | Effect |
 |---|---|---|
-| Interior line | 45 s stretch + 30 s per floor above the 1st + 15 s | When the crew enters (at 45 s) it **opens the entry door** (or *controls* it if door control is on). Water starts at the ready time |
-| Exterior line | 45 s | Breaks/opens that opening; water only into that room |
-| Water supply | 240 s | Until then lines run off a **500-gal tank at 150 gpm** (≈3.3 min of flow) and stop when it's empty |
+| Interior line | 45 s stretch + 30 s per floor above the 1st + 15 s | When the crew enters (at 45 s) it **opens the entry door** (or *controls* it if door control is on). Water starts at the ready time if there is fire within reach |
+| Line to the attic/cockloft (pull ceiling) | interior line time to the room below + 30 s to pull the ceiling | At the ready time the ceiling between that room and the attic is **breached** (it now passes heat and smoke both ways, k 0.6). Water: **0.8** into the attic, **0.6** into the room below [Simplification; the ceiling-opening behavior follows FSRI: VV] |
+| Exterior line | 45 s | Breaks/opens that opening; water only into that room. Openings on other sides (e.g. a rear slider on Side C) can be used |
+| Exterior line through a roof vent | 45 s + 30 s per story | Only after a vertical vent is open. Water goes into the attic/cockloft (0.85) |
+| Reassign a line | interior → interior: 30 s + 30 s per floor moved (+30 s if pulling a ceiling); exterior → exterior: 30 s; inside ↔ outside: a new stretch | The line stops flowing and moves; the log records from/to |
+| Withdraw a line | immediate | The line is removed; the log records it. "Withdraw all" removes every line |
+| Water supply | 240 s | Until then each flowing line draws **150 gpm from a 500-gal tank** (one line ≈ 3.3 min; three lines ≈ 67 s). A **low-tank warning** is logged below 150 gal; lines stop when it's empty and restart once the supply is in |
 | Horizontal vent | 15 s | Opening becomes open/failed |
 | Vertical vent | 300 s | Roof hole + ceiling pushed below it |
 | PPV/PPA fan | entry door opens now; fan on after 60 s | See below |
@@ -249,7 +262,13 @@ Task times are **teaching values**, not SOP or FSRI numbers:
   - heat drops by 3.5% × water
   - heat release drops 6% × water and its target collapses with a 4 s lag
   - steam builds, so the smoke turns white
-- Knockdown happens when **wet > 0.85 and q < 0.03**. Lines shut down 20 s after knockdown.
+- **Knockdown** happens when the room has stayed **wet > 0.8, q < 0.12 and heat T < 0.3 for 10 s in a row** (the older rule, wet > 0.85 and q < 0.03, still counts too). Because water removes the post-flashover boost (4b), **flashed-over rooms can be knocked down**. Typical result: a flashed living room goes out about 35 s after the line starts flowing. [Simplification; the knockdown thresholds are teaching values]
+- **Burned out**: a room with under 5% fuel left and q < 0.05 (and not air-starved) is marked burned out.
+- **Lines stand by when there is no fire within reach.** Each line has a reach: its room plus the spill-over rooms above, or the attic and the room below for a pulled ceiling, or the one room for an exterior stream. If nothing in its reach is burning for 20 s, the line shuts down, but the crew stays in position. If fire comes back within its reach, the line starts flowing again. A line sent to a room with no fire stands by from the start, so it does not drain the tank.
+- **Overhaul and rekindle** [Simplification]:
+  - A knocked-down room with more than 30% fuel left can **rekindle once**. That needs it to sit **dry (wet < 0.05) for 600 s** with no water on it and **no interior line in position covering it**.
+  - For an upper-floor room knocked down only from outside, the wait is 120 s (see the next point).
+  - A rekindle restarts the growth curve from zero, so it is slow to build. It un-sets "under control" and is logged.
 - Wet dries off slowly (over 900 s). For an **upper-floor room hit only from outside**, it dries in **70 s**, so the room can **regrow** unless an interior line follows. [FSRI: CFA]
 - Water from any direction cools the fire room and the rooms around it. [FSRI: VVR, the 40% / 22% finding; this behavior is qualitative and the code is not tuned to those exact percentages]
 - Water does not push fire; only flow paths move it. [FSRI: VVR]
@@ -261,7 +280,20 @@ Task times are **teaching values**, not SOP or FSRI numbers:
   - adds +1.6 air into the entry room
   - multiplies heat movement ×1.6 and smoke venting ×1.8
   - multiplies outflow ×1.7 at every other opening, so a fan helps only when there is an exhaust in the fire room [FSRI: PPV, "Positive Pressure Attack is exhaust dependent"]
-- **Defensive strategy** withdraws interior lines and stops searches.
+- **Defensive strategy** withdraws interior lines (the log names them) and stops searches. In Defensive the line list defaults to exterior streams.
+
+**Multiple lines** [Simplification]:
+- Up to **3 hoselines** can work at once, interior and exterior in any mix. Each is listed on the board with its target and status: en route (with countdown), flowing, standing by, or no water.
+- A new order **adds** a line; it never silently replaces one. When all 3 are committed, the order is refused with a message: reassign or withdraw a line first.
+- The cap of 3 stands in for the crews on scene. **Staffing is not modeled**, and configurable staffing and task times are planned separately.
+- Where two lines reach the same room, it gets the larger of their two amounts of water (amounts are not added together).
+
+**Under control**:
+- When every room that ignited is knocked down or burned out, the model logs **"Fire under control"**.
+- The app then pauses the clock, shows a banner with *Open debrief* / *Keep playing*, and clears the flashover chip.
+- If a room rekindles later, the state is cleared and logged.
+
+**Picking orders while the clock runs**: the order dropdowns keep your choice when the board refreshes. The line list puts **burning rooms first** (🔥) and preselects the first burning room that has no line yet. One-tap chips (＋ Line → room) appear for burning rooms. Pressing an order button with nothing picked shows a message.
 
 ## 6. Occupant and crew-safety calculations
 
@@ -285,3 +317,4 @@ This is a simplified stand-in for heat and toxic-gas exposure (FED-style), not a
 - **Coarse building.** One heat value and one smoke value per room: no hot layer vs cool floor inside a room, and no separate doorways. Rooms in an uploaded photo are a generic left room / right room / hall per floor.
 - **Random within the seed.** Window failure timing, occupant placement and similar draws come from the scenario seed. The same seed gives the same drill; a different seed gives slightly different timing.
 - **Generic tactics.** Task times and drill timings are not your department's SOPs.
+- **No staffing model.** The 3-line cap, reassign and pull-ceiling times, knockdown hold and rekindle timing are teaching values. They are not FSRI findings and not SOPs.

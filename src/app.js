@@ -49,7 +49,7 @@ const now=()=>A.S?A.S.t-A.S.tArr:0;
 const NOAUTO=/noautoplay/.test(location.hash);
 function startClock(){A.simAcc=0;A.playing=!NOAUTO;A.wasPlaying=false;syncUI();}
 function advance(sec){const S=A.S;const n0=S.events.length;for(let i=0;i<sec;i++)M.step(S);A.scn.tNow=now();return S.events.slice(n0);}
-function order(a){const t=now();const act={...a,t};A.scn.actions.push(act);M.act(A.S,{...a,t:A.S.t});M.step(A.S);A.scn.tNow=now();// apply immediately-due orders
+function order(a){const t=now();const act={...a,t};A.scn.actions.push(act);const n0=A.S.events.length;M.act(A.S,{...a,t:A.S.t});M.step(A.S);A.scn.tNow=now();const ne=A.S.events.slice(n0);if(ne.length){A.latest=ne.map(e=>e.msg);toast(`T+${fmt(now())} · ${ne[0].msg}`);handleEvents(ne);}// apply immediately-due orders
   refreshAll();}
 function zoneOf(id){return A.B.zones.find(z=>z.id===id);}
 function zname(id){return M.zname(A.S||{B:A.B},id);}
@@ -68,11 +68,15 @@ new ResizeObserver(()=>layout()).observe(stage);
 function curVis(){if(!A.S||A.screen<3)return null;if(A.visT!==A.S.t){A.vis=SizeupVisual.build(A.S,A.B,M);A.visT=A.S.t;}return A.vis;}
 function setTexture(){if(R&&A.img)R.setImage(A.img,A.B.W,A.B.H);}
 function warm(sec){if(R){R.clear();const v=curVis();if(v)R.prewarm(sec,v);}}
+// under control: auto-pause, banner, prompt to debrief
+function handleEvents(ne){if(ne.some(e=>e.kind==='control')){if(A.playing){A.playing=false;A.simAcc=0;}A.ucDismissed=null;syncUI();toast(`T+${fmt(now())} · Fire under control. Clock paused.`);}
+  if(ne.some(e=>e.kind==='control-lost'))A.ucDismissed=null;}
+function underControl(){return A.S&&A.S.underControl!=null;}
 let last=performance.now(),uiT=0;
 function loop(now_){const wdt=Math.min(1,(now_-last)/1000),dt=Math.min(.05,wdt);last=now_;
   if(A.screen>=2&&A.B&&!document.hidden){
     if(A.playing&&A.screen===4&&A.S){A.simAcc+=wdt*A.speed;let n=0;const n0=A.S.events.length;while(A.simAcc>=1&&n<60){A.simAcc--;M.step(A.S);n++;}A.scn.tNow=now();
-      const ne=A.S.events.slice(n0);if(ne.length){A.latest=ne.map(e=>e.msg);buildInjects();toast(`T+${fmt(now())} · ${ne[0].msg}`);}uiT+=wdt;if(uiT>.5||ne.length){uiT=0;renderBoard();}}
+      const ne=A.S.events.slice(n0);if(ne.length){A.latest=ne.map(e=>e.msg);buildInjects();toast(`T+${fmt(now())} · ${ne[0].msg}`);handleEvents(ne);}uiT+=wdt;if(uiT>.5||ne.length){uiT=0;renderBoard();}}
     if(R){R.update(dt,A.screen>=3?curVis():null);R.draw(rect,dpr);}drawOverlay();}
   requestAnimationFrame(loop);}
 function toScene(cx,cy){return{x:(cx-rect.x)/rect.w*A.B.W,y:(cy-rect.y)/rect.h*A.B.H};}
@@ -170,7 +174,8 @@ function syncUI(){const sc=A.scn;
   $('#toDial').disabled=!A.originSet;
   const chips=A.screen>=2&&A.originSet&&!isHidden();$('#chipSide').hidden=!chips;$('#chipFloor').hidden=!chips;$('#chipSide b').textContent=A.side;$('#chipFloor b').textContent=z.floor==='Attic'?'ATT':z.floor;$('#chipFloor small').textContent=/^\d+$/.test(z.floor)?'FLOOR':'LEVEL';
   $('#taphint').classList.toggle('show',A.screen===2&&!A.originSet&&!(isPhoto&&A.markMode!=='origin'));if(isPhoto&&A.screen===2&&A.markMode!=='origin'){$('#taphint').textContent=$('#markHint').textContent;$('#taphint').classList.add('show');}else $('#taphint').textContent='Tap where the fire starts';
-  const fo=A.S&&A.screen>=3&&Object.values(A.S.z).some(z=>z.flashed&&!z.out)&&!isHidden();$('#foChip').classList.toggle('show',!!fo);
+  const fo=A.S&&A.screen>=3&&!underControl()&&Object.values(A.S.z).some(z=>z.flashed&&!z.out)&&!isHidden();$('#foChip').classList.toggle('show',!!fo);
+  const uc=A.screen===4&&underControl()&&A.ucDismissed!==A.S.underControl;$('#ucBanner').classList.toggle('show',!!uc);if(uc)$('#ucT').textContent=`All fire knocked down at T+${fmt(A.S.underControl-A.S.tArr)}. Clock paused.`;
   $('#clock').classList.toggle('show',A.screen===4);$('#clock').classList.toggle('paused',!A.playing);$('#clock').textContent=A.playing?`▶ T+${fmt(now())} · ${A.speed}×`:`❚❚ PAUSED · T+${fmt(now())}`;
   $('#cbT').textContent=`T+${fmt(now())}`;$('#cbS').textContent=A.playing?`running ${A.speed}× · since arrival`:'paused · since arrival';$('#cbClock').classList.toggle('run',A.playing);
   $('#legend').classList.toggle('show',A.screen===4&&A.showFlow&&!isHidden());
@@ -189,7 +194,7 @@ function dominant(){const S=A.S;const v=M.openingVis(S);let best=null;for(const 
 function smokeWhere(){const S=A.S;const v=M.openingVis(S);const list=A.B.openings.filter(o=>v[o.id]&&v[o.id].rate>.01).sort((a,b)=>v[b.id].rate-v[a.id].rate).map(o=>(o.hidden?o.name:o.name.replace(/ \(.+\)/,''))+(v[o.id].state==='closed'?' (around the closed '+o.type+')':''));const e=M.eavesVis(S);if(e&&e.rate>.02)list.push(A.B.id==='mixed'?'cornice':'eaves');for(const id in S.o)if(S.o[id].type==='roof'&&S.o[id].state!=='closed'&&v[id]&&v[id].rate>.02)list.push('roof vent');return [...new Set(list)];}
 function fireShowing(){const S=A.S;const v=M.openingVis(S);return A.B.openings.filter(o=>v[o.id]&&v[o.id].flame>.05).map(o=>o.name);}
 function smokeText(){const d=dominant();if(!d)return'Nothing showing';const w=smokeWhere();return `${M.VOLN[d.vol]} ${d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
-function burningText(){const S=A.S;const b=Object.values(S.z).filter(z=>z.ign&&!z.out);if(!b.length)return Object.values(S.z).some(z=>z.out)?'Knocked down':'No fire';return b.map(z=>`${zname(z.id)}: ${M.stageOf(S,z.id).toLowerCase()}`).join(' · ');}
+function burningText(){const S=A.S;const b=Object.values(S.z).filter(z=>z.ign&&!z.out);if(!b.length)return underControl()?'Under control: all fire knocked down':Object.values(S.z).some(z=>z.out)?'Knocked down':'No fire';return b.map(z=>`${zname(z.id)}: ${M.stageOf(S,z.id).toLowerCase()}`).join(' · ');}
 function hostile(){const S=A.S,o=S.z[A.scn.origin];let s=0,why=[];
   if(o.vl&&!o.flashed&&o.T>.3){s+=3;why.push('ventilation-limited and hot: new air will speed it up');}
   if(o.decay){s+=1;why.push('starved fire, pulsing smoke');}
@@ -225,27 +230,71 @@ function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,
    +au('stage','Fire stage',esc(burningText()))+ed('stories','layers','Stories')+ed('exposures','bldgs','Exposures')+ed('life','users','Life hazard')
    +au('flow','Flow path',`${esc('Exhaust: '+(fp.exhaust.join(', ')||'none open (leakage only)'))}<br>${esc('Intake: '+(fp.intake.join(', ')||'none'))} <button class="btn ghost sm" id="flowTog" style="min-height:34px;margin-left:6px">${A.showFlow?'Hide arrows':'Show arrows'}</button>`,true)
    +au('gauge','Hostile-event indicators',`${meter()} <span class="muted" style="font-size:13px">${esc(hostile().why.join('; '))}</span>`,true)
-   +`<div class="frow">${svg('drop')}<span class="k">Water</span><span class="v">${W.supply?'Supply established':W.supplyAt!=null?`Supply in ${fmt(W.supplyAt-S.t)}`:'Tank only'} · tank ${Math.round(W.tank)} gal${occ}</span></div>`;
+   +`<div class="frow">${svg('drop')}<span class="k">Water</span><span class="v">${W.supply?'Supply established':W.supplyAt!=null?`Supply in ${fmt(W.supplyAt-S.t)}`:'Tank only'} · <span class="${!W.supply&&W.tank<M.TASK.lowTank?'water-low':''}">tank ${Math.round(W.tank)} gal${!W.supply&&W.tank<M.TASK.lowTank?' (low)':''}</span> · ${W.lines.length}/${M.TASK.lineCap} lines${occ}</span></div>`;
   $$('#facts .ed').forEach(i=>{i.oninput=()=>{A.facts[i.dataset.f]=i.textContent.trim();};i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();i.blur();}};});
   const ft=$('#flowTog');if(ft)ft.onclick=()=>{A.showFlow=!A.showFlow;renderBoard();syncUI();};
   const t=now();$('#pT').textContent=`T+${fmt(t)}`;$('#prompt').classList.toggle('changing',t>0&&A.latest.length>0);
   if(t===0){$('#pH').textContent='You’re first due.';$('#pP').textContent=A.mode==='solo'?(A.locked?'Give your initial radio report and make your first orders.':'Make your size-up calls below, then give your initial radio report.'):'Crew: call out the size-up. Instructor: play or advance the clock.';}
+  else if(underControl()){$('#pH').textContent='Fire under control.';$('#pP').textContent='No room is still burning. Open the debrief, or keep the clock running: a room left dry with no line nearby can rekindle.';}
   else if(A.latest.length){$('#pH').textContent='Conditions changing.';$('#pP').textContent=A.latest.slice(-3).join(' ')+' Update your report, strategy and assignments.';}
   else{$('#pH').textContent='Reassess.';$('#pP').textContent='No major change in this interval. Does your plan still match conditions?';}
   renderOrders();renderLog();renderCalls();syncUI();}
-function renderOrders(){const B=A.B,S=A.S;const cur={};
-  $('#lineSel').innerHTML=`<option value="">Attack line…</option>`+B.zones.filter(z=>!z.attic).map(z=>`<option value="${z.id}">Interior line to ${esc(z.name)}</option>`).join('')+B.openings.filter(o=>!o.hidden&&o.type!=='garage').map(o=>`<option value="ext:${o.id}">Exterior water through ${esc(o.name)}</option>`).join('')+`<option value="none">Shut down lines</option>`;
+// rebuild a <select> only when its options change, and keep the user's pick across board refreshes
+function setOpts(sel,html,def){const v=sel.value;
+  if(sel._h!==html){sel.innerHTML=html;sel._h=html;if(sel._touched&&v&&[...sel.options].some(o=>o.value===v&&!o.disabled))sel.value=v;else{sel._touched=false;sel.value=def||'';}}
+  else if(!sel._touched&&(def||'')!==v)sel.value=def||'';}
+['#lineSel','#ventSel','#searchSel'].forEach(id=>{const el=$(id);el.addEventListener('change',()=>{el._touched=!!el.value;el.classList.remove('need');});});
+function burningIds(){return Object.values(A.S.z).filter(z=>z.ign&&!z.out).map(z=>z.id);}
+// every line target the player can pick: interior rooms, attic/cockloft via a pulled ceiling, exterior openings (incl. roof vents)
+function lineTargets(){const B=A.B,S=A.S,burn=new Set(burningIds());const att=B.zones.find(z=>z.attic);const T=[];
+  B.zones.filter(z=>!z.attic).forEach(z=>T.push({v:z.id,zone:z.id,g:'room',label:`Interior line to ${z.name}`,short:z.name}));
+  if(att)B.conns.filter(c=>c.type==='ceiling'&&(c.a===att.id||c.b===att.id)).forEach(c=>{const via=c.a===att.id?c.b:c.a;const vz=zoneOf(via);if(!vz||vz.attic)return;
+    T.push({v:'attic:'+via,zone:att.id,g:'attic',label:`Line to ${att.name} via ${vz.name} (pull ceiling)`,short:`${att.name} via ${vz.name}`});});
+  B.openings.filter(o=>o.type==='window'||o.type==='door').forEach(o=>T.push({v:'ext:'+o.id,zone:o.zone,g:'ext',label:`Exterior water through ${o.name}`,short:o.name}));
+  for(const id in S.o){const o=S.o[id];if(o.type==='roof'&&o.dyn&&o.state!=='closed')T.push({v:'ext:'+id,zone:o.zone,g:'ext',label:`Exterior water through ${M.oname(S,id)} (into ${zname(o.zone)})`,short:M.oname(S,id)});}
+  const used={};S.water.lines.forEach(l=>used[l.key]=l.id);
+  T.forEach(t=>{t.burn=burn.has(t.zone);t.used=used[t.v];});return T;}
+function lineOptsHTML(T,skip){const o=t=>`<option value="${t.v}"${t.used&&t.v!==skip?' disabled':''}>${t.burn?'🔥 ':''}${esc(t.label)}${t.used?` (Line ${t.used})`:''}</option>`;
+  const def=A.S.strategy==='Defensive';const burnFirst=T.filter(t=>t.burn&&(def?t.g==='ext':t.g!=='ext'));
+  const grp=(lab,list)=>list.length?`<optgroup label="${esc(lab)}">${list.map(o).join('')}</optgroup>`:'';
+  return grp('Burning now',burnFirst)+grp('Rooms',T.filter(t=>t.g==='room'&&!burnFirst.includes(t)))+grp((A.B.atticName||'Attic')+' (pull ceiling)',T.filter(t=>t.g==='attic'&&!burnFirst.includes(t)))+grp('Exterior',T.filter(t=>t.g==='ext'&&!burnFirst.includes(t)));}
+function defaultLine(T){const def=A.S.strategy==='Defensive';const c=T.filter(t=>t.burn&&!t.used&&(def?t.g==='ext':t.g!=='ext'));
+  // prefer a room the fire is in, then the attic, then exterior
+  const pick=c.find(t=>t.g==='room')||c.find(t=>t.g==='attic')||c[0];return pick?pick.v:'';}
+function lineStatus(l){const S=A.S;if(S.t<l.readyAt)return`en route, in position in ${fmt(l.readyAt-S.t)}`;if(l.flowing)return'flowing';
+  if(!(S.water.supply||S.water.tank>0))return'no water (tank empty)';return'standing by: no fire within reach';}
+function renderOrders(){const B=A.B,S=A.S;const T=lineTargets();const W=S.water;
+  setOpts($('#lineSel'),`<option value="">Attack line…</option>`+lineOptsHTML(T),defaultLine(T));
   const fr=B.openings.find(o=>o.front);
-  $('#ventSel').innerHTML=`<option value="">Ventilation…</option>`+B.openings.filter(o=>o.type==='window'||(o.type==='door'&&!o.front)).map(o=>`<option value="h:${o.id}">Horizontal: ${esc(o.name)}</option>`).join('')
-    +B.zones.filter(z=>z.floor===String(B.stories)&&!z.hidden||z.attic).map(z=>`<option value="v:${z.id}">Vertical: roof over ${esc(z.name)}</option>`).join('')+(fr?`<option value="ppv">PPV/PPA fan at ${esc(fr.name)}</option><option value="fanoff">Fan off</option>`:'');
+  setOpts($('#ventSel'),`<option value="">Ventilation…</option>`+B.openings.filter(o=>o.type==='window'||(o.type==='door'&&!o.front)).map(o=>`<option value="h:${o.id}">Horizontal: ${esc(o.name)}</option>`).join('')
+    +B.zones.filter(z=>z.floor===String(B.stories)&&!z.hidden||z.attic).map(z=>`<option value="v:${z.id}">Vertical: roof over ${esc(z.name)}</option>`).join('')+(fr?`<option value="ppv">PPV/PPA fan at ${esc(fr.name)}</option><option value="fanoff">Fan off</option>`:''),'');
   const floors=[...new Set(B.zones.filter(z=>!z.attic).map(z=>z.floor))].sort();
-  $('#searchSel').innerHTML=`<option value="">Primary search…</option>`+floors.map(f=>`<option value="${f}">Primary search: floor ${f}</option>`).join('');
-  const W=S.water;const lines=W.lines.map(l=>`${l.ext?'exterior → '+M.oname(S,l.opening):'interior → '+zname(l.zone)}${l.flowing?' (flowing)':S.t<l.readyAt?` (in ${fmt(l.readyAt-S.t)})`:' (no water)'}`);
+  setOpts($('#searchSel'),`<option value="">Primary search…</option>`+floors.map(f=>`<option value="${f}">Primary search: floor ${f}</option>`).join(''),'');
+  // quick one-tap chips for burning places without a line
+  const def=S.strategy==='Defensive';let q=[];
+  if(W.lines.length<M.TASK.lineCap){const seen=new Set();for(const t of T){if(!t.burn||t.used||seen.has(t.zone))continue;if(def?t.g!=='ext':t.g==='ext')continue;if(t.g==='attic'&&T.some(x=>x.zone===t.zone&&x.used))continue;seen.add(t.zone);q.push(t);}q=q.slice(0,4);}
+  const qh=q.map(t=>`<button data-t="${t.v}">＋ ${t.g==='ext'?'Exterior':'Line'} → ${esc(t.short)}</button>`).join('');
+  const qe=$('#lineQuick');if(qe._h!==qh){qe.innerHTML=qh;qe._h=qh;}
+  // lines list with reassign / withdraw; structure rebuilt only when lines or targets change
+  const sig=JSON.stringify(W.lines.map(l=>[l.id,l.key]))+lineOptsHTML(T);const LL=$('#linesList');
+  if(LL._h!==sig){LL._h=sig;
+    LL.innerHTML=W.lines.map(l=>`<div class="lrow" data-id="${l.id}"><div class="lst"><b>Line ${l.id}</b>${l.ext?'Exterior':'Interior'} → ${esc(l.label.replace(/ \(exterior\)$/,''))}<small class="lstat"></small></div><span></span>
+      <div class="lctl"><select class="lre" aria-label="Reassign Line ${l.id}"><option value="">Reassign Line ${l.id} to…</option>${lineOptsHTML(T,l.key)}</select><button class="btn ghost sm lwd">Withdraw</button></div></div>`).join('')
+      +(W.lines.length?`<div class="lcap">${W.lines.length} of ${M.TASK.lineCap} hoselines committed. The cap is a simplification: staffing is not modeled. <button class="btn ghost sm" id="lwdAll">Withdraw all</button></div>`:'');}
+  W.lines.forEach(l=>{const r=LL.querySelector(`.lrow[data-id="${l.id}"]`);if(!r)return;const st=lineStatus(l);const el=r.querySelector('.lstat');if(el.textContent!==st)el.textContent=st;r.classList.toggle('flow',!!l.flowing);r.classList.toggle('idle',!l.flowing);});
+  const lines=W.lines.map(l=>`Line ${l.id} ${l.ext?'exterior → '+M.oname(S,l.opening):'interior → '+l.label} (${lineStatus(l)})`);
   const srch=S.searches.map(s=>`floor ${s.floor} ${s.done?(s.aborted?'aborted':'done'):`(${fmt(s.end-S.t)} left)`}`);
   $('#opsStat').textContent=`Strategy: ${S.strategy||'not set'} · Lines: ${lines.join('; ')||'none'} · Search: ${srch.join('; ')||'none'}${S.fan&&S.fan.on?' · Fan running':''}`;}
-$('#lineGo').onclick=()=>{const v=$('#lineSel').value;if(!v)return;order({kind:'line',target:v});};
-$('#ventGo').onclick=()=>{const v=$('#ventSel').value;if(!v)return;if(v.startsWith('h:'))order({kind:'vent',type:'horizontal',opening:v.slice(2)});else if(v.startsWith('v:'))order({kind:'vent',type:'vertical',zone:v.slice(2)});else if(v==='ppv')order({kind:'vent',type:'ppv'});else order({kind:'vent',type:'none'});};
-$('#searchGo').onclick=()=>{const v=$('#searchSel').value;if(!v)return;order({kind:'search',floor:v});};
+function needPick(sel){toast('Pick an option from the list first, then press the button.');sel.classList.add('need');sel.focus();setTimeout(()=>sel.classList.remove('need'),2500);}
+function doneSel(sel){sel._touched=false;}
+$('#lineGo').onclick=()=>{const el=$('#lineSel'),v=el.value;if(!v)return needPick(el);doneSel(el);order({kind:'line',target:v});};
+$('#ventGo').onclick=()=>{const el=$('#ventSel'),v=el.value;if(!v)return needPick(el);doneSel(el);if(v.startsWith('h:'))order({kind:'vent',type:'horizontal',opening:v.slice(2)});else if(v.startsWith('v:'))order({kind:'vent',type:'vertical',zone:v.slice(2)});else if(v==='ppv')order({kind:'vent',type:'ppv'});else order({kind:'vent',type:'none'});};
+$('#searchGo').onclick=()=>{const el=$('#searchSel'),v=el.value;if(!v)return needPick(el);doneSel(el);order({kind:'search',floor:v});};
+$('#lineQuick').onclick=e=>{const b=e.target.closest('button[data-t]');if(b)order({kind:'line',target:b.dataset.t});};
+$('#linesList').addEventListener('change',e=>{const s=e.target.closest('select.lre');if(!s||!s.value)return;const id=+s.closest('.lrow').dataset.id;order({kind:'reassign',line:id,target:s.value});});
+$('#linesList').addEventListener('click',e=>{if(e.target.id==='lwdAll'){order({kind:'line',target:'none'});return;}const b=e.target.closest('.lwd');if(!b)return;order({kind:'withdraw',line:+b.closest('.lrow').dataset.id});});
+$('#ucDebrief').onclick=()=>$('#finishBtn').click();
+$('#ucKeep').onclick=()=>{A.ucDismissed=A.S.underControl;A.playing=true;A.simAcc=0;syncUI();};
 $('#dcToggle').onclick=()=>order({kind:'doorcontrol',on:!A.S.doorControl});
 $('#supplyGo').onclick=()=>order({kind:'supply'});
 function renderLog(){const S=A.S;const items=S.events.filter(e=>e.t>=S.tArr).slice().reverse();
@@ -254,7 +303,7 @@ function renderLog(){const S=A.S;const items=S.events.filter(e=>e.t>=S.tArr).sli
    +(pre.length&&!isHidden()?`<div class="e" style="opacity:.8"><b>Before arrival</b> · ${esc(pre.map(e=>`${fmt(e.t)} ${e.msg}`).join(' · '))}</div>`:'');}
 $('#checks').innerHTML=CHECKS.map(c=>`<button class="check" data-k="${c}" aria-pressed="false"><i></i>${c}</button>`).join('');
 $('#checks').onclick=e=>{const b=e.target.closest('.check');if(!b)return;A.checks[b.dataset.k]=!A.checks[b.dataset.k];syncUI();};
-function doEvolve(sec){if(!A.S)return;const ne=advance(sec);A.latest=ne.map(e=>e.msg);if(R){const v=curVis();R.prewarm(Math.min(2.5,sec/20+1),v);}renderBoard();buildInjects();toast(ne.length?`T+${fmt(now())} · ${ne[0].msg}`:`T+${fmt(now())} · no major change`);}
+function doEvolve(sec){if(!A.S)return;const ne=advance(sec);A.latest=ne.map(e=>e.msg);handleEvents(ne);if(R){const v=curVis();R.prewarm(Math.min(2.5,sec/20+1),v);}renderBoard();buildInjects();toast(ne.length?`T+${fmt(now())} · ${ne[0].msg}`:`T+${fmt(now())} · no major change`);}
 $('#evolveBtn').onclick=()=>doEvolve(A.stepSize);
 $('#adv1').onclick=()=>doEvolve(60);
 const togglePlay=()=>{A.playing=!A.playing;A.simAcc=0;syncUI();};$('#playBtn').onclick=togglePlay;$('#clock').onclick=()=>{if(A.screen===4)togglePlay();};
@@ -329,7 +378,7 @@ function debrief(){const S=A.S,sc=A.scn,ta=S.tArr,items=[];const at=t=>`T+${fmt(
   const S0=S.searches.filter(s=>s.done&&!s.aborted);if(!S.searches.length)add('mid','No primary search ordered','',[]);
   // strategy note
   if(S.strategy==='Defensive'){const o=S.z[sc.origin];const confined=Object.values(S.z).filter(z=>z.ign).length<=1&&!o.flashed;add('mid','Defensive strategy',confined?'At arrival the fire was in one compartment. Compare that with your life-hazard read. The choice is yours; this is just what the model showed.':'Conditions included flashover or extension. The model just shows what the building did.',[]);}
-  const out=Object.values(S.z).filter(z=>z.ign);const allOut=out.length&&out.every(z=>z.out);add(allOut?'ok':'mid',allOut?`All fire knocked down by ${at(Math.max(...out.map(z=>z.tOut||0)))}`:'Fire not yet under control at the end of the drill',`Burned: ${out.map(z=>zname(z.id)).join(', ')||'none'}.`,['push']);
+  const out=Object.values(S.z).filter(z=>z.ign);const allOut=out.length&&out.every(z=>z.out);add(allOut?'ok':'mid',allOut?`Fire under control at ${at(S.underControl!=null?S.underControl:Math.max(...out.map(z=>z.tOut||0)))}`:`Fire not yet under control at the end of the drill (still burning: ${out.filter(z=>!z.out).map(z=>zname(z.id)).join(', ')})`,`Burned: ${out.map(z=>zname(z.id)).join(', ')||'none'}.`,['push']);
   return items;}
 $('#finishBtn').onclick=()=>{A.playing=false;A.wasPlaying=false;A.finished=true;syncUI();const items=debrief();const ok=items.filter(i=>i.st==='ok').length;
   openModal('Debrief',`<div class="debrief"><p style="margin:0 0 8px">${esc(A.B.name)} · ${esc(M.FUEL[A.scn.fuel].label)} · drill ended at T+${fmt(now())}. ${ok}/${items.length} items went well.</p>${items.map(i=>`<div class="item"><b><span class="badge2 ${i.st}">${i.st==='ok'?'✓':i.st==='mid'?'!':'✗'}</span>${esc(i.title)}</b>${i.detail?`<small>${esc(i.detail)}</small>`:''}${ruleHTML(i.rules)}</div>`).join('')}
