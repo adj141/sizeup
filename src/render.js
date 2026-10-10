@@ -111,10 +111,10 @@ function create(canvas){
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
   const img=gl.createTexture();let W=1,H=1;
   const MAXP=1400,FL=13,vb=new Float32Array(MAXP*6*FL),pbuf=gl.createBuffer();
-  const R={gl,canvas,smoke:[],time:0,acc:{},vis:null};
+  const R={gl,canvas,smoke:[],time:0,acc:{},em:{},vis:null};
   R.setImage=(src,w,h)=>{W=w;H=h;gl.bindTexture(gl.TEXTURE_2D,img);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);R.smoke=[];R.acc={};};
-  R.clear=()=>{R.smoke=[];R.acc={};};
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);R.smoke=[];R.acc={};R.em={};};
+  R.clear=()=>{R.smoke=[];R.acc={};R.em={};};
   /* ---- particle simulation (scene pixel units) ---- */
   function emit(src,U,wind){if(R.smoke.length>=MAXP)return;const vel=src.vel,den=src.den;const w=src.w;
     const x=src.x+rand(-.45,.45)*w,y=src.y+rand(0,1)*(src.hgt||0);
@@ -125,7 +125,15 @@ function create(canvas){
     R.smoke.push({x,y,vx:rand(-6,6)*U+(src.side||0)*burst*.25,vy:-rise-burst*rand(.5,1),rise,age:0,life,s0,s1,a:[.28,.5,.72,.92][den]*(src.alpha||1),turb:[4,10,18,40][vel]*U,ph:rand(0,99),rot:rand(0,6.28),vr:rand(-.25,.25)*(vel===3?2.5:1),
       rgb,seed:rand(0,1),glow:src.glow||0,wind:wind*U,ev:rand(0,10),evr:[.18,.3,.45,.8][vel],cool:src.cool==null?.35:src.cool});}
   R.update=(dt,vis)=>{R.time+=dt;R.vis=vis;if(!vis)return;const U=H/800,wind=vis.wind||0;
-    vis.emitters.forEach((s,i)=>{if(s.rate<=0)return;const k='e'+(s.key||i);let r=s.rate;if(s.pulse)r*=.35+.65*Math.max(0,Math.sin(R.time*2.4+i));R.acc[k]=(R.acc[k]||0)+r*dt;while(R.acc[k]>=1){R.acc[k]--;emit(s,U,wind);}});
+    vis.emitters.forEach((s,i)=>{if(s.rate<=0)return;const k='e'+(s.key||i);
+      /* De-synced, irregular spawning for EVERY emitter (Oct 9 rework): each emitter gets its own random starting counter, its own
+         rate offset (±25%), slow incommensurate "gusts", and a random interval between puffs (threshold 0.35–1.65 instead of a fixed 1),
+         so neighbouring emitters never puff in lockstep. Visual only; the model is unchanged. */
+      let st=R.em[k];if(!st){st=R.em[k]={acc:Math.random(),thr:rand(.35,1.65),j:rand(.75,1.25),f1:rand(.25,.6),f2:rand(.9,1.7),p1:rand(0,6.3),p2:rand(0,6.3)};}
+      const gust=1+.28*Math.sin(R.time*st.f1+st.p1)+.16*Math.sin(R.time*st.f2+st.p2);let r=s.rate*st.j*gust;
+      if(s.pulse){/* irregular breathing, not a metronome: two incommensurate cycles; 'attic' = ventilation-limited attic [FSRI-ATTIC], 1 = starved room [FSRI-VVR] */
+        const b=.5+.3*Math.sin(R.time*(s.pulse==='attic'?1.1:1.7)*st.f2+st.p1)+.2*Math.sin(R.time*.53*st.f2+st.p2*1.7);r*=.2+1.3*Math.max(0,b)*Math.max(0,b);}
+      st.acc+=r*dt;while(st.acc>=st.thr){st.acc-=st.thr;st.thr=rand(.35,1.65);emit(s,U,wind);}});
     const sm=R.smoke;for(let i=sm.length-1;i>=0;i--){const p=sm[i];p.age+=dt;if(p.age>=p.life){sm[i]=sm[sm.length-1];sm.pop();continue;}const k=p.age/p.life;
       p.vy+=(-p.rise*(1-k*.4)-p.vy)*Math.min(1,dt*1.3);p.vx+=(p.wind*(.3+k*1.2)-p.vx)*Math.min(1,dt*.8);
       p.x+=(p.vx+Math.sin(p.y*.02/U+R.time*1.7+p.ph)*p.turb*(.4+k))*dt;p.y+=p.vy*dt;p.rot+=p.vr*dt;p.ev+=p.evr*dt;}};

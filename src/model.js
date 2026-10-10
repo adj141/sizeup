@@ -467,11 +467,15 @@ const SMOKE_RGB={white:[226,224,218],gray:[128,126,122],'gray-black':[70,68,66],
 // openings to the outside relieve that pressure.
 function bldgPressure(S){let p=0;for(const id in S.z){const z=S.z[id];if(z.ign&&!z.out)p=Math.max(p,z.q*z.T*1.7);}
   let open=0;for(const id in S.o){const o=S.o[id];if(o.state!=='closed')open+=openK(S,o);}return clamp(p/(1+open*2.5),0,1);}
-function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bldgPressure(S);
+/* As a closed-up fire goes ventilation-limited and uses up its air, the smoke forced out of the gaps fades [FSRI-HV08:
+   "once the fire became ventilation limited the smoke being forced out of the gaps of the houses greatly diminished or stopped all
+   together"]. 1 while the burning rooms still have air (oxygen reservoir R >= 0.3), falling to 0 as R runs out (thresholds are teaching values). */
+function vlPush(S){let k=1;for(const id in S.z){const z=S.z[id];if(z.ign&&!z.out&&z.vl)k=Math.min(k,clamp((z.R-.05)/.25,0,1));}return k;}
+function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bldgPressure(S),vk=vlPush(S);
   for(const oid in S.o){const o=S.o[oid],z=S.z[o.zone];if(!z)continue;const sm=smokeOf(S,o.zone,o);
     const open=o.state!=='closed';const ctrl=o.state==='controlled';
     let rate=0;if(open)rate=z.s*(.4+z.T)*(ctrl?.35:1)*(o.type==='roof'?1.6:1)*(S.fan&&S.fan.on&&S.fan.at!==oid?1.7:1);
-    else if(z.s>.3)rate=Math.max(0,(z.s-.3)*(z.T*.3+bp*.25)); // pushing through gaps around closed windows/doors
+    else if(z.s>.3)rate=Math.max(0,(z.s-.3)*(z.T*.3+bp*vk*.25)); // pushing through gaps around closed windows/doors; fades once the fire is starved [FSRI-HV08]
     if(!open){const cap=rate>.05?2:1;sm.vol=Math.min(sm.vol,cap);sm.vel=Math.min(sm.vel,cap);} // leakage through gaps: what you see is limited by the gap, not the fire [simplification]
     let flame=0;if(open&&z.ign&&!z.out){if(z.flashed&&z.q>.7)flame=clamp(z.q*.6,0,1.2);else if(z.q>.6&&o.type!=='door')flame=(z.q-.6)*.8;}
     if(o.type==='door'&&open&&!z.flashed)flame*=.3;
@@ -482,14 +486,36 @@ function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bld
     let pulse=z.decay?1:0;
     out[oid]={rate,flame,glow,stain:clamp((z.s-.35)*1.6,0,1),frac,pulse,inflow:open&&!(S.fan&&S.fan.at===oid)?(z.ign&&z.q>.2?1:0):0,...sm,rgb:SMOKE_RGB[sm.col],state:o.state,zone:o.zone,steam:z.steam};}
   return out;}
-function eavesVis(S){const a=S.z.attic;if(!a)return null;let sm=smokeOf(S,'attic');
-  // smoke pushing through soffit/eave vents when the attic/cockloft has smoke
-  let rate=Math.max(0,a.s-.15)*(.6+a.T*1.5);
-  // pressure push: in a closed-up building smoke finds the eaves/soffit gaps too (simplification)
-  const bp=bldgPressure(S);let sMax=0,zid=null;for(const id in S.z){const z=S.z[id];if(!z.attic&&z.s>sMax){sMax=z.s;zid=id;}}
-  const pr=bp*Math.max(0,sMax-.3)*.45;
-  if(pr>rate&&zid){const zs=smokeOf(S,zid);sm={vol:Math.min(2,zs.vol),vel:Math.min(2,zs.vel),den:Math.min(1,zs.den),col:zs.col==='white'?'white':'gray',P:zs.P};rate=pr;}
-  return{rate,flame:a.ign&&!a.out&&a.q>.5?a.q:0,...sm,rgb:SMOKE_RGB[sm.col],pressure:pr};}
+/* Eave / soffit / cornice smoke, localized (Oct 9 2026 rework).
+   - Attic smoke leaks along the eave, most over the part of the attic fed from the burning/hot room below, plus any marked gable/soffit
+     vents (B.eaveVents [{x,w,kind:'gable'|'soffit',y?}]) which concentrate it.
+   - Pressure push at the eaves only comes from the TOP floor (the rooms directly under the roof), once that floor is itself charged
+     with smoke (s > 0.5), above that room, and fades as the fire goes ventilation-limited. A first-floor room fire therefore shows
+     at its own window/door gaps first, not at the eaves. [simplification; the eave cue follows FSRI-ATTIC]
+   - Deliberate pulsing only for a ventilation-limited attic with no roof opening: "Once the ridge vent seals, the eaves will act as
+     both the source of air as well as the exhaust and you may notice a pulsing of smoke out of the eaves. This is a sign that you
+     have a ventilation-limited fire in the attic." [FSRI-ATTIC] */
+function eavesVis(S){const B=S.B,a=S.z.attic;if(!a||!B.eaves||!B.eaves.length)return null;
+  const ex0=Math.min(...B.eaves.map(e=>e.x0)),ex1=Math.max(...B.eaves.map(e=>e.x1));const top=String(B.stories||2);
+  const bp=bldgPressure(S),vk=vlPush(S);const atticRate=Math.max(0,a.s-.15)*(.6+a.T*1.5);
+  const roofOpen=Object.values(S.o).some(o=>o.type==='roof'&&o.state!=='closed');
+  const pulse=a.ign&&!a.out&&a.vl&&!roofOpen?1:0;
+  const tops=B.zones.filter(z=>z.floor===top&&!z.attic&&S.z[z.id]);
+  // the attic is fed (heat and smoke) mostly over the burning/hot room below it, so weight by that room's fire and heat, not by smoke (which evens out across a floor)
+  const feed=z=>(z.ign&&!z.out?Math.min(1,z.q):0)*.7+Math.min(1,z.T)*.3;let fMax=0;for(const bz of tops)fMax=Math.max(fMax,feed(S.z[bz.id]));
+  const segs=[];const cover=[];const gap=sm=>({vol:Math.min(2,sm.vol),vel:Math.min(2,sm.vel),den:Math.min(1,sm.den),col:sm.col,P:sm.P});
+  for(const bz of tops){const z=S.z[bz.id];const x0=Math.max(ex0,bz.x0),x1=Math.min(ex1,bz.x1);if(x1-x0<5)continue;cover.push([x0,x1]);
+    const push=bp*vk*Math.max(0,z.s-.5)*.45;
+    const share=atticRate*(.12+.88*(fMax>.02?feed(z)/fMax:1));
+    if(Math.max(push,share)<=.005)continue;const fromAttic=share>=push;const sm=fromAttic?smokeOf(S,'attic'):gap(smokeOf(S,bz.id));
+    segs.push({x0,x1,zone:bz.id,src:fromAttic?'attic':'push',rate:Math.max(push,share),pulse:fromAttic?pulse:0,...sm});}
+  if(atticRate>.005){const sm=smokeOf(S,'attic');cover.sort((p,q)=>p[0]-q[0]);let x=ex0;
+    for(const [c0,c1] of cover.concat([[ex1,ex1]])){if(c0-x>20)segs.push({x0:x,x1:c0,zone:'attic',src:'attic',rate:atticRate*.12,pulse,...sm});x=Math.max(x,c1);}
+    for(const v of (B.eaveVents||[]))segs.push({x0:v.x-v.w/2,x1:v.x+v.w/2,y:v.y,zone:'attic',src:v.kind||'vent',rate:atticRate*(v.kind==='gable'?1.6:1.2),pulse,...sm});}
+  let best=null;for(const g of segs){g.rgb=SMOKE_RGB[g.col];if(!best||g.rate>best.rate)best=g;}
+  const flame=a.ign&&!a.out&&a.q>.5?a.q:0;
+  if(!best){const sm=smokeOf(S,'attic');return{rate:0,flame,segs,pulse,pressure:0,...sm,rgb:SMOKE_RGB[sm.col]};}
+  return{rate:best.rate,flame,segs,pulse,pressure:Math.max(0,...segs.filter(g=>g.src==='push').map(g=>g.rate)),vol:best.vol,vel:best.vel,den:best.den,col:best.col,P:best.P,rgb:best.rgb,zone:best.zone};}
 function summary(S){const o=S.scn.origin;const burning=Object.values(S.z).filter(z=>z.ign&&!z.out).map(z=>z.id);
   const vis=openingVis(S);let best=null;for(const id in vis){const v=vis[id];const sc=v.rate+v.flame;if(!best||sc>best.sc)best={id,sc,...v};}
   const ev_=eavesVis(S);
@@ -501,6 +527,6 @@ function flowPath(S){const intake=[],exhaust=[];const vis=openingVis(S);
     if(o.type==='roof'){exhaust.push(nm);continue;}
     const z=S.z[o.zone];if(v.rate>.05){if(o.type==='door'||o.type==='garage'){exhaust.push(nm+' (top)');intake.push(nm+' (bottom)');}else exhaust.push(nm);} else intake.push(nm);}
   return{intake,exhaust};}
-return{DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

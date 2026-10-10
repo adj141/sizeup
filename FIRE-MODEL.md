@@ -1,6 +1,6 @@
 # How SizeUp's simulated fire works
 
-*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, updated Oct 9, 2026: companies and dispatch, editable task times, per-engine water, time of day and weather, wind-driven fire; earlier the same day: knockdown, multiple lines, attic access, under-control state).*
+*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, updated Oct 9, 2026: eave and gap smoke rework (localized, starved-fire fade, no lockstep), companies and dispatch, editable task times, per-engine water, time of day and weather, wind-driven fire; earlier the same day: knockdown, multiple lines, attic access, under-control state).*
 
 > **Read this first.** SizeUp uses a **teaching model**, not fire physics. It is not CFAST, FDS or any validated zone/CFD model. Every number in it is a **dimensionless index** (0 = nothing, 1 = "flashover-level"), not °F, kW or ppm. The model's job is to put events in the **right order with roughly the right timing**, and to react to tactics the way the UL FSRI experiments describe. It cannot predict any real building. Training prototype, not for operational use.
 
@@ -16,6 +16,8 @@ FSRI sources referred to:
 - **FA**: *Impact of Fire Attack Utilizing Interior and Exterior Streams*
 - **PPV**: *Effectiveness of Fire Service Positive Pressure Ventilation*
 - **CBYD**: *Close Before You Doze: Before & After*
+- **HV08**: *Impact of Ventilation on Fire Behavior in Legacy and Contemporary Residential Construction*, final report (DHS 2008 grant, PDF). Read: the full report.
+- **ATTIC**: *Study of Residential Attic Fire Mitigation Tactics and Exterior Fire Spread Hazards on Fire Fighter Safety*, final report (PDF). Read: the full report.
 
 Other research referred to (wind-driven fire only):
 - **NIST-WD**: NIST TN 1618, *Fire Fighting Tactics under Wind Driven Conditions: Laboratory Experiments* (Madrzykowski & Kerber, 2009), and NIST TN 1629, *… 7-Story Building Experiments* (2009). Read: the NIST publication pages and abstracts.
@@ -221,8 +223,27 @@ These come from the room the smoke is leaving. **The cue mapping is the widely t
 
 **How much smoke leaves each opening:**
 - Open: `smoke × (0.4 + T)`, ×0.35 if the door is controlled, ×1.6 for a roof vent, and ×1.7 at the other openings when a fan is running.
-- Closed (leaking around the frame): `(smoke − 0.3) × (0.3 × T + 0.25 × building pressure)`. The volume and velocity you can see from a gap are capped (Moderate, or Heavy if it's pushing hard).
-- **Building pressure** = `1.7 × q × T` of the hottest fire ÷ (1 + 2.5 × total open-opening area), capped at 1. A growing fire in a closed-up house pushes smoke around windows, doors and at the eaves; opening the house relieves it. [Simplification]
+- Closed (leaking around the frame): `(smoke − 0.3) × (0.3 × T + 0.25 × building pressure × starved factor)`. The volume and velocity you can see from a gap are capped (Moderate, or Heavy if it's pushing hard). In a closed-up house this is the **first** smoke you see, from the fire room's own windows and door.
+- **Starved factor** [FSRI: HV08 for the behavior; thresholds are teaching values]: 1 while every burning room still has air (oxygen reservoir R ≥ 0.3), falling linearly to 0 at R = 0.05. FSRI: "once the fire became ventilation limited the smoke being forced out of the gaps of the houses greatly diminished or stopped all together." So a starved, closed-up fire shows little or no smoke, and the app does not read that as a small fire.
+- **Building pressure** = `1.7 × q × T` of the hottest fire ÷ (1 + 2.5 × total open-opening area), capped at 1. A growing fire in a closed-up house pushes smoke around the windows and doors of its smoky rooms (and, once the top floor is smoke-charged, at the eaves above it); opening the house relieves it. [Simplification]
+
+**Eave / soffit / cornice smoke** (reworked Oct 9, 2026):
+- **Where it comes from.** There are only two sources:
+  - *Attic smoke* leaks at the eaves once the attic's smoke is above 0.15: `(attic smoke − 0.15) × (0.6 + 1.5 × attic T)`.
+  - *Pressure push from the top floor*: the rooms directly under the roof push smoke out at the eaves once that floor is charged with smoke (room smoke > 0.5): `building pressure × starved factor × (smoke − 0.5) × 0.45`.
+  - Smoke on a lower floor never pushes at the eaves. **A first-floor room fire in a closed house therefore shows at its own window and door gaps first, not at the eaves.** (Earlier builds used the smokiest room anywhere, so a living-room fire drew a band of smoke along the second-floor eave about 17 s after arrival. That was wrong.) [Simplification; the cue follows FSRI: ATTIC]
+- **Localized, not a band.** The eave is split into the stretches above each top-floor room. Each stretch gets the larger of:
+  - its room's own push, or
+  - a share of the attic smoke weighted by how much fire and heat that room is feeding up into the attic: `0.12 + 0.88 × (room feed ÷ highest feed)`, where feed is `0.7 × fire (if burning) + 0.3 × T`.
+  - Eave stretches with no room below (for example over the garage end) get 0.12 of the attic smoke.
+  - Gable or soffit vents marked on a building (`eaveVents`) concentrate the attic smoke: ×1.6 at a gable vent, ×1.2 at a soffit vent.
+  - Example: a Bedroom 1 fire with its window failed puts about 3× more smoke at the eave above Bedroom 1 than over the other rooms. [Teaching values]
+- **Pulsing only for a starved attic.** Eave smoke "breathes" only when the attic itself is burning, ventilation-limited, and has no roof opening. The pulse is irregular (two out-of-step cycles per emitter), not a fixed rhythm. While the attic is starved, no eave flames are drawn. FSRI: "Once the ridge vent seals, the eaves will act as both the source of air as well as the exhaust and you may notice a pulsing of smoke out of the eaves. This is a sign that you have a ventilation-limited fire in the attic." [FSRI: ATTIC for the behavior; the pulse shape is a teaching value]
+- **No lockstep anywhere** (drawing only, not the model). Every smoke emitter (window and door gaps, open openings, roof vents, eaves) gets:
+  - its own random starting counter and a ±25% rate offset;
+  - slow out-of-step "gusts";
+  - a random interval between puffs (0.35–1.65 of the mean).
+  So neighbouring emitters never puff together. Previously all 15 eave emitters spawned on the same frame every ~1.5 s, which read as a pulsing line.
 
 **Neutral plane**: an open window exhausts from its top ~65%, a door from its top ~50%. Below that, air flows in. This affects how it is drawn. [Behavior FSRI: VV/VVR; fractions are teaching values]
 

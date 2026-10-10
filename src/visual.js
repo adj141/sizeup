@@ -33,9 +33,13 @@ function build(S,B,M){const vis={windows:[],lights:[],flames:[],emitters:[],wind
   for(const oid in S.o){const o=S.o[oid];if(o.type!=='roof'||o.state==='closed')continue;const v=ov[oid];const sp=B.roofSpots&&(B.roofSpots[o.over]||B.roofSpots[o.zone]);if(!sp||!v)continue;
     vis.emitters.push({key:oid,kind:'roof',x:sp.x,y:sp.y,w:70*U,hgt:6*U,rate:v.rate*30+2,vel:Math.max(1,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,glow:v.flame>.05?.8:0,cool:.4});total+=v.rate;
     const az=S.z[o.zone];if(az&&az.ign&&!az.out&&az.q>.35){const fh=(60+az.q*110)*U;vis.flames.push({x:sp.x,y:sp.y+8*U,w:70*U,h:fh,i:.8+az.q*.4,seed:.77,lean,asp:1.2});vis.lights.push({x:sp.x,y:sp.y,r:160*U,i:.6*az.q});}}
-  const e=M.eavesVis(S);if(e&&e.rate>.02)for(const ev of B.eaves){const n=Math.max(3,Math.round((ev.x1-ev.x0)/(70*U)));for(let i=0;i<n;i++){const x=ev.x0+(i+.5)*(ev.x1-ev.x0)/n;
-      vis.emitters.push({key:'eave'+i,kind:'eave',x,y:ev.y,w:(ev.x1-ev.x0)/n,hgt:4*U,rate:e.rate*7,vel:Math.min(3,e.vel),den:e.den,vol:e.vol,rgb:e.rgb,alpha:.45+.15*e.den,cool:.4,glow:e.flame?.5:0});}
-    if(e.flame>.4)for(const ev of B.eaves){vis.flames.push({x:(ev.x0+ev.x1)/2,y:ev.y,w:(ev.x1-ev.x0)*.6,h:(50+e.flame*90)*U,i:.5+e.flame*.4,seed:.31,lean,asp:6});}total+=e.rate;}
+  // eave / soffit smoke: one short run of emitters per smoky stretch of eave (localized, weighted by that zone) [see model eavesVis]
+  const e=M.eavesVis(S);if(e&&e.segs&&e.rate>.02){const ey=B.eaves[0].y;
+    for(const g of e.segs){if(g.rate<.012)continue;const n=Math.max(1,Math.round((g.x1-g.x0)/(60*U)));
+      for(let i=0;i<n;i++){const x=g.x0+(i+.5)*(g.x1-g.x0)/n;
+        vis.emitters.push({key:'eave:'+g.zone+':'+(g.src||'')+':'+Math.round(g.x0)+':'+i,kind:'eave',x,y:g.y!=null?g.y:ey,w:(g.x1-g.x0)/n*(g.src==='gable'?1:.9),hgt:4*U,rate:g.rate*7,vel:Math.min(3,g.vel),den:g.den,vol:g.vol,rgb:g.rgb,alpha:.45+.15*g.den,cool:.4,glow:e.flame?.5:0,pulse:g.pulse?'attic':0});}}
+    if(e.flame>.4&&!e.pulse){const hot=e.segs.filter(g=>g.src==='attic'&&g.rate>=e.rate*.6);for(const g of hot)vis.flames.push({x:(g.x0+g.x1)/2,y:ey,w:(g.x1-g.x0)*.8,h:(50+e.flame*90)*U,i:.5+e.flame*.4,seed:.31+g.x0*.001,lean,asp:Math.max(1.5,(g.x1-g.x0)*.8/((50+e.flame*90)*U)*1.6)});}
+    total+=e.rate;}
   vis.lights.sort((a,b)=>b.i-a.i);vis.lights=vis.lights.slice(0,8);
   vis.dim=Math.min(.28,total*.06);
   return vis;}
