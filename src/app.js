@@ -186,7 +186,8 @@ function syncUI(){const sc=A.scn;
   syncSide();if(A.screen===2)renderSideCtl();
   const z=zoneOf(sc.origin);$('#floorAuto').textContent=A.originSet?`${z.name} · ${floorLabel(z.floor)}`:'Tap the photo or pick a room';
   $('#toDial').disabled=!A.originSet;
-  const chips=A.screen>=2&&A.originSet&&!isHidden();$('#chipSide').hidden=!chips;$('#chipFloor').hidden=!chips;$('#chipSide b').textContent=(A.originPt&&A.originPt.side)||'A';$('#chipFloor b').textContent=z.floor==='Attic'?'ATT':z.floor;$('#chipFloor small').textContent=/^\d+$/.test(z.floor)?'FLOOR':'LEVEL';
+  // SIDE = the side being viewed (not a secret); FLOOR/LEVEL = the fire floor, numbered from Side A on every side (hidden with the answers)
+  const chips=A.screen>=2&&A.originSet&&!isHidden();$('#chipSide').hidden=!(A.screen>=2&&A.B);$('#chipFloor').hidden=!chips;$('#chipSide b').textContent=A.side;$('#chipSide').setAttribute('aria-label','Viewing Side '+A.side);$('#chipFloor b').textContent=z.floor==='Attic'?'ATT':z.floor;$('#chipFloor small').textContent=/^\d+$/.test(z.floor)?'FLOOR':'LEVEL';
   $('#taphint').classList.toggle('show',A.screen===2&&!A.originSet&&!(isPhoto&&A.markMode!=='origin'));if(isPhoto&&A.screen===2&&A.markMode!=='origin'){$('#taphint').textContent=$('#markHint').textContent;$('#taphint').classList.add('show');}else $('#taphint').textContent='Tap where the fire starts';
   const fo=A.S&&A.screen>=3&&!underControl()&&Object.values(A.S.z).some(z=>z.flashed&&!z.out)&&!isHidden();$('#foChip').classList.toggle('show',!!fo);
   const uc=A.screen===4&&underControl()&&A.ucDismissed!==A.S.underControl;$('#ucBanner').classList.toggle('show',!!uc);if(uc)$('#ucT').textContent=`All fire knocked down at T+${fmt(A.S.underControl-A.S.tArr)}. Clock paused.`;
@@ -413,14 +414,17 @@ $('#rules').innerHTML=RULES.map(r=>`<div class="rule"><b>${esc(r.name)}<span cla
   +`<div class="rule"><b>Further training</b><a href="${SRC['FSRI-ACAD'].url}" target="_blank" rel="noopener">${esc(SRC['FSRI-ACAD'].title)}</a></div>`;
 
 /* ---------- share / export / import ---------- */
-function summary(){const F=A.facts,S=A.S;return[`SizeUp drill · TRAINING · T+${fmt(now())}`,`Building: ${F.occupancy} · ${F.construction} · ${F.stories} stories`,`Contents: ${M.FUEL[A.scn.fuel].label}`,
+function summary(){const F=A.facts,S=A.S;return[`SizeUp drill · TRAINING · T+${fmt(now())} · Side ${A.side}`,`Building: ${F.occupancy} · ${F.construction} · ${F.stories} stories`,...((()=>{const V=curView();return V&&!(V.has&&sideImg(A.side))?[`Side ${A.side} (no photo): ${V.desc||'no description'}`]:[];})()),`Contents: ${M.FUEL[A.scn.fuel].label}`,
   ...(isHidden()?['Conditions: (hidden, call them out)']:[`Fire: ${burningText()}`,`Smoke: ${smokeText()}`]),`Wind: ${windText()}`,`Exposures: ${F.exposures}`,`Life hazard: ${F.life}`,
   ...(A.latest.length?[`Latest: ${A.latest.join(' ')}`]:[]),`Task: You're first due. Give your initial radio report, strategy and initial assignments.`,'Training prototype, not for operational use.'];}
 function wrap(g,text,maxW){const words=text.split(' '),lines=[];let l='';for(const w of words){const t=l?l+' '+w:w;if(g.measureText(t).width>maxW&&l){lines.push(l);l=w;}else l=t;}if(l)lines.push(l);return lines;}
-function exportPNG(){if(R)R.draw(rect,dpr);const B=A.B,EW=Math.min(Math.round(rect.w*dpr),1600),EH=Math.round(EW*B.H/B.W),k=Math.max(EW/1200,.8);
+function exportPNG(){if(R)R.draw(rect,dpr);const V=curView(),pic=!!(V&&V.has&&sideImg(A.side)),B=pic?V:A.B,EW=Math.min(Math.round(rect.w*dpr),1600),EH=pic?Math.round(EW*B.H/B.W):0,k=Math.max(EW/1200,.8);
   const c=document.createElement('canvas'),g=c.getContext('2d'),lines=summary(),fs=Math.round(24*k),pad=Math.round(28*k),font=w=>`${w} ${fs}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`;
   g.font=font(500);const wl=[];lines.slice(1).forEach(t=>wl.push(...wrap(g,t,EW-pad*2)));const panel=Math.round(pad*2+fs*1.8+wl.length*fs*1.35);c.width=EW;c.height=EH+panel;
-  g.drawImage(cv,rect.x*dpr,rect.y*dpr,rect.w*dpr,rect.h*dpr,0,0,EW,EH);
+  if(pic){g.drawImage(cv,rect.x*dpr,rect.y*dpr,rect.w*dpr,rect.h*dpr,0,0,EW,EH);
+   // which side this is, as on the stage badge
+   const sw=Math.round(fs*3.2),sh=Math.round(fs*2.3),sx=Math.round(pad*.6),sy=Math.round(pad*.6);g.fillStyle='rgba(18,20,24,.85)';g.fillRect(sx,sy,sw,sh);g.strokeStyle='#d32f2f';g.lineWidth=Math.max(2,fs*.12);g.strokeRect(sx,sy,sw,sh);g.fillStyle='#cfd2d6';g.font=`700 ${Math.round(fs*.5)}px Arial,sans-serif`;g.textAlign='center';g.fillText('SIDE',sx+sw/2,sy+fs*.75);g.fillStyle='#fff';g.font=`800 ${Math.round(fs*1.15)}px Arial,sans-serif`;g.fillText(A.side,sx+sw/2,sy+fs*1.95);g.textAlign='left';
+   if(V.illustrated){g.font=`700 ${Math.round(fs*.55)}px Arial,sans-serif`;const t='Illustrated view, not a photo';const tw=g.measureText(t).width;g.fillStyle='rgba(18,20,24,.8)';g.fillRect(sx,EH-sy-fs*1.1,tw+fs*.6,fs*1.1);g.fillStyle='#cfd2d6';g.fillText(t,sx+fs*.3,EH-sy-fs*.3);}}
   g.font=`800 ${Math.round(fs*.8)}px Arial,sans-serif`;const bw=g.measureText('TRAINING').width+fs;g.fillStyle='#d32f2f';g.fillRect(EW-bw-pad*.6,pad*.6,bw,fs*1.4);g.fillStyle='#fff';g.textBaseline='middle';g.fillText('TRAINING',EW-bw-pad*.6+fs/2,pad*.6+fs*.72);g.textBaseline='alphabetic';
   g.fillStyle='#14171b';g.fillRect(0,EH,EW,panel);g.fillStyle='#d32f2f';g.fillRect(0,EH,EW,6);let y=EH+pad+fs;g.fillStyle='#fff';g.font=`800 ${Math.round(fs*1.2)}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`;g.fillText(lines[0],pad,y);y+=fs*1.6;
   g.font=font(500);let col='#e6e8ea';wl.forEach(t=>{if(/^(Latest|Task):/.test(t))col='#ffb300';else if(/^Training prototype/.test(t))col='#9ca2aa';else if(/^[A-Z][a-z ]+:/.test(t))col='#e6e8ea';g.fillStyle=col;g.fillText(t,pad,y);y+=fs*1.35;});return c;}
