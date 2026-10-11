@@ -1,6 +1,6 @@
 # How SizeUp's simulated fire works
 
-*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, updated Oct 9, 2026: eave and gap smoke rework (localized, starved-fire fade, no lockstep), companies and dispatch, editable task times, per-engine water, time of day and weather, wind-driven fire; earlier the same day: knockdown, multiple lines, attic access, under-control state).*
+*For fire officers. This describes the code in `src/model.js` exactly as it runs today (SizeUp v2, updated Oct 11, 2026: multi-side buildings and the 360 (Sides A to D, rear rooms, walk-out basement, follow-up report, side features); earlier: eave and gap smoke rework (localized, starved-fire fade, no lockstep), companies and dispatch, editable task times, per-engine water, time of day and weather, wind-driven fire; earlier the same day: knockdown, multiple lines, attic access, under-control state).*
 
 > **Read this first.** SizeUp uses a **teaching model**, not fire physics. It is not CFAST, FDS or any validated zone/CFD model. Every number in it is a **dimensionless index** (0 = nothing, 1 = "flashover-level"), not °F, kW or ppm. The model's job is to put events in the **right order with roughly the right timing**, and to react to tactics the way the UL FSRI experiments describe. It cannot predict any real building. Training prototype, not for operational use.
 
@@ -18,6 +18,7 @@ FSRI sources referred to:
 - **CBYD**: *Close Before You Doze: Before & After*
 - **HV08**: *Impact of Ventilation on Fire Behavior in Legacy and Contemporary Residential Construction*, final report (DHS 2008 grant, PDF). Read: the full report.
 - **ATTIC**: *Study of Residential Attic Fire Mitigation Tactics and Exterior Fire Spread Hazards on Fire Fighter Safety*, final report (PDF). Read: the full report.
+- **BSMT**: *Understanding and Fighting Basement Fires* (FSRI & ISFSI), project page and conclusions: https://fsri.org/research/understanding-and-fighting-basement-fires. Read: the project page (overview, context, conclusions).
 
 Other research referred to (wind-driven fire only):
 - **NIST-WD**: NIST TN 1618, *Fire Fighting Tactics under Wind Driven Conditions: Laboratory Experiments* (Madrzykowski & Kerber, 2009), and NIST TN 1629, *… 7-Story Building Experiments* (2009). Read: the NIST publication pages and abstracts.
@@ -38,7 +39,19 @@ Other research referred to (wind-driven fire only):
 | Ceiling pushed (after roof/ceiling breach) | 0.6 | Teaching value |
 | Interior door **closed** | 0.025 | Teaching value; the effect is FSRI: VVR/CBYD (closed door protects the room) |
 | Intact ceiling to attic | 0.02 | Teaching value |
+| Floor between the basement and floor 1 | 0.02 | Teaching value (same leak as a ceiling) |
 | Wall | 0.004 | Teaching value |
+
+### 1b. Four sides, rear rooms and the basement (multi-side buildings and the 360)
+
+The building has four sides: **A** (front), **B** (left as you face A), **C** (rear) and **D** (right). Every opening belongs to a side and is backed by a room, so every window or door you can see on any side connects to the fire model.
+
+- **Sample house.** Side A is the original picture. Sides B, C and D are **illustrated views** (drawn for this project to match the Side A mock; not photos). The house gained a rear bedroom on floor 2 (**Bedroom 4**, rear B/C corner) and a **basement** that is a **walk-out on Side C**: the yard falls away, so Side C shows **3 stories** (basement slider and window at grade, kitchen slider onto a deck, floor 2) while Side A shows 2. The basement connects to the kitchen through a closed **basement stair door** (`stair`), and to floor 1 through the floor (`floor`, k 0.02).
+- **New openings use their own random stream.** Window-failure times for the original openings are drawn exactly as before, and the new side openings draw from a second seeded stream. That keeps old drills replaying identically. The extra air leakage from the new openings shifts the house's calibration timings slightly; the FSRI calibration tests (modern vs legacy) still pass.
+- **Your own photos.** In the builder (step 2) pick a side and load its photo (Side A is required; B, C and D are optional). On each photo you mark the windows, doors and garage doors, the eave and grade lines, the stories visible on that side, and features. Each opening is mapped to a room automatically by side and level: Side B → the left rooms, Side D → the right rooms, Side C → a rear room per floor, and anything below the grade line, or in an extra lowest story on a side that shows more stories than the front, → the **basement**. You can change the room in the "Openings → rooms" list. A side with no photo can carry a **text description**, shown in the drill instead of a picture together with a live line from the model (for example: smoke from the Side C basement window).
+- **Hidden truth.** The builder's marks are the scenario's truth. They are drawn only on the builder step. During the drill there are no outlines or labels on any side, and the board's "Showing" and "Smoke" lines only list sides you have seen. The flow-path arrows stay as an opt-in toggle.
+
+**Rendering per side.** The picture shows the side you are looking at, on the same drill clock. Smoke and fire are drawn from that side's openings, with the eave rules of section 4h applied to that side's own eave or gable vents. Smoke from openings on the other sides rises over that side's roofline.
 
 ## 2. What each room tracks
 
@@ -376,6 +389,20 @@ If no free preconnect is long enough the order is refused: "Hose too short: … 
 - **Wind and wind-driven fire** [NIST-WD for the behavior; magnitudes are teaching values]: wind blowing into an open window or door on the windward side adds air to that room (×1.4 / 1.9 / 2.6 for light / moderate / strong). When that room is burning hard (q > 0.5), heat moving out of it along the flow path is multiplied by 1 + 0.45 × (wind strength 1–3), with a larger per-second limit, and a crew warning is logged: *"Wind-driven conditions: wind entering … is pushing heat and smoke through the flow path."* This follows the NIST finding that wind *"rapidly caused conditions in the structure to deteriorate by forcing fire gases through the apartment of origin and into the public corridor and stairwell"* (TN 1629 abstract). NIST also found that blocking the wind (wind control devices) and exterior water into the fire-room window from below reduced the hazard; in SizeUp you can close the flow path or put exterior water into the windward opening.
 - A **scheduled wind shift** (Time & weather tab) changes the wind at a set drill time, logged on the timeline. It lives in the scenario, so a replay gets the same shift at the same second. The starting wind saved in the scenario is never overwritten by a shift or an instructor's wind inject.
 
+### 5e. The 360, the follow-up report and side features [Simplification unless marked]
+
+- **The walk.** The side tabs above the picture (or a swipe on a phone) change the view. The **first** look at each of Sides B, C and D costs drill time, default **30 s** (Task times → "360 & sides"); the clock runs on while you walk. After that, switching sides is free, as if crews there are reporting. Side A is free. Each view is logged with its time; "360 complete" is logged once all four sides have been seen.
+- **Follow-up report.** The board's 360 card builds the report from a pick-list of findings (walk-out basement, basement, more stories than from the front, fire showing, smoke showing, victim seen, power lines, fence/access problem, exposure threatened, car blocking access, nothing new), each with a side. You also give the strategy (confirm or change; a change is applied), assignment changes, the accountability location, and optional free text. The report is checked against the scenario truth **at the moment you give it**: stories by side, a basement or walk-out, fire or smoke on Sides B, C and D, and marked hazards. *Key* findings are the ones that change the plan: extra stories, the basement or walk-out, fire on another side, and a threatened exposure. Free text counts: "walk-out basement in the rear" matches. The check is a teaching aid, not a grade against any SOP.
+- **Debrief.** The debrief shows which sides you viewed and when, whether you gave a follow-up and how many key findings it had, and anything reported that the model did not find. For each missed key finding it shows **that side's picture with the missed item outlined**. It also checks whether tactics adapted: a basement fire attacked from its own level (walk-out door or basement window) versus only down the interior stair, lines sent to fire found on another side, an exposure protected, and tasks blocked by power lines.
+- **Basement fires** [FSRI: BSMT for the behavior; thresholds are teaching values]. A basement fire is ventilation-limited and feeds on the stair door and basement windows. An interior line to the basement from floor 1 goes down the interior stair: it **opens the basement stair door**, the stairway becomes the fire's exhaust, and a crew warning fires once the basement is hot (T > 0.5). Crews working on floor 1 over a burning basement get a **collapse-risk warning**; collapse itself is not modelled. A line through the walk-out door (pick "Basement @ Side C basement slider" in the line list) or exterior water through a basement window attacks the fire from its own level. FSRI: *"Each of these suppression methods provided a means of fighting the fire at its own level, without having to operate over the fire on an unrated wood floor assembly as well as remaining out of the exhaust portion of the basement fire flow in the basement stairway."*
+- **Features** (teaching rules, not measured values):
+  - **Fence** on a side: +30 s to stretch any line that goes to or through that side.
+  - **Power lines** on a side: no ground ladders or aerial on that side, so no outside vent of upper-floor windows there.
+  - **Car** on a side: blocks the aerial there; laddering that side uses ground ladders only and takes ×1.25.
+  - **Exposure** building on a side: from arrival, while fire shows from openings on that side it builds radiant "heat". A flame-weighted counter warns at 20 and ignites the exposure at **240** (about 4 min of strong flame; editable) unless a company is assigned **Protect an exposure** (2 members, 60 s to set up).
+  - **Porch/deck** and **utility meter**: notes only.
+- **Hose reach around the building** (5c) already adds extra hose for Sides B/D and C.
+
 ## 6. Occupant and crew-safety calculations
 
 **Occupant** (hidden; placed by you, at random in an upper-floor bedroom, or by time of day as in 5d):
@@ -400,5 +427,6 @@ This is a simplified stand-in for heat and toxic-gas exposure (FED-style), not a
 - **Generic tactics.** Task times, crew sizes, equipment and the default first-alarm preset are generic, editable teaching values. They are not your department's SOPs.
 - **Simple crews.** A task needs a fixed minimum crew; extra members don't make it faster (staffing only enters through the short-staffing factor). Crews move instantly when released. Apparatus position is not modeled (every engine is at the setback; a reverse-laying engine still supplies the attack engine). There is no air-supply (SCBA) clock, no command-post or accountability model, and no Mayday.
 - **Weather is mostly visual.** Rain, snow and fog change visibility and task times only; they do not cool the fire. The wind-driven push is a qualitative stand-in for the NIST experiments, not a fitted value.
+- **Sides are simple.** Each side is one picture with openings mapped to rooms; there is no 3D geometry, and the rear rooms of an uploaded photo are one generic room per floor. The 360 walk is a fixed time per side, not a distance. Basement floor collapse is a warning only. Exposure heat is a simple flame-time counter, not a radiation calculation. The sample's Sides B, C and D are illustrations, not photos.
 - **Night is visual plus occupancy.** Darkness changes what you can read, not how the fire behaves.
 - Reassign and pull-ceiling times, knockdown hold and rekindle timing are teaching values. They are not FSRI findings and not SOPs.

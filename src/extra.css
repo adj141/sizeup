@@ -119,3 +119,34 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
 .cot-type{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#90caf9;background:#173049;border-radius:999px;padding:2px 8px;white-space:nowrap}
 .cocard:not([open]){gap:0}
 .prow select{width:auto}.coassign select{width:auto}
+
+/* multi-side: side tabs, no-photo panel, builder side panel, follow-up card */
+.sidetabs{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:4px;background:rgba(18,20,24,.82);border:1px solid var(--line);border-radius:999px;padding:3px;z-index:4}
+.sidetabs[hidden]{display:none}
+.sidetabs button{min-width:40px;height:34px;border-radius:999px;border:0;background:transparent;color:#e8eaed;font-weight:800;font-size:15px;cursor:pointer;position:relative}
+.sidetabs button.on{background:var(--red);color:#fff}
+.sidetabs button.walk::after{content:'';position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--amber)}
+.sidetabs button.nopic:not(.on){color:#9aa0a6}
+.stage.hastabs .ucbanner{top:54px}
+.sidedesc{display:none;position:absolute;inset:0;padding:60px 22px 22px;background:linear-gradient(180deg,#1b1f25,#0f1216);color:#e8eaed;overflow:auto}
+.stage.nophoto .sidedesc{display:block}.stage.nophoto canvas{visibility:hidden}
+.sidedesc b{font-size:20px}.sidedesc .tag{margin-left:10px;font-size:11px;font-weight:800;letter-spacing:.08em;border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:#9aa0a6;vertical-align:3px}
+.sidedesc p{font-size:15px;line-height:1.45;max-width:640px}.sidedesc p.live{color:#ffcc80;font-weight:600}
+.sidectl{margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+.sidectl .note2{font-size:12.5px;color:#ffcc80;margin:4px 0}
+.sidectl textarea,#fuCard textarea,#fuCard input,#fuCard select{width:100%;box-sizing:border-box;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;font-size:14px}
+.sidectl .oitem{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:4px 0;font-size:13.5px}.sidectl .oitem select{max-width:55%}
+.sidectl .flist{margin:4px 0 0;padding-left:18px;font-size:13px}
+.filebtn{display:inline-flex;align-items:center;cursor:pointer}
+.seg.feats button{font-size:13px}
+#markCtl.sidemode .seg:first-of-type button[data-v="origin"]{opacity:.45}
+#fuCard .lbl2{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9aa0a6;margin:12px 0 6px}
+#fuCard .furow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}#fuCard .furow select{flex:1 1 180px;width:auto}#fuCard .furow .seg{flex:none}#fuCard .furow .seg button{min-width:36px}
+#fuCard .furow .btn{width:auto}
+.fuchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.fuchip{border:1px solid var(--line);background:#23272e;color:#e8eaed;border-radius:999px;padding:5px 10px;font-size:13px;cursor:pointer}
+.fuwalk{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.fuwalk span{border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-weight:800;color:#9aa0a6}.fuwalk span.ok{border-color:var(--ok);color:#a5d6a7}
+.fuwalk small{flex-basis:100%;color:#9aa0a6;font-size:12.5px;margin-top:4px}
+.dbimg{display:block;width:100%;max-width:560px;border-radius:10px;margin-top:8px;border:1px solid var(--line)}
+@media (max-width:600px){.fochip{top:54px}.sidetabs button{min-width:36px;height:32px}}
+.sidetag{position:absolute;left:10px;bottom:46px;background:rgba(18,20,24,.78);border:1px solid var(--line);border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.04em;padding:3px 7px;color:#cfd2d6;pointer-events:none}.sidetag[hidden]{display:none}

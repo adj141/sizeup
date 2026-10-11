@@ -50,11 +50,14 @@
   <div class="sticky"><div class="slot"></div></div>
   <div class="sheet">
     <div class="ctl" id="markCtl" hidden><div class="lbl">Mark your photo <span class="val" id="markHint">Tap to place</span></div>
-      <div class="seg" data-key="markMode"><button data-v="origin">Fire</button><button data-v="window">Window</button><button data-v="door">Door</button><button data-v="eave">Eave line</button><button data-v="grade">Grade</button></div>
+      <div class="seg" data-key="markMode"><button data-v="origin">Fire</button><button data-v="window">Window</button><button data-v="door">Door</button><button data-v="garage">Garage</button><button data-v="eave">Eave line</button><button data-v="grade">Grade</button></div>
+      <div class="seg feats" data-key="markMode" style="margin-top:6px" aria-label="Tactical features"><button data-v="fence">Fence</button><button data-v="power">Power lines</button><button data-v="exposure">Exposure</button><button data-v="car">Car</button><button data-v="porch">Porch/deck</button><button data-v="meter">Meter</button></div>
+      <div class="hint">Openings below the grade line (or in an extra lowest story on that side) are the basement. Features carry simple teaching effects: fence = extra hose-stretch time; power lines = no ladders/aerial on that side; car = no aerial on that side; exposure = radiant-heat risk.</div>
       <div class="row2" style="margin-top:8px"><span class="muted" style="font-size:13px" id="markStat"></span><button class="btn ghost sm" id="undoMark">Undo opening</button></div></div>
     <div class="ctl"><div class="lbl">Fire room <span class="val" id="floorAuto">Tap the photo</span></div><select id="roomSel" aria-label="Fire room"></select></div>
-    <div class="ctl"><div class="lbl">Side showing fire <span class="val">Photo = Side A</span></div>
-      <div class="seg red" data-key="side"><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button><button data-v="D">D</button></div></div>
+    <div class="ctl"><div class="lbl">Building side <span class="val">tabs on the picture too · swipe on a phone</span></div>
+      <div class="seg" data-key="side"><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button><button data-v="D">D</button></div>
+      <div id="sideCtl" class="sidectl" hidden></div></div>
     <div class="ctl" id="storiesCtl"><div class="lbl">Stories above grade</div>
       <div class="stepper"><button id="stDown" aria-label="Fewer stories">−</button><output id="stOut">2</output><button id="stUp" aria-label="More stories">+</button><span class="muted" style="font-size:14px;margin-left:6px">sets the floor bands</span></div></div>
     <div class="ctl" style="border:0;padding-bottom:0"><button class="btn primary" id="toDial" disabled>Continue</button></div>
@@ -160,6 +163,7 @@
         </div></div>
       <div><span class="l">Checklist</span><div class="checks" id="checks"></div></div>
     </div>
+    <div class="card" id="fuCard"></div>
     <div class="card"><h2 style="margin-top:0">Timeline</h2><div class="log" id="log"></div>
       <div class="btnrow" style="margin-top:12px"><button class="btn ghost" id="resetBtn">Reset to arrival</button><button class="btn ghost" id="newBtn">New building</button></div>
       <button class="btn primary" id="finishBtn" style="margin-top:12px">Finish &amp; debrief</button>
@@ -175,6 +179,9 @@
 <div class="stage" id="stage" style="display:none">
   <canvas id="cv" class="gl"></canvas><canvas id="ov" class="ov"></canvas>
   <div class="chips"><div class="chip" id="chipSide" hidden><small>SIDE</small><b>A</b></div><div class="chip" id="chipFloor" hidden><small>FLOOR</small><b>2</b></div></div>
+  <div class="sidetabs" id="sideTabs" role="tablist" aria-label="Building side" hidden><button data-side="A" role="tab">A</button><button data-side="B" role="tab">B</button><button data-side="C" role="tab">C</button><button data-side="D" role="tab">D</button></div>
+  <div class="sidedesc" id="sideDesc"></div>
+  <div class="sidetag" id="sideTag" hidden>Illustrated view, not a photo</div>
   <div class="fochip" id="foChip">⚠ FLASHOVER</div>
   <div class="ucbanner" id="ucBanner" role="status"><b>✓ FIRE UNDER CONTROL</b><span id="ucT"></span><span class="ucbtns"><button class="btn primary sm" id="ucDebrief">Open debrief</button><button class="btn ghost sm" id="ucKeep">Keep playing</button></span></div>
   <div class="clock" id="clock">T+0:00</div>

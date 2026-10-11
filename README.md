@@ -14,7 +14,18 @@ The fire behavior is a simplified teaching model grounded in UL FSRI (Fire Safet
 
 Image and source credits are in [CREDITS.md](CREDITS.md).
 
-## What's new (Oct 9, 2026, evening)
+## What's new (Oct 11, 2026): multi-side buildings and the 360
+
+- **Four sides.** Tabs above the picture (or a swipe on a phone) switch between Sides A, B, C and D. Each side is drawn live on the same drill clock from its own windows and doors, with the eave rules applied to that side. Smoke from the other sides rises over the roofline.
+- **The 360 costs time.** The first look at each of Sides B, C and D costs drill time (default 30 s, editable on the Task times tab). After that, switching is free. Every view is logged with its time.
+- **360 follow-up report.** A board card builds the report: findings from a pick-list with a side (walk-out basement, extra stories, fire or smoke on another side, victims, power lines, fence, exposure, car), strategy confirmed or changed, assignment changes, the accountability location, and optional free text. It is checked against the scenario.
+- **Debrief for the 360.** Shows which sides you saw and when, whether you gave a follow-up and which key findings it had, and whether your tactics adapted. A missed item is shown on that side's picture with the item outlined.
+- **Sample house, now with Sides B, C and D** (illustrated views made for this project, not photos, labelled in the app). It has a rear bedroom and a **walk-out basement on Side C**: 3 stories at the rear, 2 at the front. Basement fires follow the FSRI basement study: going down the interior stair opens the stair door and puts the crew in the exhaust path (with a warning), crews over a burning basement get a collapse-risk warning, and a line through the walk-out door or a basement window attacks the fire from its own level.
+- **Builder for every side.** Load a photo for each side (Side A required). Mark windows, doors, garage doors and basement openings, the eave and grade lines, the stories visible on that side, and features: fence, power lines, exposure building, car, porch/deck and utility meter. Each opening maps to a room (rear rooms and a basement are added as needed), and you can change the mapping. A side without a photo can have a text description instead. The builder's marks are hidden during the drill.
+- **Features change tactics** (simple teaching rules): a fence adds hose-stretch time on its side; power lines block ladders and the aerial on their side; a car blocks the aerial; an exposure building takes radiant heat while fire shows on that side and can ignite unless a company protects it (new task: Protect an exposure).
+- The board's Showing and Smoke readings now cover only the sides you've seen.
+
+## Earlier (Oct 9, 2026, evening)
 
 - **Eave and gap smoke reworked.** A closed-up first-floor fire now shows first at the fire room's own window and door gaps, not as a band along the second-floor eave. Eave smoke appears only when the attic has smoke or the top floor is smoke-charged, and it shows above the rooms feeding it (or at marked gable/soffit vents). Smoke from the gaps fades as a starved fire runs out of air, per the FSRI ventilation study ("no smoke showing"). Eave smoke pulses only for a ventilation-limited attic, irregularly, per the FSRI attic study. No smoke source puffs in lockstep any more.
 - **Dispatch and companies.** A Dispatch tab before the drill builds the assignment: engines, ladders/trucks, rescues/squads, medics and a battalion chief, each with an ID, staffing (1 to 6), arrival time after dispatch and equipment. Engines have a tank (default 1000 gal), a pump, supply hose and editable preconnects (defaults: 1¾ in. 200 ft at 150 gpm ×2 and 2½ in. 200 ft at 250 gpm). Ladders and rescues have ground ladders, an aerial, a fan, saws and hooks. These are generic, editable defaults, not any department's SOP.
@@ -39,4 +50,4 @@ Image and source credits are in [CREDITS.md](CREDITS.md).
 ## Files
 
 - `index.html`: the complete app in one file. It works offline, with no server needed.
-- `src/` and `build.py`: the source pieces. `python3 build.py` rebuilds `index.html`. The build expects an `assets/` folder with `house.jpg` and `mixed.jpg`; those images are already embedded in `index.html`.
+- `src/` and `build.py`: the source pieces. `python3 build.py` rebuilds `index.html`. The build expects an `assets/` folder with `house.jpg`, `mixed.jpg` and the sample house side views `house-b.jpg`, `house-c.jpg`, `house-d.jpg`; those images are already embedded in `index.html`.

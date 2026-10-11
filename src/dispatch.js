@@ -9,6 +9,7 @@ const SET_GROUPS=[
  ['Truck & support work',[['horizontal','Horizontal vent','s'],['vertical','Vertical vent (roof)','s'],['aerialFactor','Aerial speeds roof work (multiplier)','×'],['ppv','PPV fan set-up','s'],['pullCeiling','Pull ceiling','s'],['ladder','Ladder a side','s'],['lights','Scene lighting set-up','s']]],
  ['Search, RIT & rehab',[['searchBase','Search: base time','s'],['searchPerFloor','Search: one floor area','s'],['secondaryFactor','Secondary search (multiplier)','×'],['rit','RIT in place','s'],['rehab','Rehab set-up','s']]],
  ['Distances',[['setback','Engine setback to the front door','ft'],['hydrantDist','Hydrant distance','ft'],['roomRun','Hose run inside to a room','ft'],['floorRun','Hose per floor (stairs)','ft'],['sideRunBD','Extra hose around to Side B/D','ft'],['sideRunC','Extra hose around to Side C','ft']]],
+ ['360 & sides',[['walkSide','360: first look at each of Sides B, C, D','s'],['fence','Fence in the way of a stretch','s'],['expoProtect','Protect an exposure: set-up','s'],['expoHeat','Flame time on a side before an unprotected exposure ignites','s']]],
  ['Modifiers',[['refStaff','Reference staffing (no slow-down at or above)','members'],['shortStaff','Slower per member below reference','×'],['cold','Cold & icy: all tasks take longer','×'],['heatPer10','Heat: fatigue per 10 min of work','×'],['heatCap','Heat: fatigue cap','×']]]];
 function ensureScn(sc){if(!sc.companies||!sc.companies.length){sc.companies=M.PRESETS.generic.companies();sc.presetName=sc.presetName||'generic';}
   sc.settings={...M.DEF_SET,...(sc.settings||{})};sc.env={tod:'day',precip:'none',temp:'mild',...(sc.env||{})};if(sc.windShift===undefined)sc.windShift=null;return sc;}
@@ -87,7 +88,7 @@ function renderSettings(){const sc=A.scn,el=$('#settings');if(!sc||!el)return;
 $('#settings').addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('set-in'))return;const v=+t.value;if(!isFinite(v)||v<0){t.value=A.scn.settings[t.dataset.k];return;}A.scn.settings[t.dataset.k]=v;rebuild();renderSetup();});
 $('#settings').addEventListener('click',e=>{if(e.target.id==='setReset'){A.scn.settings={...M.DEF_SET};rebuild();renderSettings();renderSetup();toast('Task times reset to the default teaching values.');}});
 /* ---------- company board ---------- */
-function coTaskList(c){return Object.keys(M.TASKDEF).filter(k=>!M.canDo(c,k));}
+function coTaskList(c){return Object.keys(M.TASKDEF).filter(k=>!M.canDo(c,k)&&(k!=='expo'||M.feats(A.B,null,'exposure').length));}
 function needOf(k,c,pre){if(k==='line'){if(pre&&pre!=='auto'){const [e,i]=pre.split(':');const E=A.S.cos.find(x=>x.id===e);const p=E&&E.eq.pre[+i];if(p)return +p.dia>=2.5?3:2;}return 2;}return M.TASKDEF[k].need;}
 function tgtHTML(k,c){const B=A.B,S=A.S;
   if(k==='line')return`<option value="">Line to…</option>`+lineOptsHTML(lineTargets());
@@ -96,6 +97,7 @@ function tgtHTML(k,c){const B=A.B,S=A.S;
   if(k==='search1'||k==='search2')return`<option value="">Floor…</option>`+[...new Set(B.zones.filter(z=>!z.attic).map(z=>z.floor))].sort().map(f=>`<option value="${f}">Floor ${f}</option>`).join('');
   if(k==='pullceiling'){const att=B.zones.find(z=>z.attic);return`<option value="">Room…</option>`+(att?B.conns.filter(q=>q.type==='ceiling'&&(q.a===att.id||q.b===att.id)).map(q=>q.a===att.id?q.b:q.a).filter(id=>!zoneOf(id).attic).map(id=>`<option value="${id}">${esc(zname(id))}</option>`).join(''):'');}
   if(k==='ladder')return`<option value="">Side…</option>`+['A','B','C','D'].map(s=>`<option value="${s}"${S.laddered[s]?' disabled':''}>Side ${s}${S.laddered[s]?' (done)':''}</option>`).join('');
+  if(k==='expo')return`<option value="">Exposure…</option>`+M.feats(B,null,'exposure').map(f=>`<option value="${f.side}">${esc(f.name)} (Side ${f.side})${S.expo[f.side]&&S.expo[f.side].prot?' (protected)':''}</option>`).join('');
   if(k==='supply')return S.cos.filter(e=>e.type==='engine').map(e=>`<option value="${e.id}"${e.supplied||e.supplyBy?' disabled':''}>To ${esc(e.name)}${e===c?' (itself)':''}${e.supplied?' (supplied)':e.supplyBy?' (supply coming)':''}</option>`).join('');
   return null;}
 function optHTML(k,c){const S=A.S;
@@ -131,12 +133,12 @@ $('#coList').addEventListener('click',e=>{const r=e.target.closest('.corow2');if
   if(!tg.hidden&&!tg.value)return needPick(tg);const c=A.S.cos.find(x=>x.id===co);const replace=M.freeCrew(A.S,c)<needOf(k,c,op.value);
   const a={kind:'assign',co,task:k};if(replace)a.replace=true;
   if(k==='line'){a.target=tg.value;if(op.value&&op.value!=='auto')a.pre=op.value;}else if(k==='hvent')a.opening=tg.value;else if(k==='vvent'||k==='pullceiling')a.zone=tg.value;
-  else if(k==='search1'||k==='search2')a.floor=tg.value;else if(k==='ladder')a.side=tg.value;else if(k==='supply'){a.to=tg.value;a.mode=op.value;}
+  else if(k==='search1'||k==='search2')a.floor=tg.value;else if(k==='ladder'||k==='expo')a.side=tg.value;else if(k==='supply'){a.to=tg.value;a.mode=op.value;}
   ts._touched=false;tg._touched=false;op._touched=false;ts.value='';order(a);});
 /* ---------- precipitation overlay (drawn over the photo in scene units) ---------- */
 const WX={kind:null,ps:[],t:performance.now()};
 function drawWeather(c){const S=A.S;if(!S||A.screen<3)return;const e=S.scn.env||{};const kind=e.precip;if(kind!=='rain'&&kind!=='snow'){WX.kind=null;return;}
-  const B=A.B,W=B.W,H=B.H,U=H/800;const t=performance.now();const dt=Math.min(.05,(t-WX.t)/1000);WX.t=t;const wind=SizeupVisual.windPx(S.wind)*(kind==='rain'?5:2.2)*U;
+  const B=curView()||A.B,W=B.W,H=B.H,U=H/800;const t=performance.now();const dt=Math.min(.05,(t-WX.t)/1000);WX.t=t;const wind=SizeupVisual.windPx(S.wind)*(kind==='rain'?5:2.2)*U;
   const N=kind==='rain'?300:240;if(WX.kind!==kind||WX.ps.length!==N){WX.kind=kind;WX.ps=[];for(let i=0;i<N;i++)WX.ps.push({x:Math.random()*W,y:Math.random()*H,z:.5+Math.random()*.9,ph:Math.random()*7});}
   const night=e.tod==='night',lit=!!S.lights;c.save();c.beginPath();c.rect(0,0,W,H);c.clip();
   if(kind==='rain'){c.lineCap='round';const a=night?(lit?.34:.2):.3;c.strokeStyle=`rgba(${night?'170,185,210':'215,225,240'},${a})`;c.beginPath();

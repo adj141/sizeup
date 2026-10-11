@@ -9,16 +9,17 @@ const M=SizeupModel,SRC=SIZEUP_SOURCES,RULES=SIZEUP_RULES;
 const fmt=s=>{s=Math.max(0,Math.round(s));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
 const CHECKS=['360 completed','Water supply','RIT / RIC assigned','Search priority set','Command established','More resources requested'];
 const A={mode:'solo',screen:1,maxScreen:1,B:null,img:null,scn:null,S:null,hidden:false,calls:{},locked:false,lockResult:null,checks:{},facts:{},
-  playing:false,speed:1,stepSize:60,simAcc:0,lastEvN:0,latest:[],showFlow:true,markMode:'origin',side:'A',vis:null,visT:-1,photoMarks:null,finished:false};
+  playing:false,speed:1,stepSize:60,simAcc:0,lastEvN:0,latest:[],showFlow:true,markMode:'origin',side:'A',vis:null,visT:-1,photoMarks:null,finished:false,sideImgs:{},sidePhotos:{},fu:{findings:[]}};
 window.__sizeup={A,M};
 
 /* ---------- assets ---------- */
 const IMGS={};
 function loadImg(src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=src;});}
-async function initSamples(){for(const k of ['house','mixed']){IMGS[k]=await loadImg(SIZEUP_ASSETS[k]);$('#th_'+k).src=SIZEUP_ASSETS[k];}}
+async function initSamples(){for(const k of ['house','mixed']){IMGS[k]=await loadImg(SIZEUP_ASSETS[k]);$('#th_'+k).src=SIZEUP_ASSETS[k];}
+  for(const k in SIZEUP_ASSETS)if(!IMGS[k])IMGS[k]=await loadImg(SIZEUP_ASSETS[k]);}
 
 /* ---------- photo building (manual marks) ---------- */
-function defaultMarks(W,H,stories){return{stories,eave:Math.round(H*.25),grade:Math.round(H*.86),openings:[]};}
+function defaultMarks(W,H,stories){return{stories,eave:Math.round(H*.25),grade:Math.round(H*.86),openings:[],features:[],sides:{}};}
 function photoBuilding(W,H,mk){const n=mk.stories,eave=mk.eave,grade=mk.grade,bh=(grade-eave)/n;
   const floors=[{f:'Roof',y0:0,y1:Math.max(1,eave-H*.09)},{f:'Attic',y0:Math.max(1,eave-H*.09),y1:eave}];
   for(let i=n;i>=1;i--)floors.push({f:String(i),y0:eave+(n-i)*bh,y1:eave+(n-i+1)*bh});floors.push({f:'B',y0:grade,y1:H});
@@ -36,8 +37,8 @@ function photoBuilding(W,H,mk){const n=mk.stories,eave=mk.eave,grade=mk.grade,bh
   if(!front)openings.push({id:'pfd',name:'Entry door (not marked)',type:'door',side:'A',zone:'h1',hidden:true,front:true});
   openings.push({id:'prear',name:'Rear door (Side C)',type:'door',side:'C',zone:'L1',hidden:true});
   const roofSpots={};zones.filter(z=>z.floor===String(n)||z.attic).forEach(z=>roofSpots[z.id]={x:(z.x0+z.x1)/2,y:Math.max(4,eave-H*.05)});
-  return{id:'photo',name:'Your photo',W,H,stories:n,atticName:'Attic',construction:'wood',floors,bldg:{x0,x1},eaves:[{x0,x1,y:eave,zone:'attic'}],ridge:{x0,x1,y:Math.max(4,eave-H*.08)},zones,openings,conns,roofSpots,
-    facts:{occupancy:'Residential (confirm)',construction:'Unknown, confirm on 360',stories:String(n),exposures:'B: ? · D: ?',life:'Unknown, not yet confirmed'},suggested:{origin:'L1',fuel:'modern',preburn:210}};}
+  return extendPhotoSides({id:'photo',name:'Your photo',W,H,stories:n,atticName:'Attic',construction:'wood',floors,bldg:{x0,x1},eaves:[{x0,x1,y:eave,zone:'attic'}],ridge:{x0,x1,y:Math.max(4,eave-H*.08)},zones,openings,conns,roofSpots,
+    facts:{occupancy:'Residential (confirm)',construction:'Unknown, confirm on 360',stories:String(n),exposures:'B: ? · D: ?',life:'Unknown, not yet confirmed'},suggested:{origin:'L1',fuel:'modern',preburn:210}},mk);}
 
 /* ---------- scenario & sim ---------- */
 function newScenario(B){const sg=B.suggested||{};return ensureScn({format:'sizeup-scenario',v:2,sceneId:B.id,origin:sg.origin||B.zones[0].id,fuel:sg.fuel||'modern',preburn:sg.preburn||360,
@@ -59,14 +60,14 @@ const stage=$('#stage'),cv=$('#cv'),ov=$('#ov'),octx=ov.getContext('2d');let R=n
 try{R=SizeupRender.create(cv);}catch(e){console.error(e);R=null;}
 if(!R)$('#glfail').style.display='block';
 window.__sizeup.R=()=>R;
-function layout(){const w=stage.clientWidth||300,B=A.B,W=B?B.W:1200,H=B?B.H:800,wide=innerWidth>=960;
+function layout(){const w=stage.clientWidth||300,B=curView(),W=B&&B.has?B.W:(A.B?A.B.W:1200),H=B&&B.has?B.H:(A.B?A.B.H:800),wide=innerWidth>=960;
   let maxH=A.screen===4?(wide?innerHeight*(A.mode==='crew'?.78:.6):innerHeight*.42):(wide?innerHeight*.72:innerHeight*.48);
-  const h=Math.round(Math.min(w*H/W,Math.max(220,maxH)));stage.style.height=h+'px';dpr=Math.min(devicePixelRatio||1,1.6);
+  const h=Math.round(Math.max(wide?0:Math.min(240,maxH),Math.min(w*H/W,Math.max(220,maxH)))); // a very wide side picture is letterboxed on a phone so the overlays fitstage.style.height=h+'px';dpr=Math.min(devicePixelRatio||1,1.6);
   for(const c of [cv,ov]){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
   const sc=Math.min(w/W,h/H);rect={x:(w-W*sc)/2,y:(h-H*sc)/2,w:W*sc,h:H*sc};}
 new ResizeObserver(()=>layout()).observe(stage);
-function curVis(){if(!A.S||A.screen<3)return null;if(A.visT!==A.S.t){A.vis=SizeupVisual.build(A.S,A.B,M);A.visT=A.S.t;}return A.vis;}
-function setTexture(){if(R&&A.img)R.setImage(A.img,A.B.W,A.B.H);}
+function curVis(){if(!A.S||A.screen<3)return null;if(A.visT!==A.S.t||A.visSide!==A.side){A.vis=SizeupVisual.build(A.S,A.B,M,A.side);A.visT=A.S.t;A.visSide=A.side;}return A.vis;}
+function setTexture(){const V=curView();const im=sideImg(A.side);if(R&&im&&V&&V.has)R.setImage(im,V.W,V.H);syncSide();}
 function warm(sec){if(R){R.clear();const v=curVis();if(v)R.prewarm(sec,v);}}
 // under control: auto-pause, banner, prompt to debrief
 function handleEvents(ne){if(ne.some(e=>e.kind==='control')){if(A.playing){A.playing=false;A.simAcc=0;}A.ucDismissed=null;syncUI();toast(`T+${fmt(now())} · Fire under control. Clock paused.`);}
@@ -79,15 +80,16 @@ function loop(now_){const wdt=Math.min(1,(now_-last)/1000),dt=Math.min(.05,wdt);
       const ne=A.S.events.slice(n0);if(ne.length){A.latest=ne.map(e=>e.msg);buildInjects();toast(`T+${fmt(now())} · ${ne[0].msg}`);handleEvents(ne);}uiT+=wdt;if(uiT>.5||ne.length){uiT=0;renderBoard();}}
     if(R){R.update(dt,A.screen>=3?curVis():null);R.draw(rect,dpr);}drawOverlay();}
   requestAnimationFrame(loop);}
-function toScene(cx,cy){return{x:(cx-rect.x)/rect.w*A.B.W,y:(cy-rect.y)/rect.h*A.B.H};}
-function drawOverlay(){const c=octx;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,ov.width,ov.height);if(!A.B)return;const B=A.B;const k=rect.w/B.W*dpr;c.setTransform(k,0,0,k,rect.x*dpr,rect.y*dpr);const U=B.H/800;
+function toScene(cx,cy){const V=curView();return{x:(cx-rect.x)/rect.w*V.W,y:(cy-rect.y)/rect.h*V.H};}
+function drawOverlay(){const c=octx;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,ov.width,ov.height);if(!A.B)return;const B=curView();if(!B||!B.has)return;const k=rect.w/B.W*dpr;c.setTransform(k,0,0,k,rect.x*dpr,rect.y*dpr);const U=B.H/800;
   const markRect=(o,col,dash)=>{c.setLineDash(dash?[8*U,6*U]:[]);c.strokeStyle=col;c.lineWidth=3*U/Math.max(.6,k*B.W/1200/ (B.W/1200));c.lineWidth=Math.max(2*U,2/k);c.strokeRect(o.x-o.w/2,o.y-o.h/2,o.w,o.h);c.setLineDash([]);};
-  if(A.screen===2){if(B.id==='photo'){const mk=A.photoMarks;c.setLineDash([10*U,8*U]);c.lineWidth=Math.max(2/k,2*U);c.strokeStyle='#ffb300';c.beginPath();c.moveTo(0,mk.eave);c.lineTo(B.W,mk.eave);c.stroke();c.strokeStyle='#90caf9';c.beginPath();c.moveTo(0,mk.grade);c.lineTo(B.W,mk.grade);c.stroke();c.setLineDash([]);
+  if(A.screen===2&&A.side!=='A'){drawSideMarks(c,B,k,U);const o=A.originPt;if(o&&o.side===A.side){const r=20*U;c.lineWidth=5*U;c.strokeStyle='#fff';c.beginPath();c.arc(o.x,o.y,r,0,7);c.stroke();}}
+  if(A.screen===2&&A.side==='A'){if(B.id==='photo'){const mk=A.photoMarks;c.setLineDash([10*U,8*U]);c.lineWidth=Math.max(2/k,2*U);c.strokeStyle='#ffb300';c.beginPath();c.moveTo(0,mk.eave);c.lineTo(B.W,mk.eave);c.stroke();c.strokeStyle='#90caf9';c.beginPath();c.moveTo(0,mk.grade);c.lineTo(B.W,mk.grade);c.stroke();c.setLineDash([]);
       c.font=`${Math.round(16*U)}px sans-serif`;c.fillStyle='#ffb300';c.fillText('EAVE',8*U,mk.eave-6*U);c.fillStyle='#90caf9';c.fillText('GRADE',8*U,mk.grade-6*U);
       B.floors.filter(f=>/^\d+$/.test(f.f)).forEach(f=>{c.fillStyle='rgba(255,255,255,.75)';c.fillText('F'+f.f,B.W-40*U,(f.y0+f.y1)/2);});
-      B.openings.filter(o=>!o.hidden).forEach(o=>markRect(o,o.type==='door'?'#90caf9':'#ffb300',false));}
-    const o=A.originPt;if(o){const r=20*U*(1+.12*Math.sin(performance.now()/180));c.fillStyle='rgba(211,47,47,.3)';c.beginPath();c.arc(o.x,o.y,r*1.6,0,7);c.fill();c.lineWidth=5*U;c.strokeStyle='#fff';c.beginPath();c.arc(o.x,o.y,r,0,7);c.stroke();c.fillStyle='#fff';c.beginPath();c.arc(o.x,o.y,6*U,0,7);c.fill();}}
-  if(A.screen===3&&A.S){B.openings.filter(o=>!o.hidden).forEach(o=>{const st=A.S.o[o.id].state;if(st!=='closed')markRect(o,'#ffb300',true);else{c.globalAlpha=.25;markRect(o,'#fff',true);c.globalAlpha=1;}});}
+      B.openings.filter(o=>!o.hidden).forEach(o=>markRect(o,o.type==='door'?'#90caf9':'#ffb300',false));drawFeatures(c,B,'A',U);}
+    const o=A.originPt;if(o&&(o.side||'A')===A.side){const r=20*U*(1+.12*Math.sin(performance.now()/180));c.fillStyle='rgba(211,47,47,.3)';c.beginPath();c.arc(o.x,o.y,r*1.6,0,7);c.fill();c.lineWidth=5*U;c.strokeStyle='#fff';c.beginPath();c.arc(o.x,o.y,r,0,7);c.stroke();c.fillStyle='#fff';c.beginPath();c.arc(o.x,o.y,6*U,0,7);c.fill();}}
+  if(A.screen===3&&A.S){B.openings.filter(o=>!o.hidden&&A.S.o[o.id]).forEach(o=>{const st=A.S.o[o.id].state;if(st!=='closed')markRect(o,'#ffb300',true);else{c.globalAlpha=.25;markRect(o,'#fff',true);c.globalAlpha=1;}});}
   drawWeather(c);
   if(A.screen===4&&A.S&&A.showFlow&&!isHidden()){const v=curVis();const ov_=M.openingVis(A.S);
     for(const o of B.openings){if(o.hidden)continue;const st=A.S.o[o.id];if(!st||st.state==='closed')continue;const vv=ov_[o.id];const out=vv.rate>.05,inn=vv.inflow||(A.S.fan&&A.S.fan.at===o.id);
@@ -104,31 +106,33 @@ function show(n){if(n>A.maxScreen)return;const prev=A.screen;A.screen=n;$$('.scr
 $('#backBtn').onclick=()=>show(Math.max(1,A.screen-1));
 $$('#steps button').forEach(b=>b.onclick=()=>show(+b.dataset.go));
 function reach(n){A.maxScreen=Math.max(A.maxScreen,n);}
-function useBuilding(B,img){A.B=B;A.img=img;A.scn=newScenario(B);A.S=null;A.originPt=null;A.calls={};A.locked=false;A.lockResult=null;A.checks={};A.facts={...B.facts};A.latest=[];A.finished=false;A.hidden=false;
+function useBuilding(B,img){A.B=B;A.img=img;A.side='A';A.fu={findings:[]};if(B.id!=='photo'){A.sideImgs={};for(const s of ['B','C','D']){const v=(B.views||{})[s];if(v&&v.img&&IMGS[v.img])A.sideImgs[s]=IMGS[v.img];}}A.scn=newScenario(B);A.S=null;A.originPt=null;A.calls={};A.locked=false;A.lockResult=null;A.checks={};A.facts={...B.facts};A.latest=[];A.finished=false;A.hidden=false;
   $('#radio').value='';setTexture();buildRoomSel();A.maxScreen=2;show(2);}
 $$('.sample').forEach(b=>b.onclick=()=>{const B=BUILDINGS[b.dataset.sample];useBuilding(B,IMGS[b.dataset.sample]);A.originPt=null;A.originSet=false;});
 async function loadPhoto(file){if(!file)return;$('#fileErr').textContent='';try{let src;
   try{src=await createImageBitmap(file,{imageOrientation:'from-image'});}catch(e){src=await loadImg(URL.createObjectURL(file));}
   const k=Math.min(1,1400/Math.max(src.width,src.height)),c=document.createElement('canvas');c.width=Math.round(src.width*k);c.height=Math.round(src.height*k);c.getContext('2d').drawImage(src,0,0,c.width,c.height);
-  A.photoData=c.toDataURL('image/jpeg',.85);const im=await loadImg(A.photoData);A.photoMarks=defaultMarks(c.width,c.height,2);useBuilding(photoBuilding(c.width,c.height,A.photoMarks),im);A.markMode='window';A.originSet=false;syncUI();}
+  A.photoData=c.toDataURL('image/jpeg',.85);const im=await loadImg(A.photoData);A.photoMarks=defaultMarks(c.width,c.height,2);A.sidePhotos={};A.sideImgs={};useBuilding(photoBuilding(c.width,c.height,A.photoMarks),im);A.markMode='window';A.originSet=false;syncUI();}
   catch(e){console.error(e);$('#fileErr').textContent='Could not read that image. Try a JPG or PNG.';}}
 ['#fileCam','#fileUpload'].forEach(id=>$(id).addEventListener('change',e=>{loadPhoto(e.target.files[0]);e.target.value='';}));
 
 /* ---------- step 2: origin & marking ---------- */
 function buildRoomSel(){const B=A.B;$('#roomSel').innerHTML=B.zones.map(z=>`<option value="${z.id}">${esc(z.name)}${z.hidden?' (interior)':''}</option>`).join('');$('#roomSel').value=A.scn.origin;}
-$('#roomSel').onchange=e=>{A.scn.origin=e.target.value;A.originSet=true;const z=zoneOf(A.scn.origin);const o=A.B.openings.find(o=>o.zone===z.id&&!o.hidden);A.originPt=o?{x:o.x,y:o.y}:{x:(z.x0+z.x1)/2,y:A.B.floors.find(f=>f.f===z.floor)?((f=>(f.y0+f.y1)/2)(A.B.floors.find(f=>f.f===z.floor))):A.B.H/2};A.S=null;syncUI();};
-function zoneAt(x,y){const B=A.B;const o=B.openings.find(o=>!o.hidden&&Math.abs(x-o.x)<o.w/2+10&&Math.abs(y-o.y)<o.h/2+10);if(o)return o.zone;
+$('#roomSel').onchange=e=>{A.scn.origin=e.target.value;A.originSet=true;const z=zoneOf(A.scn.origin);const o=A.B.openings.find(o=>o.zone===z.id&&!o.hidden);A.originPt=o?{x:o.x,y:o.y,side:'A'}:{side:'A',x:(z.x0+z.x1)/2,y:A.B.floors.find(f=>f.f===z.floor)?((f=>(f.y0+f.y1)/2)(A.B.floors.find(f=>f.f===z.floor))):A.B.H/2};A.S=null;syncUI();};
+function zoneAt(x,y){const B=curView();const o=B.openings.find(o=>!o.hidden&&Math.abs(x-o.x)<o.w/2+10&&Math.abs(y-o.y)<o.h/2+10);if(o)return o.zone;
   let f=null;for(const b of B.floors)if(y>=b.y0&&y<b.y1)f=b.f;if(f==='Roof'||f==='Attic')return(B.zones.find(z=>z.attic)||{}).id;if(f==='B'||!f)f='1';
   const c=B.zones.filter(z=>z.floor===f&&!z.hidden);if(!c.length)return B.zones[0].id;c.sort((a,b)=>Math.abs((a.x0+a.x1)/2-x)-Math.abs((b.x0+b.x1)/2-x));return(c.find(z=>x>=z.x0&&x<=z.x1)||c[0]).id;}
 function onTap(cx,cy){if(!A.B)return;if(cx<rect.x||cx>rect.x+rect.w||cy<rect.y||cy>rect.y+rect.h)return;const p=toScene(cx,cy);
-  if(A.screen===2){if(A.B.id==='photo'&&A.markMode!=='origin'){const mk=A.photoMarks;const bh=(mk.grade-mk.eave)/mk.stories;
+  if(A.screen===2){if(A.side!=='A'&&A.B.id==='photo'&&A.markMode!=='origin'){sideMarkTap(p);return;}
+    if(A.B.id==='photo'&&A.markMode!=='origin'&&FEATS[A.markMode]){featTap(A.photoMarks,p,curView());rebuildPhoto();return;}
+    if(A.B.id==='photo'&&A.markMode!=='origin'){const mk=A.photoMarks;const bh=(mk.grade-mk.eave)/mk.stories;
       if(A.markMode==='eave')mk.eave=Math.round(Math.min(p.y,mk.grade-40));else if(A.markMode==='grade')mk.grade=Math.round(Math.max(p.y,mk.eave+40));
-      else{const hit=mk.openings.findIndex(o=>Math.abs(p.x-o.x)<o.w/2&&Math.abs(p.y-o.y)<o.h/2);if(hit>=0)mk.openings.splice(hit,1);else{const h=A.markMode==='door'?bh*.78:bh*.5,w=A.markMode==='door'?h*.45:h*.7;mk.openings.push({type:A.markMode,x:Math.round(p.x),y:Math.round(A.markMode==='door'?Math.min(p.y,mk.grade-h/2):p.y),w:Math.round(w),h:Math.round(h)});}}
+      else{const hit=mk.openings.findIndex(o=>Math.abs(p.x-o.x)<o.w/2&&Math.abs(p.y-o.y)<o.h/2);if(hit>=0)mk.openings.splice(hit,1);else{const t=A.markMode,h=t==='door'?bh*.78:t==='garage'?bh*.72:bh*.5,w=t==='door'?h*.45:t==='garage'?h*2:h*.7;mk.openings.push({type:t,x:Math.round(p.x),y:Math.round(t!=='window'?Math.min(p.y,mk.grade-h/2):p.y),w:Math.round(w),h:Math.round(h)});}}
       const keep=A.scn.origin;A.B=photoBuilding(A.B.W,A.B.H,mk);buildRoomSel();if(A.B.zones.some(z=>z.id===keep))A.scn.origin=keep;$('#roomSel').value=A.scn.origin;A.S=null;syncUI();return;}
-    A.scn.origin=zoneAt(p.x,p.y);A.originPt=p;A.originSet=true;$('#roomSel').value=A.scn.origin;A.S=null;syncUI();return;}
-  if(A.screen===3){const o=A.B.openings.find(o=>!o.hidden&&Math.abs(p.x-o.x)<o.w/2+8&&Math.abs(p.y-o.y)<o.h/2+8);if(o){cycleOpening(o.id);}}}
+    A.scn.origin=zoneAt(p.x,p.y);A.originPt={...p,side:A.side};A.originSet=true;$('#roomSel').value=A.scn.origin;A.S=null;syncUI();return;}
+  if(A.screen===3){const o=curView().openings.find(o=>!o.hidden&&Math.abs(p.x-o.x)<o.w/2+8&&Math.abs(p.y-o.y)<o.h/2+8);if(o){cycleOpening(o.id);}}}
 cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();onTap(e.clientX-r.left,e.clientY-r.top);});
-$('#undoMark').onclick=()=>{if(!A.photoMarks)return;A.photoMarks.openings.pop();A.B=photoBuilding(A.B.W,A.B.H,A.photoMarks);buildRoomSel();A.S=null;syncUI();};
+$('#undoMark').onclick=()=>{if(!A.photoMarks)return;if(A.side!=='A'){const sm=(A.photoMarks.sides||{})[A.side];if(sm&&sm.openings&&sm.openings.length){sm.openings.pop();rebuildPhoto();}return;}A.photoMarks.openings.pop();A.B=photoBuilding(A.B.W,A.B.H,A.photoMarks);buildRoomSel();A.S=null;syncUI();};
 function setStories(n){if(!A.B||A.B.id!=='photo')return;A.photoMarks.stories=clamp(n,1,6);A.B=photoBuilding(A.B.W,A.B.H,A.photoMarks);A.facts.stories=String(A.photoMarks.stories);buildRoomSel();A.S=null;syncUI();}
 $('#stDown').onclick=()=>setStories((A.photoMarks||{stories:2}).stories-1);$('#stUp').onclick=()=>setStories((A.photoMarks||{stories:2}).stories+1);
 $('#toDial').onclick=()=>{reach(3);show(3);};
@@ -146,7 +150,7 @@ function renderSetup(){if(!A.B)return;const sc=A.scn;
 $('#olist').onclick=e=>{const b=e.target.closest('button');const sg=e.target.closest('[data-op]');if(!b||!sg)return;A.scn.openings[sg.dataset.op]=b.dataset.v;rebuild();warm(3);renderSetup();};
 $('#dlist').onclick=e=>{const b=e.target.closest('button');const sg=e.target.closest('[data-dr]');if(!b||!sg)return;A.scn.doors[sg.dataset.dr]=b.dataset.v;rebuild();warm(3);renderSetup();};
 $('#occSel').onchange=e=>{A.scn.occupant=e.target.value;rebuild();renderSetup();};
-$('#toBoard').onclick=()=>{reach(4);A.scn.actions=[];A.scn.tNow=0;rebuild();warm(4);show(4);startClock();toast(A.playing?'Drill clock running. The fire keeps developing until you act. Pause any time.':'Drill clock paused. Press Play to start.');};
+$('#toBoard').onclick=()=>{reach(4);A.scn.actions=[];A.scn.tNow=0;A.fu={findings:[]};if(A.side!=='A'){A.side='A';setTexture();}rebuild();warm(4);show(4);startClock();toast(A.playing?'Drill clock running. The fire keeps developing until you act. Pause any time.':'Drill clock paused. Press Play to start.');};
 $('#surprise').onclick=()=>{const sc=A.scn,r=Math.random;sc.fuel=r()<.75?'modern':'legacy';sc.preburn=[180,300,480,720,900][Math.floor(r()*5)];sc.occupant=r()<.6?'random':'none';
   for(const c of A.B.conns)if(c.type==='door')sc.doors[c.id]=r()<.5?'open':'closed';sc.openings={};if(r()<.35){const w=A.B.openings.filter(o=>o.type==='window'&&!o.hidden);sc.openings[w[Math.floor(r()*w.length)].id]='failed';}
   sc.wind={dir:['calm','A','B','C','D'][Math.floor(r()*5)],spd:Math.floor(r()*3)};sc.preburn=[150,210,300,480,720,900][Math.floor(r()*6)];sc.seed=(r()*1e9)|0;A.hidden=true;A.locked=false;reach(4);sc.actions=[];sc.tNow=0;rebuild();warm(4);show(4);startClock();toast('Conditions randomized. Answers are hidden until you lock in your size-up.');};
@@ -154,7 +158,7 @@ $('#surprise').onclick=()=>{const sc=A.scn,r=Math.random;sc.fuel=r()<.75?'modern
 /* ---------- segmented controls ---------- */
 $$('.seg[data-key]').forEach(seg=>seg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const key=seg.dataset.key;let v=b.dataset.v;if(seg.hasAttribute('data-num'))v=+v;
   const sc=A.scn;
-  switch(key){case 'markMode':A.markMode=v;break;case 'side':A.side=v;break;
+  switch(key){case 'markMode':A.markMode=v;break;case 'side':setSide(v);break;
    case 'fuel':sc.fuel=v;rebuild();warm(3);break;case 'glass':sc.glass=v;rebuild();warm(3);break;case 'preburn':sc.preburn=v;rebuild();warm(3);break;
    case 'frdoor':{const c=fireRoomConn();if(c){sc.doors[c.id]=v;rebuild();warm(3);}break;}
    case 'windDir':sc.wind={...sc.wind,dir:v};if(A.S){A.S.scn.wind={...sc.wind};A.S.wind={...sc.wind};}A.visT=-1;break;case 'windSpd':sc.wind={...sc.wind,spd:v};if(A.S){A.S.scn.wind={...sc.wind};A.S.wind={...sc.wind};}A.visT=-1;break;
@@ -178,10 +182,11 @@ function syncUI(){const sc=A.scn;
    const ws=sc.windShift;$('#vShift').textContent=ws?`T+${fmt(ws.at)} → ${['light','moderate','strong'][ws.spd]} from Side ${ws.dir}`:'None';$$('.seg[data-key=shiftDir] button,.seg[data-key=shiftSpd] button').forEach(b=>b.disabled=!ws);
    const ss=$('#setupSum');if(ss)ss.textContent=setupSummary();}
   const isPhoto=A.B&&A.B.id==='photo';$('#markCtl').hidden=!isPhoto;$('#storiesCtl').hidden=!isPhoto;
-  if(isPhoto){const mk=A.photoMarks;$('#markStat').textContent=`${mk.openings.filter(o=>o.type==='window').length} windows, ${mk.openings.filter(o=>o.type==='door').length} doors marked. Tap a marked one again to remove it.`;$('#markHint').textContent={origin:'Tap the fire room',window:'Tap each window',door:'Tap each door',eave:'Tap the eave line',grade:'Tap the ground line'}[A.markMode];$('#stOut').textContent=mk.stories;}
+  if(isPhoto){const mk=A.photoMarks;const sm=A.side==='A'?mk:(mk.sides||{})[A.side]||{openings:[]};const ops=sm.openings||[];$('#markStat').textContent=`Side ${A.side}: ${ops.filter(o=>o.type==='window').length} windows, ${ops.filter(o=>o.type!=='window').length} doors marked, ${(sm.features||[]).length} features. Tap a mark again to remove it.`;$('#markHint').textContent=({origin:'Tap the fire room',window:'Tap each window',door:'Tap each door',garage:'Tap each garage door',eave:'Tap the eave line',grade:'Tap the ground line'})[A.markMode]||`Tap to mark: ${FEATS[A.markMode]}`;$('#stOut').textContent=mk.stories;}
+  syncSide();if(A.screen===2)renderSideCtl();
   const z=zoneOf(sc.origin);$('#floorAuto').textContent=A.originSet?`${z.name} · ${floorLabel(z.floor)}`:'Tap the photo or pick a room';
   $('#toDial').disabled=!A.originSet;
-  const chips=A.screen>=2&&A.originSet&&!isHidden();$('#chipSide').hidden=!chips;$('#chipFloor').hidden=!chips;$('#chipSide b').textContent=A.side;$('#chipFloor b').textContent=z.floor==='Attic'?'ATT':z.floor;$('#chipFloor small').textContent=/^\d+$/.test(z.floor)?'FLOOR':'LEVEL';
+  const chips=A.screen>=2&&A.originSet&&!isHidden();$('#chipSide').hidden=!chips;$('#chipFloor').hidden=!chips;$('#chipSide b').textContent=(A.originPt&&A.originPt.side)||'A';$('#chipFloor b').textContent=z.floor==='Attic'?'ATT':z.floor;$('#chipFloor small').textContent=/^\d+$/.test(z.floor)?'FLOOR':'LEVEL';
   $('#taphint').classList.toggle('show',A.screen===2&&!A.originSet&&!(isPhoto&&A.markMode!=='origin'));if(isPhoto&&A.screen===2&&A.markMode!=='origin'){$('#taphint').textContent=$('#markHint').textContent;$('#taphint').classList.add('show');}else $('#taphint').textContent='Tap where the fire starts';
   const fo=A.S&&A.screen>=3&&!underControl()&&Object.values(A.S.z).some(z=>z.flashed&&!z.out)&&!isHidden();$('#foChip').classList.toggle('show',!!fo);
   const uc=A.screen===4&&underControl()&&A.ucDismissed!==A.S.underControl;$('#ucBanner').classList.toggle('show',!!uc);if(uc)$('#ucT').textContent=`All fire knocked down at T+${fmt(A.S.underControl-A.S.tArr)}. Clock paused.`;
@@ -198,11 +203,13 @@ function floorLabel(f){if(f==='Attic')return A.B.atticName||'Attic';if(f==='B')r
 function windText(){const w=(A.S&&A.screen===4&&A.S.wind)||A.scn.wind;return w.dir==='calm'?'Calm':`${['Light','Moderate','Strong'][w.spd]} from Side ${w.dir}`;}
 
 /* ---------- readings ---------- */
-function dominant(){const S=A.S;const v=M.openingVis(S);let best=null;for(const o of A.B.openings){const x=v[o.id];if(!x)continue;const sc=x.rate+x.flame*.5;if(sc>.01&&(!best||sc>best.sc))best={...x,sc,name:o.name,id:o.id};}
+function dominant(seen){const S=A.S;const v=M.openingVis(S);let best=null;for(const o of A.B.openings){const x=v[o.id];if(!x||(seen&&!seenO(o)))continue;const sc=x.rate+x.flame*.5;if(sc>.01&&(!best||sc>best.sc))best={...x,sc,name:o.name,id:o.id};}
   const e=M.eavesVis(S);if(e&&e.rate>.04&&(!best||e.rate*1.2>best.sc))best={...e,sc:e.rate,name:'eaves / cornice',id:'eaves'};return best;}
-function smokeWhere(){const S=A.S;const v=M.openingVis(S);const list=A.B.openings.filter(o=>v[o.id]&&v[o.id].rate>.01).sort((a,b)=>v[b.id].rate-v[a.id].rate).map(o=>(o.hidden?o.name:o.name.replace(/ \(.+\)/,''))+(v[o.id].state==='closed'?' (around the closed '+o.type+')':''));const e=M.eavesVis(S);if(e&&e.rate>.02)list.push(A.B.id==='mixed'?'cornice':'eaves');for(const id in S.o)if(S.o[id].type==='roof'&&S.o[id].state!=='closed'&&v[id]&&v[id].rate>.02)list.push('roof vent');return [...new Set(list)];}
-function fireShowing(){const S=A.S;const v=M.openingVis(S);return A.B.openings.filter(o=>v[o.id]&&v[o.id].flame>.05).map(o=>o.name);}
-function smokeText(){const d=dominant();if(!d)return'Nothing showing';const w=smokeWhere();const e=A.S.scn.env||{};const dark=e.tod==='night'&&!A.S.lights,fogv=e.precip==='fog';return `${dark?'(hard to read in the dark) ':fogv?'(partly hidden by fog) ':''}${M.VOLN[d.vol]} ${dark?'dark-looking, colour uncertain':d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
+function smokeWhere(){const S=A.S;const v=M.openingVis(S);const behind=A.B.openings.some(o=>!seenO(o)&&v[o.id]&&v[o.id].rate>.05);const list=A.B.openings.filter(o=>seenO(o)&&v[o.id]&&v[o.id].rate>.01).sort((a,b)=>v[b.id].rate-v[a.id].rate).map(o=>(o.hidden?o.name:o.name.replace(/ \(.+\)/,''))+(v[o.id].state==='closed'?' (around the closed '+o.type+')':''));const e=M.eavesVis(S);if(e&&e.rate>.02)list.push(A.B.id==='mixed'?'cornice':'eaves');for(const id in S.o)if(S.o[id].type==='roof'&&S.o[id].state!=='closed'&&v[id]&&v[id].rate>.02)list.push('roof vent');if(behind)list.push('behind the roofline (a side you have not walked)');return [...new Set(list)];}
+// on the board, the readings only cover sides you have seen (Side A, plus each side walked in the 360)
+function seenO(o){if(A.screen!==4||!A.S)return true;const s=o.side||'A';return s==='A'||A.S.walked[s]!=null;}
+function fireShowing(){const S=A.S;const v=M.openingVis(S);return A.B.openings.filter(o=>seenO(o)&&v[o.id]&&v[o.id].flame>.05).map(o=>o.name);}
+function smokeText(){const d=dominant(true);if(!d){const w=smokeWhere();return w.length?'Smoke showing '+w.join(', '):'Nothing showing';}const w=smokeWhere();const e=A.S.scn.env||{};const dark=e.tod==='night'&&!A.S.lights,fogv=e.precip==='fog';return `${dark?'(hard to read in the dark) ':fogv?'(partly hidden by fog) ':''}${M.VOLN[d.vol]} ${dark?'dark-looking, colour uncertain':d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
 function burningText(){const S=A.S;const b=Object.values(S.z).filter(z=>z.ign&&!z.out);if(!b.length)return underControl()?'Under control: all fire knocked down':Object.values(S.z).some(z=>z.out)?'Knocked down':'No fire';return b.map(z=>`${zname(z.id)}: ${M.stageOf(S,z.id).toLowerCase()}`).join(' · ');}
 function hostile(){const S=A.S,o=S.z[A.scn.origin];let s=0,why=[];
   if(o.vl&&!o.flashed&&o.T>.3){s+=3;why.push('ventilation-limited and hot: new air will speed it up');}
@@ -229,7 +236,7 @@ const ICON={home:'<path d="M3 11L12 4l9 7v9h-6v-6H9v6H3z" fill="currentColor"/>'
  flow:'<path d="M4 18c4 0 4-12 8-12s4 12 8 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',gauge:'<path d="M4 16a8 8 0 1116 0" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 16l4-5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
  stage:'<path d="M4 20h16M6 20V12M10 20V8M14 20V10M18 20V5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',drop:'<path d="M12 3c4 5 6 8 6 11a6 6 0 01-12 0c0-3 2-6 6-11z" fill="currentColor"/>'};
 const svg=n=>`<svg viewBox="0 0 24 24">${ICON[n]}</svg>`;
-function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,hid=isHidden();
+function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,hid=isHidden();renderFU();
   const ed=(k,ic,label)=>`<div class="frow">${svg(ic)}<span class="k">${label}<span class="tag">EDIT</span></span><span class="v ed" contenteditable="true" role="textbox" data-f="${k}" aria-label="${label}">${esc(F[k]||'')}</span></div>`;
   const au=(ic,label,v,stack)=>`<div class="frow${stack?' stack':''}">${svg(ic)}<span class="k">${label}</span><span class="v${hid?' hidev':''}">${v}</span></div>`;
   const fs=fireShowing();const fp=M.flowPath(S);const W=S.water;
@@ -262,6 +269,7 @@ function lineTargets(){const B=A.B,S=A.S,burn=new Set(burningIds());const att=B.
   B.zones.filter(z=>!z.attic).forEach(z=>T.push({v:z.id,zone:z.id,g:'room',label:`Interior line to ${z.name}`,short:z.name}));
   if(att)B.conns.filter(c=>c.type==='ceiling'&&(c.a===att.id||c.b===att.id)).forEach(c=>{const via=c.a===att.id?c.b:c.a;const vz=zoneOf(via);if(!vz||vz.attic)return;
     T.push({v:'attic:'+via,zone:att.id,g:'attic',label:`Line to ${att.name} via ${vz.name} (pull ceiling)`,short:`${att.name} via ${vz.name}`});});
+  B.openings.filter(o=>o.type==='door'&&!o.front&&o.side!=='A').forEach(o=>{const z=zoneOf(o.zone);if(z&&!z.attic)T.push({v:o.zone+'@'+o.id,zone:o.zone,g:'room',label:`Interior line in through ${o.name} to ${z.name}`,short:`${z.name} via ${o.name.replace(/^Side [A-D] /,'')}`});});
   B.openings.filter(o=>o.type==='window'||o.type==='door').forEach(o=>T.push({v:'ext:'+o.id,zone:o.zone,g:'ext',label:`Exterior water through ${o.name}`,short:o.name}));
   for(const id in S.o){const o=S.o[id];if(o.type==='roof'&&o.dyn&&o.state!=='closed')T.push({v:'ext:'+id,zone:o.zone,g:'ext',label:`Exterior water through ${M.oname(S,id)} (into ${zname(o.zone)})`,short:M.oname(S,id)});}
   const used={};S.water.lines.forEach(l=>used[l.key]=l.id);
@@ -360,7 +368,7 @@ function lockIn(){const T=truthCalls(),C=A.calls;const rows=[];const num=(k,name
 /* ---------- debrief ---------- */
 function ruleHTML(ids){return ids.map(id=>{const r=RULES.find(r=>r.id===id);if(!r)return'';return `<span class="q">${esc(r.quote||r.does)}</span><small>${r.src.map(s=>`<a href="${SRC[s].url}" target="_blank" rel="noopener">${esc(SRC[s].title)}</a>`).join(' · ')||'Simplification (not from FSRI)'}</small>`;}).join('');}
 function debrief(){const S=A.S,sc=A.scn,ta=S.tArr,items=[];const at=t=>`T+${fmt(t-ta)}`;
-  const add=(st,title,detail,rules)=>items.push({st,title,detail,rules:rules||[]});
+  const add=(st,title,detail,rules,img)=>items.push({st,title,detail,rules:rules||[],img});
   if(A.mode==='solo'){if(A.lockResult)add(A.lockResult.score>=5?'ok':A.lockResult.score>=3?'mid':'no',`Size-up calls: ${A.lockResult.score}/${A.lockResult.n}`,A.lockResult.rows.map(r=>`${r.k}: ${r.you} (model: ${r.truth})`).join(' · '),['smokecolor','pulse']);
     else add('mid','Size-up calls not locked in','Lock in your read of the smoke and stage next time before acting.',[]);}
   const rr=$('#radio').value.trim().toLowerCase();if(rr){const el=[['unit',/engine|truck|ladder|rescue|squad|battalion|medic|\b[etlq]\s?\d/],['building',/stor(y|ies)|wood|brick|frame|residential|commercial|mixed|apartment|house/],['conditions',/smoke|fire|flame|nothing showing|showing/],['strategy',/offensive|defensive|attack|investigat|transitional/],['command',/command/],['needs',/request|need|alarm|additional|assign/]];const miss=el.filter(([k,re])=>!re.test(rr)).map(([k])=>k);
@@ -392,11 +400,11 @@ function debrief(){const S=A.S,sc=A.scn,ta=S.tArr,items=[];const at=t=>`T+${fmt(
   const S0=S.searches.filter(s=>s.done&&!s.aborted);if(!S.searches.length)add('mid','No primary search ordered','',[]);
   // strategy note
   if(S.strategy==='Defensive'){const o=S.z[sc.origin];const confined=Object.values(S.z).filter(z=>z.ign).length<=1&&!o.flashed;add('mid','Defensive strategy',confined?'At arrival the fire was in one compartment. Compare that with your life-hazard read. The choice is yours; this is just what the model showed.':'Conditions included flashover or extension. The model just shows what the building did.',[]);}
-  companyDebrief(add,at);
+  companyDebrief(add,at);debrief360(add,at);
   const out=Object.values(S.z).filter(z=>z.ign);const allOut=out.length&&out.every(z=>z.out);add(allOut?'ok':'mid',allOut?`Fire under control at ${at(S.underControl!=null?S.underControl:Math.max(...out.map(z=>z.tOut||0)))}`:`Fire not yet under control at the end of the drill (still burning: ${out.filter(z=>!z.out).map(z=>zname(z.id)).join(', ')})`,`Burned: ${out.map(z=>zname(z.id)).join(', ')||'none'}.`,['push']);
   return items;}
 $('#finishBtn').onclick=()=>{A.playing=false;A.wasPlaying=false;A.finished=true;syncUI();const items=debrief();const ok=items.filter(i=>i.st==='ok').length;
-  openModal('Debrief',`<div class="debrief"><p style="margin:0 0 8px">${esc(A.B.name)} · ${esc(M.FUEL[A.scn.fuel].label)} · drill ended at T+${fmt(now())}. ${ok}/${items.length} items went well.</p>${items.map(i=>`<div class="item"><b><span class="badge2 ${i.st}">${i.st==='ok'?'✓':i.st==='mid'?'!':'✗'}</span>${esc(i.title)}</b>${i.detail?`<small>${esc(i.detail)}</small>`:''}${ruleHTML(i.rules)}</div>`).join('')}
+  openModal('Debrief',`<div class="debrief"><p style="margin:0 0 8px">${esc(A.B.name)} · ${esc(M.FUEL[A.scn.fuel].label)} · drill ended at T+${fmt(now())}. ${ok}/${items.length} items went well.</p>${items.map(i=>`<div class="item"><b><span class="badge2 ${i.st}">${i.st==='ok'?'✓':i.st==='mid'?'!':'✗'}</span>${esc(i.title)}</b>${i.detail?`<small>${esc(i.detail)}</small>`:''}${i.img?`<img class="dbimg" src="${i.img}" alt="${esc(i.title)}">`:''}${ruleHTML(i.rules)}</div>`).join('')}
   <p class="tip">The model is a simplified teaching tool informed by UL FSRI research. It does not grade you against any department SOP. Training prototype, not for operational use.</p></div><div class="btnrow"><button class="btn ghost" id="dbCopy">Copy debrief</button><button class="btn primary" id="dbShare">Share drill</button></div>`);
   A.lastDebrief=items;$('#dbCopy').onclick=()=>copyText(items.map(i=>`[${i.st}] ${i.title}${i.detail?' - '+i.detail:''}`).join('\n'),'#dbCopy');$('#dbShare').onclick=openShare;};
 
@@ -417,7 +425,7 @@ function exportPNG(){if(R)R.draw(rect,dpr);const B=A.B,EW=Math.min(Math.round(re
   g.fillStyle='#14171b';g.fillRect(0,EH,EW,panel);g.fillStyle='#d32f2f';g.fillRect(0,EH,EW,6);let y=EH+pad+fs;g.fillStyle='#fff';g.font=`800 ${Math.round(fs*1.2)}px -apple-system,Segoe UI,Roboto,Arial,sans-serif`;g.fillText(lines[0],pad,y);y+=fs*1.6;
   g.font=font(500);let col='#e6e8ea';wl.forEach(t=>{if(/^(Latest|Task):/.test(t))col='#ffb300';else if(/^Training prototype/.test(t))col='#9ca2aa';else if(/^[A-Z][a-z ]+:/.test(t))col='#e6e8ea';g.fillStyle=col;g.fillText(t,pad,y);y+=fs*1.35;});return c;}
 function scenarioObj(hide){const o=JSON.parse(JSON.stringify(A.scn));o.format='sizeup-scenario';o.v=2;o.mode=A.mode;o.hideAnswers=!!hide;o.facts={...A.facts};o.radio=$('#radio').value;o.side=A.side;o.created=new Date().toISOString();
-  if(A.B.id==='photo'){o.photo=A.photoData;o.marks=JSON.parse(JSON.stringify(A.photoMarks));}o.note='SizeUp training scenario. Training prototype, not for operational use.';return o;}
+  if(A.B.id==='photo'){o.photo=A.photoData;o.marks=JSON.parse(JSON.stringify(A.photoMarks));o.sidePhotos={...A.sidePhotos};}o.note='SizeUp training scenario. Training prototype, not for operational use.';return o;}
 function scenarioHTML(obj){const json=JSON.stringify(obj).replace(/</g,'\\u003c');const i=PRISTINE.lastIndexOf('</body>');return PRISTINE.slice(0,i)+SCN_TAG+json+SCN_END+'\n'+PRISTINE.slice(i);}
 function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);}
 function canShareFiles(){try{return!!(navigator.canShare&&navigator.canShare({files:[new File([new Blob(['x'])],'a.png',{type:'image/png'})]}));}catch(e){return false;}}
@@ -441,12 +449,12 @@ function openShare(){const c=exportPNG();const url=c.toDataURL('image/png');A.la
 $('#shareBtn').onclick=openShare;
 $('#mClose').onclick=closeModal;$('#modal').onclick=e=>{if(e.target.id==='modal')closeModal();};
 async function loadScenario(o){if(!o||o.format!=='sizeup-scenario')throw new Error('Not a SizeUp scenario file');
-  let B,img;if(o.sceneId==='photo'){img=await loadImg(o.photo);A.photoData=o.photo;A.photoMarks=o.marks;B=photoBuilding(img.naturalWidth,img.naturalHeight,o.marks);}else{B=BUILDINGS[o.sceneId];img=IMGS[o.sceneId];}
-  A.B=B;A.img=img;setTexture();A.scn={format:o.format,v:o.v,sceneId:o.sceneId,origin:o.origin,fuel:o.fuel,preburn:o.preburn,openings:o.openings||{},doors:o.doors||{},occupant:o.occupant||'none',wind:o.wind||{dir:'calm',spd:0},glass:o.glass||'fails',seed:o.seed,actions:o.actions||[],tNow:o.tNow||0,companies:o.companies,presetName:o.presetName||(o.companies?'edited':'generic'),settings:o.settings,env:o.env,windShift:o.windShift||null};ensureScn(A.scn);
-  A.mode=o.mode==='crew'?'crew':'solo';A.hidden=!!o.hideAnswers;A.locked=false;A.lockResult=null;A.calls={};A.facts={...B.facts,...(o.facts||{})};$('#radio').value=o.radio||'';A.side=o.side||'A';A.originSet=true;A.latest=[];buildRoomSel();
+  let B,img;if(o.sceneId==='photo'){img=await loadImg(o.photo);A.photoData=o.photo;A.photoMarks=o.marks;A.sidePhotos={...(o.sidePhotos||{})};A.sideImgs={};for(const s in A.sidePhotos)A.sideImgs[s]=await loadImg(A.sidePhotos[s]);B=photoBuilding(img.naturalWidth,img.naturalHeight,o.marks);}else{B=BUILDINGS[o.sceneId];img=IMGS[o.sceneId];A.sideImgs={};for(const s of ['B','C','D']){const v=(B.views||{})[s];if(v&&v.img&&IMGS[v.img])A.sideImgs[s]=IMGS[v.img];}}
+  A.B=B;A.img=img;A.side='A';A.fu={findings:[]};setTexture();A.scn={format:o.format,v:o.v,sceneId:o.sceneId,origin:o.origin,fuel:o.fuel,preburn:o.preburn,openings:o.openings||{},doors:o.doors||{},occupant:o.occupant||'none',wind:o.wind||{dir:'calm',spd:0},glass:o.glass||'fails',seed:o.seed,actions:o.actions||[],tNow:o.tNow||0,companies:o.companies,presetName:o.presetName||(o.companies?'edited':'generic'),settings:o.settings,env:o.env,windShift:o.windShift||null};ensureScn(A.scn);
+  A.mode=o.mode==='crew'?'crew':'solo';A.hidden=!!o.hideAnswers;A.locked=false;A.lockResult=null;A.calls={};A.facts={...B.facts,...(o.facts||{})};$('#radio').value=o.radio||'';A.originSet=true;A.latest=[];buildRoomSel();
   A.maxScreen=4;A.screen=3;A.finished=false;rebuild();warm(4);show(4);buildInjects();startClock();toast(`Drill loaded: ${B.name} at T+${fmt(now())}. Clock running.`);}
 $('#fileScn').addEventListener('change',async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;try{const t=await f.text();let o;if(/^\s*</.test(t)){const d=new DOMParser().parseFromString(t,'text/html').getElementById('sizeup-scenario');if(!d)throw new Error('No scenario inside that file');o=JSON.parse(d.textContent);}else o=JSON.parse(t);await loadScenario(o);}catch(err){$('#fileErr').textContent='Could not open that drill: '+err.message;}});
-$('#resetBtn').onclick=()=>{A.scn.actions=[];A.scn.tNow=0;A.latest=[];A.finished=false;rebuild();warm(4);renderBoard();buildInjects();startClock();toast('Reset to arrival (T+0). Clock running.');};
+$('#resetBtn').onclick=()=>{A.scn.actions=[];A.scn.tNow=0;A.latest=[];A.finished=false;A.fu={findings:[]};if(A.side!=='A'){A.side='A';setTexture();layout();}rebuild();warm(4);renderBoard();buildInjects();startClock();toast('Reset to arrival (T+0). Clock running.');};
 $('#newBtn').onclick=()=>{A.maxScreen=1;A.playing=false;show(1);};
 let tt;function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),4500);}
 function refreshAll(){A.visT=-1;if(A.screen===4){renderBoard();buildInjects();}else if(A.screen===3)renderSetup();}
@@ -456,6 +464,6 @@ document.addEventListener('keydown',e=>{if(A.screen!==4||$('#modal').classList.c
 (async()=>{await initSamples();syncUI();requestAnimationFrame(loop);
   const emb=document.getElementById('sizeup-scenario');if(emb){try{await loadScenario(JSON.parse(emb.textContent));}catch(e){console.error(e);$('#fileErr').textContent='Embedded drill could not be loaded.';}}
   window.__sizeup.ready=true;})();
-Object.assign(window.__sizeup,{syncUI,rebuild,advance,order,debrief,scenarioObj,scenarioHTML,loadScenario,truthCalls,summary,exportPNG,buildInjects,smokeText,openShare,layout});
+Object.assign(window.__sizeup,{setSide,curView,findingsNow:()=>M.findings(A.S),syncUI,rebuild,advance,order,debrief,scenarioObj,scenarioHTML,loadScenario,truthCalls,summary,exportPNG,buildInjects,smokeText,openShare,layout});
 
 })();
