@@ -31,6 +31,7 @@ The model's rules and the in-app **Behind the behavior** panel quote these pages
 - FSRI-FA: Study of the Impact of Fire Attack Utilizing Interior and Exterior Streams on Firefighter Safety and Occupant Survival. https://fsri.org/research/study-impact-fire-attack-utilizing-interior-and-exterior-streams-firefighter-safety-and
 - FSRI-CBYD: Close Before You Doze: Before & After. https://fsri.org/program-update/close-you-doze-series-after
 - FSRI-BSMT: Understanding and Fighting Basement Fires (FSRI & ISFSI). https://fsri.org/research/understanding-and-fighting-basement-fires
+- NIOSH-BG: NIOSH Workplace Solutions 2018-154, Preventing Deaths and Injuries of Fire Fighters Working at Basement and Other Below-Grade Fires (2018). https://www.cdc.gov/niosh/docs/2018-154/pdfs/2018-154.pdf
 - FSRI-ACAD: FSRI Fire Safety Academy (free courses, linked for further training). https://training.fsri.org/
 
 FSRI content is quoted for training and reference with attribution. It is not redistributed.
@@ -40,7 +41,7 @@ FSRI content is quoted for training and reference with attribution. It is not re
 - Reading Smoke color, volume, velocity and density mapping. These are widely taught generic cues, not FSRI measurements.
 - All task times (line stretch, water supply, roof cut, search), tank and flow numbers, and the model's time constants. These are teaching values tuned so the timing *pattern* matches the FSRI findings cited above.
 - Wind effects on the plume and flow path.
-- The 360 walk time, the follow-up report check, and the fence, power-line, car and exposure effects. The basement behavior follows FSRI-BSMT; its thresholds are teaching values.
+- The 360 walk time, the follow-up report check, and the fence, power-line, car and exposure effects. The basement behavior follows FSRI-BSMT and NIOSH-BG; its thresholds, the below-grade gap-leak boost and the basement-to-attic chase rate are teaching values. The diluted plume for smoke on hidden sides is a drawing simplification.
 - Window glass failing on its own from heat. The timing is seeded and variable, and a "Holds" option keeps closed-house decay.
 - Building-pressure smoke push at the eaves and around closed windows and doors.
 - Smoke leaking around closed windows and doors is capped in volume and velocity because the gap limits what is visible.

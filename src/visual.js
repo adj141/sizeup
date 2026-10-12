@@ -16,8 +16,15 @@ function envOf(S){const e=S.scn.env||{};const tod=e.tod||'day',pr=e.precip||'non
    pushing smoke show as a plume rising over the roofline behind (same rule Side A always used for the rear). */
 function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0;if(B.has===false)return{windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.wind||S.scn.wind),dim:0,env:envOf(S),side,none:true};const vis={side,windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.wind||S.scn.wind),dim:0,env:envOf(S)};const ov=M.openingVis(S);const U=B.H/800;const lean=vis.wind/90;
   let total=0;
+  // openings on the other sides: one diluted plume per hidden side, placed toward that side (B/D at the building edge, C behind the ridge
+  // over the room it comes from). Gap leakage counts at 0.15x; grade and basement-level openings only clear the roofline when strongly pushing. [simplification]
+  const hid={},SO=['A','B','C','D'],vi=SO.indexOf(side);
+  const hidSmoke=(o,v)=>{if(!B.ridge)return;const z=B.zones.find(z=>z.id===o.zone);if(!z)return;const broken=v.state!=='closed';const r=v.rate*(broken?1:.15);
+    const low=o.level==='B'||z.floor==='B'||z.floor==='1';if(r<=(low?.15:.05))return;
+    const hs=SO.includes(o.side)?o.side:'C';const rel=vi<0||hs==='Roof'?'behind':(SO.indexOf(hs)-vi+4)%4===1?'left':(SO.indexOf(hs)-vi+4)%4===3?'right':'behind';
+    const g=hid[rel]||(hid[rel]={r:0,rx:0,den:0,vel:0,vol:0,rgb:[0,0,0]});g.r+=r;g.rx+=r*(z.x0+z.x1)/2;g.den=Math.max(g.den,v.den);g.vel=Math.max(g.vel,v.vel);g.vol=Math.max(g.vol,v.vol);v.rgb.forEach((c,k)=>g.rgb[k]+=c*r);};
   B.openings.forEach((o,i)=>{const v=ov[o.id];if(!v)return;const seed=(i*0.137)%1;
-    if(o.hidden){if(v.rate>.05&&B.ridge){const z=B.zones.find(z=>z.id===o.zone);if(!z)return;vis.emitters.push({key:'r'+o.id,kind:'rear',x:(z.x0+z.x1)/2,y:B.ridge.y+30*U,w:Math.min(240*U,(z.x1-z.x0)),hgt:10*U,rate:v.rate*16,vel:Math.min(2,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,alpha:.85,cool:.5});total+=v.rate*.6;}return;}
+    if(o.hidden){hidSmoke(o,v);return;}
     const top=o.y-o.h/2;const broken=v.state!=='closed';
     if(o.type==='window'||(o.type==='door'&&broken)||(o.type==='garage'&&broken)){
       vis.windows.push({x:o.x,y:o.y,w:o.w,h:o.h,glow:o.type==='window'||broken?v.glow*(broken?1:.8):0,stain:o.type==='window'?v.stain:0,broken,seed});}
@@ -32,6 +39,10 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     if(v.rate>.01){const k=o.type==='door'||o.type==='garage'?.45:v.frac;const ey=o.cover!=null?o.cover:top+(broken?o.h*.08:0);
       vis.emitters.push({key:o.id,kind:broken?'open':'leak',x:o.x,y:ey,w:broken?o.w*.85:o.w*(o.cover!=null?1.6:.9),hgt:broken?o.h*k*.55:4*U,rate:v.rate*(broken?34:110)*(o.w>200*U?2:1),vel:v.vel,den:v.den,vol:v.vol,rgb:v.steam>.3?[205,203,198]:broken?v.rgb:v.rgb.map((c,j)=>c*.45+[120,117,112][j]*.55),glow:v.flame>.05?.9:v.glow*.25,pulse:v.pulse,alpha:broken?1:.5,cool:v.col==='white'?.1:.35});total+=v.rate*(broken?1:.3);}
   });
+  {const bx=B.bldg||{x0:B.ridge?B.ridge.x0-150*U:0,x1:B.ridge?B.ridge.x1+150*U:B.W};const ey=(B.eaves&&B.eaves[0]?B.eaves[0].y:B.ridge?B.ridge.y+60*U:0);
+   for(const rel in hid){const g=hid[rel];const x=rel==='left'?bx.x0+(bx.x1-bx.x0)*.06:rel==='right'?bx.x1-(bx.x1-bx.x0)*.06:g.rx/g.r;const y=rel==='behind'?B.ridge.y+30*U:ey;
+     const rgb=g.rgb.map((c,k)=>c/g.r*.6+[150,148,145][k]*.4);
+     vis.emitters.push({key:'r'+rel,kind:'rear',x,y,w:(rel==='behind'?200:90)*U,hgt:10*U,rate:Math.min(8,g.r*12),vel:Math.min(2,g.vel),den:Math.max(0,g.den-1),vol:Math.min(2,g.vol),rgb,alpha:.38,cool:.5});total+=g.r*.6;}}
   for(const oid in S.o){const o=S.o[oid];if(o.type!=='roof'||o.state==='closed')continue;const v=ov[oid];const sp=B.roofSpots&&(B.roofSpots[o.over]||B.roofSpots[o.zone]);if(!sp||!v)continue;
     vis.emitters.push({key:oid,kind:'roof',x:sp.x,y:sp.y,w:70*U,hgt:6*U,rate:v.rate*30+2,vel:Math.max(1,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,glow:v.flame>.05?.8:0,cool:.4});total+=v.rate;
     const az=S.z[o.zone];if(az&&az.ign&&!az.out&&az.q>.35){const fh=(60+az.q*110)*U;vis.flames.push({x:sp.x,y:sp.y+8*U,w:70*U,h:fh,i:.8+az.q*.4,seed:.77,lean,asp:1.2});vis.lights.push({x:sp.x,y:sp.y,r:160*U,i:.6*az.q});}}

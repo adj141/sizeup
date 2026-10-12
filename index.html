@@ -637,6 +637,7 @@ const SIZEUP_SOURCES={
  'NIST-WD7':{title:'NIST TN 1629: Fire Fighting Tactics Under Wind Driven Fire Conditions: 7-Story Building Experiments (Madrzykowski & Kerber, 2009)',url:'https://www.nist.gov/publications/fire-fighting-tactics-under-wind-driven-fire-conditions-7-story-building-experiments'},
  'FSRI-HV08':{title:'Impact of Ventilation on Fire Behavior in Legacy and Contemporary Residential Construction: final report (DHS 2008 grant, PDF)',url:'https://fsri.org/sites/default/files/2021-07/DHS_2008_Grant_Report_Final.pdf'},
  'FSRI-ATTIC':{title:'Study of Residential Attic Fire Mitigation Tactics and Exterior Fire Spread Hazards on Fire Fighter Safety (final report, PDF)',url:'https://fsri.org/sites/default/files/2021-07/Attic-Final-Report-Online.pdf'},
+ 'NIOSH-BG':{title:'NIOSH Workplace Solutions 2018-154, Preventing Deaths and Injuries of Fire Fighters Working at Basement and Other Below-Grade Fires',url:'https://www.cdc.gov/niosh/docs/2018-154/pdfs/2018-154.pdf'},
  'FSRI-BSMT':{title:'Understanding and Fighting Basement Fires (FSRI & ISFSI project page and conclusions)',url:'https://fsri.org/research/understanding-and-fighting-basement-fires'},
  'FSRI-ACAD':{title:'FSRI Fire Safety Academy (free online courses, e.g. "Understanding Flow Paths: Low-Intake, High-Exhaust", "Impact of Horizontal Ventilation on Fire Behavior", "Residential Attic and Exterior Fires")',url:'https://training.fsri.org/'}};
 /* Behind-the-behavior rules: what the model does, and where it comes from. kind: 'fsri' (backed by a quote) or 'simplification'. */
@@ -686,8 +687,8 @@ const SIZEUP_RULES=[
   quote:'“No smoke showing: A common event during the experiments was that once the fire became ventilation limited the smoke being forced out of the gaps of the houses greatly diminished or stopped all together.”'},
  {id:'eaves',name:'Eave / soffit smoke and attic pulsing',kind:'fsri',src:['FSRI-ATTIC'],does:'Eave smoke appears only when the attic has smoke, or when the top floor (the rooms right under the roof) is itself charged with smoke, and it shows above those rooms (or at marked gable/soffit vents), not as an even band along the whole roof. A first-floor room fire shows at its own window and door gaps first. Rhythmic pulsing at the eaves is reserved for a ventilation-limited attic fire with no roof opening, and it is irregular. Where along the eave and how much are teaching values.',
   quote:'“Once the ridge vent seals, the eaves will act as both the source of air as well as the exhaust and you may notice a pulsing of smoke out of the eaves. This is a sign that you have a ventilation-limited fire in the attic.”'},
- {id:'sides360',name:'The 360: side views and the walk-around',kind:'simplification',src:[],does:'Each side of the building (A front, B left, C rear, D right) is drawn from its own openings on the same drill clock: smoke and fire you see on Side C come from the Side C windows and doors, and smoke from openings on other sides rises over the roofline. The first look at each of Sides B, C and D costs drill time (default 30 s, editable on the Task times tab: walking there and back); after that, switching sides is free, as if crews there are reporting. The sides you viewed and when, and your follow-up report, are logged and checked in the debrief against the builder\'s truth (stories by side, a basement or walk-out, fire or smoke on other sides, marked hazards). The walk time and the checks are teaching values.'},
- {id:'basement',name:'Basement fires: water from the fire\'s own level',kind:'fsri',src:['FSRI-BSMT'],does:'A basement fire is ventilation-limited and feeds on air from the stair door and basement windows. Opening the basement stair door makes the stairway the fire\'s exhaust: a line going down the interior stair gets a crew warning, and crews operating on floor 1 over a burning basement get a collapse-risk warning (collapse itself is not modelled). A line through a walk-out door or basement window (picked as "Room @ opening" in the line list) attacks from the fire\'s own level. The warning thresholds are teaching values.',
+ {id:'sides360',name:'The 360: side views and the walk-around',kind:'simplification',src:[],does:'Each side of the building (A front, B left, C rear, D right) is drawn from its own openings on the same drill clock: smoke and fire you see on Side C come from the Side C windows and doors, and smoke from openings on the other sides shows as one thin, diluted plume per side, placed toward that side (Side B at the left edge from the front, Side D at the right, Side C behind the ridge); smoke only leaking around closed windows and doors there, and anything at grade or basement level, rarely clears the roofline. The first look at each of Sides B, C and D costs drill time (default 30 s, editable on the Task times tab: walking there and back); after that, switching sides is free, as if crews there are reporting. The sides you viewed and when, and your follow-up report, are logged and checked in the debrief against the builder\'s truth (stories by side, a basement or walk-out, fire or smoke on other sides, marked hazards). The walk time and the checks are teaching values.'},
+ {id:'basement',name:'Basement fires: water from the fire\'s own level',kind:'fsri',src:['FSRI-BSMT','NIOSH-BG'],does:'A basement fire is ventilation-limited and feeds on air from the stair door and basement windows. Opening the basement stair door makes the stairway the fire\'s exhaust: a line going down the interior stair gets a crew warning, and crews operating on floor 1 over a burning basement get a collapse-risk warning (collapse itself is not modelled). A line through a walk-out door or basement window (picked as "Room @ opening" in the line list) attacks from the fire\'s own level. What you see outside: with the stair door closed the smoke stays below and leaks at the basement windows and walk-out (often only visible on the 360); with it open the still-cool first and second floors fill and leak at their window and door gaps. NIOSH lists dense smoke at the ground or first floor with modest heat and no visible fire as an indicator of a below-grade fire. Eave smoke comes later and lighter, through a slow basement-to-attic chase: NIOSH reports smoke from the eaves in NIST/UL basement experiments in houses that were not balloon-frame, suspected to come through pipe chases and holes for cables and vent pipes. The warning thresholds, the gap-leak boost and the chase rate are teaching values.',
   quote:'“Each of these suppression methods provided a means of fighting the fire at its own level, without having to operate over the fire on an unrated wood floor assembly as well as remaining out of the exhaust portion of the basement fire flow in the basement stairway.” (FSRI, Understanding and Fighting Basement Fires: conclusions)'},
  {id:'features',name:'Fences, power lines, cars and exposures',kind:'simplification',src:[],does:'Features the builder marks on a side change tactics on that side: a fence adds hose-stretch time (default +30 s) to lines that go through that side; overhead power lines block ground ladders and the aerial on that side (no outside vent of upper windows there); a car blocks the aerial on that side (ground ladders only, slower); and an exposure building collects radiant heat while fire shows from openings on that side, warns, and can ignite unless a company is assigned to protect it. Porches/decks and utility meters are notes only. All of these are simple teaching rules, not measured values.'},
  {id:'cmd-mode',name:'Command fundamentals mode (optional)',kind:'cmd',src:['BRUN-FC','PHX-201','NIMS'],does:'An optional teaching layer, off by default; with it off the drill runs exactly as before. It practises generic incident-command habits described in public sources: an initial radio report, a command position, assignments with a task, a location and an objective, progress reports, benchmarks, PARs, a periodic strategy check and the transfer of command. SizeUp wording throughout; not affiliated with, endorsed by, or a substitute for any commercial incident-command certification program. All times, thresholds and scores are editable SizeUp teaching values, not any department\'s SOP.'},
@@ -845,6 +846,7 @@ function rng(seed){let s=seed>>>0;return()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^
 // and the time from ventilation to flashover is ~2 min (modern) vs >8 min (legacy). [FSRI-VV summary report]
 const FUEL={modern:{tg:250,tau:22,tauT:50,smoke:1.35,load:1000,label:'Modern synthetic contents'},
             legacy:{tg:1400,tau:100,tauT:190,smoke:.85,load:2600,label:'Legacy (natural-material) contents'}};
+const CHASE_K=.0025; // basement-to-attic chase leakage per second (teaching value: eaves show light smoke a few minutes after the basement fills)
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004,floor:.02}; // floor: the floor assembly over a basement (same leak as a ceiling)
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
 const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,
@@ -1322,6 +1324,10 @@ function step(S){const dt=1;
     if(S.fan&&S.fan.on){dT*=1.6;}
     const wa=dT>0?wz[c.a]:wz[c.b];if(wa){dT*=1+.45*wa;ds*=1;} // wind-driven push along the flow path (magnitude is a simplification)
     dT=clamp(dT,wa?-.045:-.03,wa?.045:.03);Bz.T+=dT/Bz.vf*.9;A.T-=dT/A.vf*.25;}
+  // vertical chases (pipe, cable and vent penetrations): smoke from a basement that has caught fire reaches the attic slowly, so eaves can show
+  // light smoke later [NIOSH 2018-154 reports eave smoke in NIST/UL basement experiments in non-balloon-frame houses; the rate is a teaching value]
+  {const at=S.B.zones.find(z=>z.attic);if(at)for(const bz of S.B.zones){if(bz.floor!=='B')continue;const b=zs[bz.id],a=zs[at.id];if(!b.ign||b.s<=a.s)continue;
+    const ds=clamp((b.s-a.s)*CHASE_K*dt,0,.01);a.s=clamp(a.s+ds/a.vf,0,1);b.s=clamp(b.s-ds/b.vf,0,1);}}
   // ignition of other compartments
   for(const id in zs){const z=zs[id];if(z.ign||z.out)continue;
     if(z.T>(z.attic?.6:.82)&&z.wet<.2){z.ign=true;z.tIgn=S.t-FUEL[S.scn.fuel].tg*.55;ev(S,'spread',`Fire has extended into ${zname(S,id)}.`,{zone:id});}}
@@ -1406,11 +1412,13 @@ function bldgPressure(S){let p=0;for(const id in S.z){const z=S.z[id];if(z.ign&&
    "once the fire became ventilation limited the smoke being forced out of the gaps of the houses greatly diminished or stopped all
    together"]. 1 while the burning rooms still have air (oxygen reservoir R >= 0.3), falling to 0 as R runs out (thresholds are teaching values). */
 function vlPush(S){let k=1;for(const id in S.z){const z=S.z[id];if(z.ign&&!z.out&&z.vl)k=Math.min(k,clamp((z.R-.05)/.25,0,1));}return k;}
-function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bldgPressure(S),vk=vlPush(S);
+const belowGrade=S=>Object.values(S.z).some(z=>z.floor==='B'&&z.ign&&!z.out); // a fire burning below grade (basement)
+function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bldgPressure(S),vk=vlPush(S);const bg=belowGrade(S);
   for(const oid in S.o){const o=S.o[oid],z=S.z[o.zone];if(!z)continue;const sm=smokeOf(S,o.zone,o);
     const open=o.state!=='closed';const ctrl=o.state==='controlled';
     let rate=0;if(open)rate=z.s*(.4+z.T)*(ctrl?.35:1)*(o.type==='roof'?1.6:1)*(S.fan&&S.fan.on&&S.fan.at!==oid?1.7:1);
     else if(z.s>.3)rate=Math.max(0,(z.s-.3)*(z.T*.3+bp*vk*.25)); // pushing through gaps around closed windows/doors; fades once the fire is starved [FSRI-HV08]
+    if(!open&&bg&&z.floor!=='B'&&z.s>.15)rate=Math.max(rate,(z.s-.15)*(.08+z.T*.3+bp*vk*.25)); // below-grade fire: smoky, still-cool floors above it leak at their door and window gaps [NIOSH 2018-154; the .08 is a teaching value]
     if(!open){const cap=rate>.05?2:1;sm.vol=Math.min(sm.vol,cap);sm.vel=Math.min(sm.vel,cap);} // leakage through gaps: what you see is limited by the gap, not the fire [simplification]
     let flame=0;if(open&&z.ign&&!z.out){if(z.flashed&&z.q>.7)flame=clamp(z.q*.6,0,1.2);else if(z.q>.6&&o.type!=='door')flame=(z.q-.6)*.8;}
     if(o.type==='door'&&open&&!z.flashed)flame*=.3;
@@ -1600,7 +1608,7 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;
 
@@ -1800,8 +1808,15 @@ function envOf(S){const e=S.scn.env||{};const tod=e.tod||'day',pr=e.precip||'non
    pushing smoke show as a plume rising over the roofline behind (same rule Side A always used for the rear). */
 function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0;if(B.has===false)return{windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.wind||S.scn.wind),dim:0,env:envOf(S),side,none:true};const vis={side,windows:[],lights:[],flames:[],emitters:[],wind:windPx(S.wind||S.scn.wind),dim:0,env:envOf(S)};const ov=M.openingVis(S);const U=B.H/800;const lean=vis.wind/90;
   let total=0;
+  // openings on the other sides: one diluted plume per hidden side, placed toward that side (B/D at the building edge, C behind the ridge
+  // over the room it comes from). Gap leakage counts at 0.15x; grade and basement-level openings only clear the roofline when strongly pushing. [simplification]
+  const hid={},SO=['A','B','C','D'],vi=SO.indexOf(side);
+  const hidSmoke=(o,v)=>{if(!B.ridge)return;const z=B.zones.find(z=>z.id===o.zone);if(!z)return;const broken=v.state!=='closed';const r=v.rate*(broken?1:.15);
+    const low=o.level==='B'||z.floor==='B'||z.floor==='1';if(r<=(low?.15:.05))return;
+    const hs=SO.includes(o.side)?o.side:'C';const rel=vi<0||hs==='Roof'?'behind':(SO.indexOf(hs)-vi+4)%4===1?'left':(SO.indexOf(hs)-vi+4)%4===3?'right':'behind';
+    const g=hid[rel]||(hid[rel]={r:0,rx:0,den:0,vel:0,vol:0,rgb:[0,0,0]});g.r+=r;g.rx+=r*(z.x0+z.x1)/2;g.den=Math.max(g.den,v.den);g.vel=Math.max(g.vel,v.vel);g.vol=Math.max(g.vol,v.vol);v.rgb.forEach((c,k)=>g.rgb[k]+=c*r);};
   B.openings.forEach((o,i)=>{const v=ov[o.id];if(!v)return;const seed=(i*0.137)%1;
-    if(o.hidden){if(v.rate>.05&&B.ridge){const z=B.zones.find(z=>z.id===o.zone);if(!z)return;vis.emitters.push({key:'r'+o.id,kind:'rear',x:(z.x0+z.x1)/2,y:B.ridge.y+30*U,w:Math.min(240*U,(z.x1-z.x0)),hgt:10*U,rate:v.rate*16,vel:Math.min(2,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,alpha:.85,cool:.5});total+=v.rate*.6;}return;}
+    if(o.hidden){hidSmoke(o,v);return;}
     const top=o.y-o.h/2;const broken=v.state!=='closed';
     if(o.type==='window'||(o.type==='door'&&broken)||(o.type==='garage'&&broken)){
       vis.windows.push({x:o.x,y:o.y,w:o.w,h:o.h,glow:o.type==='window'||broken?v.glow*(broken?1:.8):0,stain:o.type==='window'?v.stain:0,broken,seed});}
@@ -1816,6 +1831,10 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     if(v.rate>.01){const k=o.type==='door'||o.type==='garage'?.45:v.frac;const ey=o.cover!=null?o.cover:top+(broken?o.h*.08:0);
       vis.emitters.push({key:o.id,kind:broken?'open':'leak',x:o.x,y:ey,w:broken?o.w*.85:o.w*(o.cover!=null?1.6:.9),hgt:broken?o.h*k*.55:4*U,rate:v.rate*(broken?34:110)*(o.w>200*U?2:1),vel:v.vel,den:v.den,vol:v.vol,rgb:v.steam>.3?[205,203,198]:broken?v.rgb:v.rgb.map((c,j)=>c*.45+[120,117,112][j]*.55),glow:v.flame>.05?.9:v.glow*.25,pulse:v.pulse,alpha:broken?1:.5,cool:v.col==='white'?.1:.35});total+=v.rate*(broken?1:.3);}
   });
+  {const bx=B.bldg||{x0:B.ridge?B.ridge.x0-150*U:0,x1:B.ridge?B.ridge.x1+150*U:B.W};const ey=(B.eaves&&B.eaves[0]?B.eaves[0].y:B.ridge?B.ridge.y+60*U:0);
+   for(const rel in hid){const g=hid[rel];const x=rel==='left'?bx.x0+(bx.x1-bx.x0)*.06:rel==='right'?bx.x1-(bx.x1-bx.x0)*.06:g.rx/g.r;const y=rel==='behind'?B.ridge.y+30*U:ey;
+     const rgb=g.rgb.map((c,k)=>c/g.r*.6+[150,148,145][k]*.4);
+     vis.emitters.push({key:'r'+rel,kind:'rear',x,y,w:(rel==='behind'?200:90)*U,hgt:10*U,rate:Math.min(8,g.r*12),vel:Math.min(2,g.vel),den:Math.max(0,g.den-1),vol:Math.min(2,g.vol),rgb,alpha:.38,cool:.5});total+=g.r*.6;}}
   for(const oid in S.o){const o=S.o[oid];if(o.type!=='roof'||o.state==='closed')continue;const v=ov[oid];const sp=B.roofSpots&&(B.roofSpots[o.over]||B.roofSpots[o.zone]);if(!sp||!v)continue;
     vis.emitters.push({key:oid,kind:'roof',x:sp.x,y:sp.y,w:70*U,hgt:6*U,rate:v.rate*30+2,vel:Math.max(1,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,glow:v.flame>.05?.8:0,cool:.4});total+=v.rate;
     const az=S.z[o.zone];if(az&&az.ign&&!az.out&&az.q>.35){const fh=(60+az.q*110)*U;vis.flames.push({x:sp.x,y:sp.y+8*U,w:70*U,h:fh,i:.8+az.q*.4,seed:.77,lean,asp:1.2});vis.lights.push({x:sp.x,y:sp.y,r:160*U,i:.6*az.q});}}

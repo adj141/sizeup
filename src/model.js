@@ -8,6 +8,7 @@ function rng(seed){let s=seed>>>0;return()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^
 // and the time from ventilation to flashover is ~2 min (modern) vs >8 min (legacy). [FSRI-VV summary report]
 const FUEL={modern:{tg:250,tau:22,tauT:50,smoke:1.35,load:1000,label:'Modern synthetic contents'},
             legacy:{tg:1400,tau:100,tauT:190,smoke:.85,load:2600,label:'Legacy (natural-material) contents'}};
+const CHASE_K=.0025; // basement-to-attic chase leakage per second (teaching value: eaves show light smoke a few minutes after the basement fills)
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004,floor:.02}; // floor: the floor assembly over a basement (same leak as a ceiling)
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
 const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,
@@ -485,6 +486,10 @@ function step(S){const dt=1;
     if(S.fan&&S.fan.on){dT*=1.6;}
     const wa=dT>0?wz[c.a]:wz[c.b];if(wa){dT*=1+.45*wa;ds*=1;} // wind-driven push along the flow path (magnitude is a simplification)
     dT=clamp(dT,wa?-.045:-.03,wa?.045:.03);Bz.T+=dT/Bz.vf*.9;A.T-=dT/A.vf*.25;}
+  // vertical chases (pipe, cable and vent penetrations): smoke from a basement that has caught fire reaches the attic slowly, so eaves can show
+  // light smoke later [NIOSH 2018-154 reports eave smoke in NIST/UL basement experiments in non-balloon-frame houses; the rate is a teaching value]
+  {const at=S.B.zones.find(z=>z.attic);if(at)for(const bz of S.B.zones){if(bz.floor!=='B')continue;const b=zs[bz.id],a=zs[at.id];if(!b.ign||b.s<=a.s)continue;
+    const ds=clamp((b.s-a.s)*CHASE_K*dt,0,.01);a.s=clamp(a.s+ds/a.vf,0,1);b.s=clamp(b.s-ds/b.vf,0,1);}}
   // ignition of other compartments
   for(const id in zs){const z=zs[id];if(z.ign||z.out)continue;
     if(z.T>(z.attic?.6:.82)&&z.wet<.2){z.ign=true;z.tIgn=S.t-FUEL[S.scn.fuel].tg*.55;ev(S,'spread',`Fire has extended into ${zname(S,id)}.`,{zone:id});}}
@@ -569,11 +574,13 @@ function bldgPressure(S){let p=0;for(const id in S.z){const z=S.z[id];if(z.ign&&
    "once the fire became ventilation limited the smoke being forced out of the gaps of the houses greatly diminished or stopped all
    together"]. 1 while the burning rooms still have air (oxygen reservoir R >= 0.3), falling to 0 as R runs out (thresholds are teaching values). */
 function vlPush(S){let k=1;for(const id in S.z){const z=S.z[id];if(z.ign&&!z.out&&z.vl)k=Math.min(k,clamp((z.R-.05)/.25,0,1));}return k;}
-function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bldgPressure(S),vk=vlPush(S);
+const belowGrade=S=>Object.values(S.z).some(z=>z.floor==='B'&&z.ign&&!z.out); // a fire burning below grade (basement)
+function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bldgPressure(S),vk=vlPush(S);const bg=belowGrade(S);
   for(const oid in S.o){const o=S.o[oid],z=S.z[o.zone];if(!z)continue;const sm=smokeOf(S,o.zone,o);
     const open=o.state!=='closed';const ctrl=o.state==='controlled';
     let rate=0;if(open)rate=z.s*(.4+z.T)*(ctrl?.35:1)*(o.type==='roof'?1.6:1)*(S.fan&&S.fan.on&&S.fan.at!==oid?1.7:1);
     else if(z.s>.3)rate=Math.max(0,(z.s-.3)*(z.T*.3+bp*vk*.25)); // pushing through gaps around closed windows/doors; fades once the fire is starved [FSRI-HV08]
+    if(!open&&bg&&z.floor!=='B'&&z.s>.15)rate=Math.max(rate,(z.s-.15)*(.08+z.T*.3+bp*vk*.25)); // below-grade fire: smoky, still-cool floors above it leak at their door and window gaps [NIOSH 2018-154; the .08 is a teaching value]
     if(!open){const cap=rate>.05?2:1;sm.vol=Math.min(sm.vol,cap);sm.vel=Math.min(sm.vel,cap);} // leakage through gaps: what you see is limited by the gap, not the fire [simplification]
     let flame=0;if(open&&z.ign&&!z.out){if(z.flashed&&z.q>.7)flame=clamp(z.q*.6,0,1.2);else if(z.q>.6&&o.type!=='door')flame=(z.q-.6)*.8;}
     if(o.type==='door'&&open&&!z.flashed)flame*=.3;
@@ -763,6 +770,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;
