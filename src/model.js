@@ -50,7 +50,7 @@ const CONT={doorcontrol:1,rit:1,rehab:1,supply:1,expo:1}; // tasks that keep the
 function diaTxt(d){return({'1.5':'1½','1.75':'1¾','2':'2','2.5':'2½','3':'3'})[String(d)]||String(d);}
 function coById(S,id){return S.cos.find(c=>c.id===id);}
 function crewUsed(S,c){let n=c.type==='engine'?1:0;for(const l of S.water.lines)if(l.co===c.id)n+=l.crew;for(const t of S.tasks)if(t.co===c.id&&t.active)n+=t.crew;return n;}
-function freeCrew(S,c){return Math.max(0,c.staff-crewUsed(S,c));}
+function freeCrew(S,c){return Math.max(0,c.staff-crewUsed(S,c)-(S.cmd&&S.cmd.seat===c.id?1:0));} // a command-post IC #1 is not a crew member
 // time multiplier for a company: short staffing, cold/ice, heat fatigue (all simplifications)
 function coF(S,c){const st=S.set,e=S.scn.env||{};let f=1+st.shortStaff*Math.max(0,st.refStaff-c.staff);if(e.temp==='cold')f*=st.cold;
   if(e.temp==='hot')f*=1+Math.min(st.heatCap,st.heatPer10*(c.work||0)/600);return f;}
@@ -113,6 +113,7 @@ function create(B,scn){
     arriveAt:S.tArr+((+c.arrive||0)-first),arrived:false,work:0,tankLeft:c.type==='engine'?+eq.tank||0:0,supplied:false};return o;});
   const ws=scn.windShift;if(ws&&ws.at>0&&ws.dir)S.pending.push({t:S.tArr+ws.at,kind:'wind',dir:ws.dir,spd:ws.spd||0,sched:true});
   const o0=S.z[scn.origin];if(o0){o0.ign=true;o0.tIgn=0;}
+  S.cmd=cmdInit(S);
   return S;
 }
 // occupancy likelihood by time of day (simplification, not sourced): homes are most likely occupied (asleep, in bedrooms) at night;
@@ -227,7 +228,13 @@ function checkFollowup(fu){const said=fu.findings||[];const txt=[fu.text,fu.assi
   return{res,extra,keyHit:res.filter(r=>r.key&&r.st==='hit').length,keyN:res.filter(r=>r.key).length};}
 /* ---------- actions ---------- */
 function act(S,a){a={...a,t:a.t==null?S.t:a.t};S.pending.push(a);S.pending.sort((x,y)=>x.t-y.t);}
-function doAction(S,a){const F=front(S);const fdo=F&&S.o[F.id];
+const CMDK={cmdpos:1,irr:1,bench:1,par:1,_pardone:1,stratcheck:1,canreq:1,canack:1,xfer:1};
+function doAction(S,a){if(!S.cmd)return doAction0(S,a);
+  if(CMDK[a.kind]){cmdAct(S,a);return;}
+  if(GATED[a.kind]){if(cmdGate(S,a))return;a={...a,_g:1};}
+  if(a.kind==='assign'){const n=S.tasks.length+S.water.lines.length;doAction0(S,a);cmdAfterAssign(S,a,n);return;}
+  const was=S.strategy;doAction0(S,a);if(a.kind==='strategy'&&S.cmd.sub.par&&was&&was!==S.strategy&&S.t>=S.tArr)cmdParDue(S,'strategy change');}
+function doAction0(S,a){const F=front(S);const fdo=F&&S.o[F.id];
   const openEntry=(why,at)=>{if(at!=null&&at>S.t){S.pending.push({t:at,kind:'_open',why});S.pending.sort((x,y)=>x.t-y.t);return;}openEntryNow(S,why);};
   switch(a.kind){
   case 'strategy':S.strategy=a.v;ev(S,'order',`Strategy: ${a.v}.`);if(a.v==='Defensive'){const gone=S.water.lines.filter(l=>!l.ext);gone.forEach(l=>l.withdrawnAt=S.t);S.water.lines=S.water.lines.filter(l=>l.ext);S.searches.forEach(s=>{if(!s.done){s.done=true;s.aborted=true;const t=S.tasks.find(t=>t.id===s.task);if(t)t.active=false;}});ev(S,'order','Interior crews withdrawn'+(gone.length?` (${gone.map(l=>'Line '+l.id).join(', ')} pulled out)`:'')+'.');}break;
@@ -520,8 +527,9 @@ function step(S){const dt=1;
      if(over){S.flags.overBsmt=S.t;ev(S,'crew','Crews are working on floor 1 over a burning basement. Basement fires carry a risk of unexpected floor collapse; get water on the fire from its own level. (Collapse itself is not modelled.)',{src:'FSRI-BSMT'});}}}
   // under control: every room that ignited is knocked down or burned out
   {const ign=Object.values(zs).filter(z=>z.ign);const allOut=ign.length>0&&ign.every(z=>z.out);
-   if(allOut&&S.underControl==null&&S.t>=S.tArr){S.underControl=S.t;ev(S,'control','Fire under control: no room is still burning.');}
-   else if(!allOut&&S.underControl!=null){S.underControl=null;ev(S,'control-lost',`Fire is no longer under control: ${ign.filter(z=>!z.out).map(z=>zname(S,z.id)).join(', ')} burning again.`);}}
+   if(allOut&&S.underControl==null&&S.t>=S.tArr){S.underControl=S.t;if(!cmdOn(S,'bench'))ev(S,'control','Fire under control: no room is still burning.');}
+   else if(!allOut&&S.underControl!=null){S.underControl=null;if(!cmdOn(S,'bench'))ev(S,'control-lost',`Fire is no longer under control: ${ign.filter(z=>!z.out).map(z=>zname(S,z.id)).join(', ')} burning again.`);}}
+  if(S.cmd)cmdStep(S);
   S.t+=dt;
   if(S.t%10===0)S.hist.push(snap(S));
 }
@@ -620,6 +628,141 @@ function flowPath(S){const intake=[],exhaust=[];const vis=openingVis(S);
     if(o.type==='roof'){exhaust.push(nm);continue;}
     const z=S.z[o.zone];if(v.rate>.05){if(o.type==='door'||o.type==='garage'){exhaust.push(nm+' (top)');intake.push(nm+' (bottom)');}else exhaust.push(nm);} else intake.push(nm);}
   return{intake,exhaust};}
-return{SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+
+/* ---------- Command fundamentals (optional teaching layer; off unless scn.command.on) ----------
+   Generic command concepts in SizeUp's own wording: command position, initial radio report, task-location-objective
+   assignments, conditions-actions-needs (CAN) reports, benchmarks, PAR and the strategy check, and command transfer.
+   Concept sources: Brunacini, Fire Command (NFPA 1985; 2nd ed. 2002) and public fire-department SOPs (see sources.js).
+   Every time and threshold here is an editable SizeUp TEACHING VALUE, not any department's SOP and not a certification standard. */
+const CMD_SET={parEvery:1200,parTime:30,stratEvery:600,cmdSetup:60,fastOrders:0,lowAir:900,ackWithin:60,lsHold:120,xLook:30,xContact:20,xF2F:45,xProgress:30,xConfirm:30,xAnnounce:15};
+const CMD_SUB={irr:true,pos:true,tlo:true,can:true,bench:true,par:true,xfer:true,fu:true,hints:false};
+const CMD_TERMS={
+  problem:{nothing:'Nothing showing',smoke:'Smoke showing',working:'Working fire',defensive:'Defensive fire conditions'},
+  size:{small:'Small',medium:'Medium',large:'Large',mega:'Mega'},
+  occ:{sfr:'Single-family residential',mfr:'Multi-family residential',mixed:'Mixed-use',comm:'Commercial',other:'Other'},
+  constr:{wood:'Wood frame',ordinary:'Ordinary (masonry walls, wood floors)',noncomb:'Noncombustible',fireres:'Fire-resistive',unknown:'Unknown'},
+  pos:{inv:'Investigating',fast:'Fast attack',post:'Command post'},
+  obj:{fire:'Fire control',life:'Search and rescue',vent:'Ventilation',water:'Water supply',expo:'Exposure protection',ffs:'Firefighter safety',loss:'Loss control',support:'Support'},
+  res:{none:'No additional resources',hold:'Hold the assignment',more:'Request more companies',upgrade:'Upgrade the alarm',cancel:'Cancel the rest of the assignment'},
+  bench:{allclear:'Primary all clear',allclear2:'Secondary all clear',uc:'Under control',ls:'Loss stopped'},
+  names:'Main Street Command\nOak Street Command\nElm Street Command\nCentral Command',
+  acct:'Command post, Side A\nSide A at the first engine\nSide C',
+  par:'PAR',can:'Progress report (conditions, actions, needs)'};
+const TASK_OBJ={line:'fire',supply:'water',hvent:'vent',vvent:'vent',ppv:'vent',doorcontrol:'fire',search1:'life',search2:'life',pullceiling:'fire',ladder:'ffs',rit:'ffs',lights:'support',rehab:'support',expo:'expo'};
+function cmdCfg(scn){const c=scn.command;if(!c||!c.on)return null;const T=JSON.parse(JSON.stringify(CMD_TERMS));for(const k in (c.terms||{})){if(typeof T[k]==='object'&&typeof c.terms[k]==='object')Object.assign(T[k],c.terms[k]);else if(c.terms[k]!=null)T[k]=c.terms[k];}
+  return{sub:{...CMD_SUB,...(c.sub||{})},set:{...CMD_SET,...(c.set||{})},terms:T};}
+function cmdInit(S){const cfg=cmdCfg(S.scn);if(!cfg)return null;const first=S.cos.slice().sort((a,b)=>a.arriveAt-b.arriveAt)[0];const bc=S.cos.find(c=>c.type==='chief');
+  return{...cfg,ic1:first?first.id:null,ic:first?first.id:null,bc:bc?bc.id:null,pos:null,posAt:null,postAt:null,seat:null,fastUsed:0,irr:null,irrs:[],tlo:[],cans:[],canN:1,bench:[],
+    par:{due:[],done:[]},strat:{due:null,checks:[]},xfer:{avail:null,steps:[],done:null},refused:[],ucAuto:null,lsAuto:null,nextPar:S.tArr+cfg.set.parEvery,nextStrat:S.tArr+cfg.set.stratEvery,
+    inSince:{},lowAir:{},lastPri:{},sent:{},flowSeen:{},posLog:[]};}
+const cmdOn=(S,k)=>!!(S.cmd&&(!k||S.cmd.sub[k]));
+// gated while IC #1 is investigating or in fast attack (or still walking out to set up the command post)
+function cmdGated(S){const C=S.cmd;if(!C||!C.sub.pos||C.xfer.done||!C.pos)return false;if(C.pos==='post')return S.t<C.postAt;return true;}
+const GATED={assign:1,line:1,vent:1,search:1,supply:1,doorcontrol:1};
+function cmdGate(S,a){const C=S.cmd;if(!cmdGated(S)||a._g)return false;if(a.kind==='doorcontrol'&&!a.on)return false;if(a.kind==='line'&&a.target==='none')return false;
+  if(a.co===C.ic1)return false;const ic=coById(S,C.ic1);const pl=C.terms.pos[C.pos]||C.pos;
+  if(C.fastUsed<C.set.fastOrders&&a.co){C.fastUsed++;return false;}
+  const who=a.co?coById(S,a.co):null;C.refused.push({t:S.t,co:a.co||null,kind:a.task||a.kind});
+  ev(S,'note',`${ic?ic.name:'IC #1'} is ${C.pos==='post'?'still setting up the command post':C.pos==='inv'?pl.toLowerCase():'in '+pl.toLowerCase()}: the IC is with the crew on a portable radio and can't direct ${who?who.name:'other companies (quick orders)'} yet. Assign your own company, set up a command post, or transfer command (teaching rule).`,{cmd:'gate'});return true;}
+function cmdSetPos(S,pos){const C=S.cmd;if(!C||!C.terms.pos[pos])return;if(C.xfer.done){ev(S,'note','Command has been transferred; the position belongs to the new IC.');return;}
+  const was=C.pos;C.pos=pos;C.posAt=C.posAt==null?S.t:C.posAt;C.posLog.push({t:S.t,pos});const ic=coById(S,C.ic1);
+  if(pos==='post'){C.postAt=S.t+(was&&was!=='post'?C.set.cmdSetup:0);C.seat=C.ic1;
+    ev(S,'cmd',`${ic.name}: ${was&&was!=='post'?'IC leaving the crew to set up a stationary command post (ready in about '+fmtS(C.set.cmdSetup)+'; the officer no longer counts as a crew member)':'command post set up at the apparatus (the officer stays out of the crew)'}.`);}
+  else{C.seat=null;C.postAt=null;ev(S,'cmd',`${ic.name}: IC ${pos==='inv'?C.terms.pos[pos].toLowerCase():'in '+C.terms.pos[pos].toLowerCase()}, working with the crew on a portable radio.`);}}
+function seenSides(S){return['A',...['B','C','D'].filter(s=>S.walked[s]!=null&&S.walked[s]<=S.t)];}
+// truth used by the radio report check: what is showing from the sides seen at that moment
+function cmdTruth(S){const vis=openingVis(S);const sides=seenSides(S);const B=S.B;const seen=B.openings.filter(o=>sides.includes(o.side||'A'));
+  const fireO=seen.filter(o=>vis[o.id]&&vis[o.id].flame>.05),smokeO=seen.filter(o=>vis[o.id]&&vis[o.id].rate>.03);const ev_=eavesVis(S);
+  const zs=Object.values(S.z);const flashed=zs.filter(z=>z.flashed&&!z.out).length;const att=zs.find(z=>z.attic);const floors=new Set(zs.filter(z=>z.ign&&!z.out&&!z.attic).map(z=>z.floor));
+  const defensive=flashed>=3||(att&&att.ign&&!att.out&&att.q>.5&&floors.size>=2);
+  const problem=defensive?'defensive':fireO.length?'working':(smokeO.length||(ev_&&ev_.rate>.03))?'smoke':'nothing';
+  const burn=zs.filter(z=>z.ign&&!z.out);const fz=burn.length?burn.slice().sort((a,b)=>b.q-a.q)[0]:S.z[S.scn.origin];
+  const showSides=[...new Set((fireO.length?fireO:smokeO).map(o=>o.side||'A'))];
+  const occ=B.id==='house'?'sfr':B.id==='mixed'?'mixed':null;const constr=B.construction==='wood'?'wood':B.construction==='ordinary'?'ordinary':null;
+  const size=B.size||(B.id==='mixed'?'large':'medium');const stories=[B.stories,...sides.map(s=>(B.views&&B.views[s]&&B.views[s].stories)||B.stories)];
+  const rooms=burn.filter(z=>!z.attic).length;
+  const posFit=problem==='nothing'?['inv']:problem==='defensive'||rooms>2||floors.size>1?['post']:['fast','post']; // teaching rule: fast attack fits a fire one crew can reach quickly (one floor, up to 2 rooms)
+  return{problem,defensive,floor:fz?fz.floor:null,showSides,occ,constr,size,stories,strategy:defensive?'Defensive':'Offensive',posFit,sides};}
+// grade a radio report against that truth: one row per element; ok / mid / no (SizeUp teaching rubric)
+function gradeIRR(S,r){const T=cmdTruth(S),C=S.cmd,L=C?C.terms:CMD_TERMS,rows=[];const add=(k,st,msg)=>rows.push({k,st,msg});
+  const onScene=S.cos.filter(c=>S.t>=c.arriveAt).sort((a,b)=>a.arriveAt-b.arriveAt);const first=onScene[0];
+  add('unit',r.unit&&first&&r.unit===first.id?'ok':r.unit?'mid':'no',!r.unit?'Say who is on scene.':first&&r.unit===first.id?`${first.name} is the first unit on scene.`:`The first unit on scene is ${first?first.name:'not here yet'}.`);
+  {let n=0,why=[];const st=+r.stories;if(T.stories.includes(st))n++;else why.push(`stories: ${T.stories[0]} from the front`);if(!T.constr||r.constr===T.constr)n++;else why.push(`construction: ${L.constr[T.constr]}`);
+   if(!T.occ||r.occ===T.occ)n++;else why.push(`occupancy: ${L.occ[T.occ]}`);if(r.size===T.size)n++;else why.push(`size: ${L.size[T.size]} (how much of the building one 200 ft line reaches)`);
+   add('building',!r.stories&&!r.occ?'no':n>=4?'ok':n>=3?'mid':'no',n>=4?'Matches the building.':`Check ${why.join('; ')}.`);}
+  {const PO=['nothing','smoke','working','defensive'];const pOk=Math.abs(PO.indexOf(r.problem)-PO.indexOf(T.problem))<=1;const fOk=!r.floor||String(r.floor)===String(T.floor);const sOk=!r.side||!T.showSides.length||T.showSides.includes(r.side);
+   const exp=L.problem[T.problem];add('conditions',!r.problem?'no':r.problem===T.problem&&fOk&&sOk?'ok':pOk?'mid':'no',
+     !r.problem?'Describe what is showing.':r.problem===T.problem?(fOk&&sOk?`${exp}${T.floor?' on floor '+T.floor:''}, as the model shows.`:`Check the location: the fire is on floor ${T.floor}${T.showSides.length?', showing on Side '+T.showSides.join('/'):''}.`):`From the sides seen, the model shows: ${exp}${T.problem==='working'?' (fire is visible: incoming units should expect a committed operation)':''}.`);}
+  {const tlo=r.task&&r.loc&&r.obj;const sOk=r.strategy===T.strategy;add('actions',tlo&&sOk?'ok':(tlo||sOk)&&r.strategy?'mid':'no',`${tlo?'Task, location and objective given':'Give your own company a task, a location and an objective'}. ${r.strategy?(sOk?r.strategy+' fits the conditions.':`${r.strategy} vs the model's read (${T.strategy}).`):'State the strategy.'}`);}
+  add('position',!r.pos?'no':T.posFit.includes(r.pos)?'ok':'mid',!r.pos?'Choose a command position.':T.posFit.includes(r.pos)?`${L.pos[r.pos]} fits.`:`${L.pos[r.pos]} vs what the conditions suggest (${T.posFit.map(p=>L.pos[p]).join(' or ')}).`);
+  add('name',r.name&&r.cmdLoc?'ok':r.name||r.cmdLoc?'mid':'no',r.name&&r.cmdLoc?'Command named and located.':'Name command and say where it is.');
+  const sc=rows.reduce((a,x)=>a+(x.st==='ok'?1:x.st==='mid'?.5:0),0);const letter=sc>=6?'A':sc>=5?'B':sc>=4?'C':sc>=3?'D':'F';return{rows,score:sc,n:6,letter,truth:T};}
+// conditions-actions-needs text for a company, from the model and its tasks
+function canFor(S,c,kind,need,pre){const C=S.cmd;const tk=coTasks(S,c);const line=S.water.lines.find(l=>l.co===c.id);const srch=S.searches.find(s=>s.co===c.id&&!s.done&&S.t>=s.start);
+  let zid=line?line.zone:null;if(!zid&&srch){const zz=S.B.zones.filter(z=>z.floor===srch.floor);zid=(zz.sort((a,b)=>S.z[b.id].s-S.z[a.id].s)[0]||{}).id;}
+  let cond;if(zid){const z=S.z[zid];const lvl=z.T>.7?'very high heat and heavy smoke':z.T>.45?'high heat, heavy smoke':z.s>.5?'heavy smoke, heat moderate':z.s>.2?'moderate smoke':'light smoke';
+    cond=`${zname(S,zid)}: ${lvl}${z.ign?(z.out?', fire knocked down':', fire still burning'):''}`;}
+  else{const burn=Object.values(S.z).filter(z=>z.ign&&!z.out);cond=burn.length?`From outside: fire in ${burn.slice(0,2).map(z=>zname(S,z.id)).join(' and ')}`:'From outside: no fire showing';}
+  if(pre)cond=zid?pre+'; '+cond:pre;
+  const act=(kind==='priority'&&need==='relief')?'Exiting to change cylinders':tk.length?tk.map(x=>x.label).join('; '):S.t<c.arriveAt?'En route':'Staged, awaiting an assignment';
+  let n=need||null;
+  if(!n){const z=zid&&S.z[zid];if(line&&z&&z.ign&&!z.out&&(z.flashed||Object.values(S.z).filter(q=>q.ign&&!q.out).length>1))n='backup';
+    else if(c.type==='engine'&&!c.supplied&&!c.supplyBy&&S.water.lines.some(l=>l.eng===c.id&&l.flowing))n='supply';
+    else if(!tk.length&&S.t>=c.arriveAt)n='assign';}
+  const nt={backup:'Need a backup line',supply:'Need a water supply to this engine',relief:'Need a crew to relieve us',assign:'Ready for an assignment',ems:'Need EMS for an occupant'}[n]||'No needs';
+  const r={id:C.canN++,t:S.t,co:c.id,kind,c:cond,a:act,n:nt,need:n,ack:null,acted:null};C.cans.push(r);
+  ev(S,'can',`${c.name} ${kind==='priority'?'(priority)':kind==='request'?'(on request)':'(status)'}: ${cond}. ${act}. ${nt}.`,{can:r.id,co:c.id});return r;}
+function cmdParDue(S,why){const C=S.cmd;C.par.due.push({t:S.t,why});ev(S,'cmd',`${C.terms.par} due (${why}).`,{par:true});}
+function cmdAct(S,a){const C=S.cmd;if(!C)return;
+  switch(a.kind){
+  case 'cmdpos':cmdSetPos(S,a.pos);break;
+  case 'irr':{const r={...(a.r||{})};const g=gradeIRR(S,r);const rec={t:S.t,r,g};C.irrs.push(rec);if(!C.irr)C.irr=rec;
+    ev(S,'cmd',`Initial radio report: ${a.text||'(structured report)'}`,{irr:true});
+    if(r.pos&&C.sub.pos&&r.pos!==C.pos)cmdSetPos(S,r.pos);if(r.strategy&&r.strategy!==S.strategy)doAction(S,{kind:'strategy',v:r.strategy});break;}
+  case 'bench':{const k=a.k,fl=a.floor!=null?String(a.floor):null;
+    const truth=k==='allclear'?S.searches.some(s=>s.floor===fl&&!s.secondary&&s.done&&!s.aborted):k==='allclear2'?S.searches.some(s=>s.floor===fl&&s.secondary&&s.done&&!s.aborted):k==='uc'?S.underControl!=null:k==='ls'?C.lsAuto!=null:false;
+    if(C.bench.some(b=>b.k===k&&b.floor===fl&&b.ok)){ev(S,'note','Already declared.');break;}
+    C.bench.push({t:S.t,k,floor:fl,ok:truth});const lab=(C.terms.bench[k]||k)+(fl?' floor '+fl:'');
+    ev(S,'cmd',`Benchmark declared: ${lab}.${truth||!C.sub.hints?'':' (Hint: the model does not agree yet.)'}`,{bench:k});if(C.sub.par)cmdParDue(S,'benchmark: '+lab);break;}
+  case 'par':{const d=C.par.due.find(x=>!x.req);const rec={t:S.t,due:d||null,doneAt:S.t+C.set.parTime};if(d)d.req=S.t;C.par.done.push(rec);
+    S.pending.push({t:rec.doneAt,kind:'_pardone',i:C.par.done.length-1});S.pending.sort((x,y)=>x.t-y.t);ev(S,'cmd',`${C.terms.par} requested from all companies on scene.`);break;}
+  case '_pardone':{const n=S.cos.filter(c=>S.t>=c.arriveAt).length;const fu=S.followups&&S.followups.length?S.followups[S.followups.length-1].acct:'';
+    ev(S,'cmd',`${C.terms.par} complete: all ${n} companies on scene accounted for${fu?' (accountability at '+fu+')':''}.`);break;}
+  case 'stratcheck':{const d=C.strat.due;C.strat.checks.push({t:S.t,due:d?d.t:null,v:a.v});C.strat.due=null;ev(S,'cmd',`Strategy check: ${a.v===S.strategy||!a.v?'confirmed '+(S.strategy||'(none set)'):'changed to '+a.v}.`);
+    if(a.v&&a.v!==S.strategy)doAction(S,{kind:'strategy',v:a.v});break;}
+  case 'canreq':{const c=coById(S,a.co);if(!c||S.t<c.arriveAt){ev(S,'note','That company is not on scene yet.');break;}canFor(S,c,'request');break;}
+  case 'canack':{const r=C.cans.find(x=>x.id===+a.id);if(r&&r.ack==null){r.ack=S.t;ev(S,'cmd',`Command acknowledged ${coById(S,r.co).name}${r.kind==='priority'?' (priority)':''}.`);}break;}
+  case 'xfer':{const bc=C.bc&&coById(S,C.bc);if(!bc||S.t<bc.arriveAt){ev(S,'note','No chief officer on scene to take command.');break;}if(C.xfer.done){ev(S,'note','Command already transferred.');break;}
+    const st=a.step;C.xfer.steps.push({t:S.t,step:st,how:a.how||null});
+    const msg={look:`${bc.name} arriving: looks at the building and the board`,contact:`${bc.name} makes ${a.how==='f2f'?'face-to-face':'radio'} contact with ${coById(S,C.ic1).name}`,progress:`${coById(S,C.ic1).name} gives a progress report`,confirm:`${bc.name} confirms every company's position and task`,announce:`${bc.name} announces the transfer: now in command at a stationary post`}[st]||st;
+    ev(S,'cmd',`Command transfer: ${msg}.`);if(st==='progress')canFor(S,coById(S,C.ic1),'request');
+    if(st==='announce'){C.xfer.done=S.t;C.ic=bc.id;C.seat=null;C.pos='post';C.postAt=S.t;}break;}}}
+// every second: model truth for grading, timers, chief arrival, and CAN reports
+function cmdStep(S){const C=S.cmd;if(!C||S.t<S.tArr)return;const st=C.set;
+  if(S.underControl!=null){if(C.ucAuto==null)C.ucAuto=S.underControl;const zs=Object.values(S.z);if(C.lsAuto==null&&S.t-S.underControl>=st.lsHold&&zs.every(z=>z.s<.35&&z.T<.3))C.lsAuto=S.t;}else{C.ucAuto=null;}
+  if(C.sub.par&&S.t>=C.nextPar){cmdParDue(S,'elapsed-time');C.nextPar+=st.parEvery;}
+  if(C.sub.par&&S.t>=C.nextStrat){if(!C.bench.some(b=>b.k==='uc'&&b.ok)){C.strat.due={t:S.t};ev(S,'cmd',`${fmtS(S.t-S.tArr)} on scene: strategy check. Confirm or change the strategy.`,{strat:true});}C.nextStrat+=st.stratEvery;}
+  if(C.sub.pos&&C.pos==='fast'&&!C.xfer.done&&!C.idleWarn&&S.t-C.posAt>60&&!coTasks(S,coById(S,C.ic1)).length){C.idleWarn=S.t;ev(S,'note',`Fast attack, but ${coById(S,C.ic1).name} has no task: in fast attack the IC's own company works a task (or the IC sets up a command post).`,{cmd:'idle'});}
+  if(C.sub.xfer&&C.bc&&C.xfer.avail==null&&S.t>=coById(S,C.bc).arriveAt){C.xfer.avail=S.t;ev(S,'cmd',`${coById(S,C.bc).name} on scene: ready to take command (transfer of command).`,{xfer:true});}
+  if(!C.sub.can)return;
+  for(const c of S.cos){if(S.t<c.arriveAt)continue;
+    for(const l of S.water.lines)if(l.co===c.id&&l.flowing&&!C.flowSeen[l.id]){C.flowSeen[l.id]=1;canFor(S,c,'status');}
+    for(const t of S.tasks)if(t.co===c.id&&t.done&&!C.sent['t'+t.id]){C.sent['t'+t.id]=1;if(['search1','search2'].includes(t.kind))continue;canFor(S,c,'status');}
+    for(const s of S.searches)if(s.co===c.id&&s.done&&!C.sent['s'+s.task]){C.sent['s'+s.task]=1;const vf=S.victim&&S.victim.foundAt===S.t&&s.floor===S.B.zones.find(z=>z.id===S.victim.zone).floor;canFor(S,c,'status',vf?'ems':null,`${s.secondary?'Secondary':'Primary'} search of floor ${s.floor} ${s.aborted?'stopped: driven out by heat':vf?'complete: occupant found and removed':'complete: negative'}`);}
+    const inside=S.water.lines.some(l=>l.co===c.id&&!l.ext&&l.entered)||S.searches.some(s=>s.co===c.id&&!s.done&&S.t>=s.start);
+    if(inside){if(C.inSince[c.id]==null)C.inSince[c.id]=S.t;if(S.t-C.inSince[c.id]>=st.lowAir&&!C.lowAir[c.id]){C.lowAir[c.id]=S.t;canFor(S,c,'priority','relief','Low-air alarm on the crew');}}else C.inSince[c.id]=null;}
+  // conditions worsening: a crew warning or flashover this second near a company's work
+  for(let i=S.events.length-1;i>=0&&S.events[i].t===S.t;i--){const e=S.events[i];if(e.kind!=='crew'&&e.kind!=='flashover')continue;
+    const zid=e.zone;const named=S.cos.filter(c=>e.msg.includes(c.name)).sort((x,y)=>y.name.length-x.name.length)[0];const c=named||S.cos.find(c=>S.water.lines.some(l=>l.co===c.id&&!l.ext&&l.entered&&(!zid||l.zone===zid||S.z[l.zone].floor===(S.z[zid]||{}).floor)))||S.cos.find(c=>S.searches.some(s=>s.co===c.id&&!s.done&&S.t>=s.start));
+    if(!c||(C.lastPri[c.id]!=null&&S.t-C.lastPri[c.id]<60))continue;C.lastPri[c.id]=S.t;canFor(S,c,'priority','backup','Conditions worsening: '+(e.kind==='flashover'?e.msg.replace(/\.$/,''):'rapid heat increase'));}}
+// after an assignment that took: record the TLO and mark a stated need as acted on
+function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.length+S.water.lines.length;if(n<=before)return;
+  const co=a.co||(S.water.lines.concat(S.tasks).slice(-1)[0]||{}).co;const c=coById(S,co);
+  if(C.sub.tlo&&a.co){const obj=a.obj||TASK_OBJ[a.task]||'support';C.tlo.push({t:S.t,co,task:a.task,loc:a.loc||'',obj,given:!!a.obj});
+    ev(S,'cmd',`Assignment: ${c?c.name:co} · ${(TASKDEF[a.task]||{}).label||a.task} · ${a.loc||'(no location given)'} · ${C.terms.obj[obj]||obj}${a.obj?'':' (objective filled in by default)'}.`);}
+  const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
+  for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
+
+return{CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

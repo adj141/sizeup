@@ -44,3 +44,12 @@ FSRI content is quoted for training and reference with attribution. It is not re
 - Window glass failing on its own from heat. The timing is seeded and variable, and a "Holds" option keeps closed-house decay.
 - Building-pressure smoke push at the eaves and around closed windows and doors.
 - Smoke leaking around closed windows and doors is capped in volume and velocity because the gap limits what is visible.
+
+## Command fundamentals mode: public sources
+
+- Alan V. Brunacini, *Fire Command* (NFPA, 1985), source of the eight functions of command: https://archive.org/details/firecommand0000brun
+- Phoenix Regional Standard Operating Procedures, M.P. 201.01 Command Procedures (public PDF): https://www.phoenix.gov/content/dam/phoenix/firesite/documents/20101.pdf
+- Fire Engineering, "Command Safety": https://www.fireengineering.com/fire-safety/command-safety/
+- FEMA, National Incident Management System: https://www.fema.gov/emergency-managers/nims
+
+All wording in the app is SizeUp's own. SizeUp is not affiliated with, endorsed by, or a substitute for any commercial incident-command certification program. Scoring weights, times and thresholds are SizeUp teaching values.

@@ -16,7 +16,7 @@ function ensureScn(sc){if(!sc.companies||!sc.companies.length){sc.companies=M.PR
 /* ---------- setup tabs ---------- */
 A.tab='cond';
 function showTab(t){A.tab=t;$$('#setupTabs button').forEach(b=>{b.classList.toggle('on',b.dataset.tab===t);b.setAttribute('aria-selected',b.dataset.tab===t);});$$('.tabp').forEach(p=>p.classList.toggle('on',p.id==='tab-'+t));
-  if(t==='disp')renderDispatch();if(t==='times')renderSettings();}
+  if(t==='disp')renderDispatch();if(t==='times')renderSettings();if(t==='cmd')renderCmdSetup();}
 $('#setupTabs').onclick=e=>{const b=e.target.closest('button[data-tab]');if(b)showTab(b.dataset.tab);};
 function setupSummary(){const sc=A.scn;if(!sc)return'';const cos=sc.companies||[];const e=sc.env||{};const first=Math.min(...cos.map(c=>c.arrive));
   return `Assignment: ${presetLabel()} · ${cos.length} companies, ${cos.reduce((a,c)=>a+(+c.staff||0),0)} members · first due arrives ${fmt(first)} after dispatch · ${({day:'Day',dusk:'Dusk',night:'Night'})[e.tod]}${e.precip!=='none'?' · '+e.precip:''}${e.temp!=='mild'?' · '+(e.temp==='cold'?'cold & icy':'hot'):''}. Edit on the Dispatch, Time & weather and Task times tabs.`;}
@@ -58,7 +58,7 @@ $('#dispatch').addEventListener('toggle',e=>{const d=e.target;if(!d.classList||!
 function coAt(t){const card=t.closest('.cocard');return card?A.scn.companies[+card.dataset.i]:null;}
 function dispatchChanged(full){edited();rebuild();warm(2);if(full)renderDispatch();else{const v=$('#presetVal');if(v)v.textContent=presetLabel();const ps=$('#presetSel');if(ps&&!ps.querySelector('option[value=""]'))ps.insertAdjacentHTML('afterbegin','<option value="">Custom assignment (edited)</option>');if(ps)ps.value='';const d=$('#presetDel');if(d)d.disabled=true;}renderSetup();}
 $('#dispatch').addEventListener('change',e=>{const t=e.target,sc=A.scn;
-  if(t.id==='presetSel'){const v=t.value;if(v==='generic'){sc.companies=M.PRESETS.generic.companies();sc.presetName='generic';}else if(v.startsWith('custom:')){const P=loadPresets()[v.slice(7)];if(!P)return;sc.companies=JSON.parse(JSON.stringify(P.companies));sc.presetName=v;}else return;
+  if(t.id==='presetSel'){const v=t.value;if(v==='generic'){sc.companies=M.PRESETS.generic.companies();sc.presetName='generic';}else if(v.startsWith('custom:')){const P=loadPresets()[v.slice(7)];if(!P)return;sc.companies=JSON.parse(JSON.stringify(P.companies));if(P.command)sc.command=JSON.parse(JSON.stringify(P.command));sc.presetName=v;}else return;
     rebuild();warm(2);renderDispatch();renderSetup();toast(`Assignment loaded: ${presetLabel()}.`);return;}
   if(t.classList.contains('set-in')){const v=+t.value;if(!isFinite(v)||v<0){t.value=sc.settings[t.dataset.k];return;}sc.settings[t.dataset.k]=v;rebuild();renderSetup();return;}
   const c=coAt(t);if(!c)return;
@@ -72,7 +72,7 @@ $('#dispatch').addEventListener('change',e=>{const t=e.target,sc=A.scn;
   const pr=t.closest('.prow');if(pr){const p=c.eq.pre[+pr.dataset.j];if(t.classList.contains('pr-name'))p.name=t.value.trim()||'Preconnect';
     else if(t.classList.contains('pr-dia'))p.dia=t.value;else{const v=+t.value;if(!isFinite(v)||v<=0){t.value=t.classList.contains('pr-len')?p.len:p.gpm;return;}if(t.classList.contains('pr-len'))p.len=v;else p.gpm=v;}dispatchChanged(false);}});
 $('#dispatch').addEventListener('click',e=>{const t=e.target,sc=A.scn;
-  if(t.id==='presetSave'){const n=($('#presetName').value||'').trim();if(!n)return needPick($('#presetName'));const P=loadPresets();P[n]={companies:JSON.parse(JSON.stringify(sc.companies)),saved:new Date().toISOString()};if(savePresets(P)){sc.presetName='custom:'+n;renderDispatch();renderSetup();toast(`Preset saved on this device: ${n}.`);}return;}
+  if(t.id==='presetSave'){const n=($('#presetName').value||'').trim();if(!n)return needPick($('#presetName'));const P=loadPresets();P[n]={companies:JSON.parse(JSON.stringify(sc.companies)),...(sc.command?{command:JSON.parse(JSON.stringify(sc.command))}:{}),saved:new Date().toISOString()};if(savePresets(P)){sc.presetName='custom:'+n;renderDispatch();renderSetup();toast(`Preset saved on this device: ${n}.`);}return;}
   if(t.id==='presetDel'){const v=$('#presetSel').value;if(!v.startsWith('custom:'))return;const P=loadPresets();delete P[v.slice(7)];savePresets(P);sc.presetName='edited';renderDispatch();renderSetup();toast('Preset deleted.');return;}
   const add=t.closest('.co-add');if(add){const ty=add.dataset.type;const pre={engine:'E',ladder:'L',rescue:'R',medic:'M',chief:'BC'}[ty];let n=1;while(sc.companies.some(c=>c.id===pre+n))n++;
     const last=Math.max(0,...sc.companies.map(c=>c.arrive));A.openCards=A.openCards||new Set();A.openCards.add(pre+n);sc.companies.push(M.newCompany(ty,pre+n,`${({engine:'Engine',ladder:'Ladder',rescue:'Rescue',medic:'Medic',chief:'Battalion'})[ty]} ${n}`,ty==='chief'?1:ty==='medic'?2:3,last+60));dispatchChanged(true);return;}
@@ -107,22 +107,23 @@ function optHTML(k,c){const S=A.S;
   return null;}
 function stClass(k){return({enroute:'s-en',staged:'s-st',working:'s-wk',available:'s-av'})[k]||'';}
 function renderCompanies(){const S=A.S,el=$('#coList');if(!S||!el)return;const cos=S.cos.slice().sort((a,b)=>a.arriveAt-b.arriveAt);
-  const sig=cos.map(c=>c.id+c.type).join(',');
+  const sig=cos.map(c=>c.id+c.type).join(',')+(cmdOn()&&cmdSub('tlo')?'|tlo':'');
   if(el._sig!==sig){el._sig=sig;el.innerHTML=cos.map(c=>{const tk=coTaskList(c);return`<div class="corow2" data-co="${esc(c.id)}"><div class="cohead"><b>${esc(c.id)}</b><span class="coname">${esc(c.name)}</span><span class="cost"></span></div>
       <div class="cometa"></div><div class="cotasks"></div>
-      ${tk.length?`<div class="coassign"><select class="co-task" aria-label="Task for ${esc(c.name)}"><option value="">Assign ${esc(c.id)} to…</option>${tk.map(k=>`<option value="${k}">${esc(M.TASKDEF[k].label)}</option>`).join('')}</select><select class="co-tgt" aria-label="Target for ${esc(c.name)}" hidden></select><select class="co-opt" aria-label="Option for ${esc(c.name)}" hidden></select><button class="btn ghost sm co-go">Assign</button></div>`:''}</div>`;}).join('');}
+      ${tk.length?`<div class="coassign"><select class="co-task" aria-label="Task for ${esc(c.name)}"><option value="">Assign ${esc(c.id)} to…</option>${tk.map(k=>`<option value="${k}">${esc(M.TASKDEF[k].label)}</option>`).join('')}</select><select class="co-tgt" aria-label="Target for ${esc(c.name)}" hidden></select><select class="co-opt" aria-label="Option for ${esc(c.name)}" hidden></select>${cfTloHTML(c)}<button class="btn ghost sm co-go">Assign</button></div>`:''}</div>`;}).join('');}
   for(const c of cos){const r=el.querySelector(`.corow2[data-co="${CSS.escape(c.id)}"]`);if(!r)continue;const st=M.coStatus(S,c);const cs=r.querySelector('.cost');
     if(cs.textContent!==st.txt.split(':')[0]){cs.textContent=st.k==='working'?'Working':st.txt.split(' · ')[0];}cs.className='cost '+stClass(st.k);
     const free=M.freeCrew(S,c);let meta=`${S.t<c.arriveAt?'Arrives in '+fmt(c.arriveAt-S.t)+' · ':''}${free} of ${c.staff} free`;
     if(c.type==='engine'){const low=!c.supplied&&c.tankLeft<(+c.eq.tank||0)*M.TASK.lowTankFrac;meta+=` · <span class="${low?'water-low':''}">tank ${Math.round(c.tankLeft)}/${c.eq.tank} gal</span>${c.supplied?' · supplied':c.supplyBy?' · supply coming':''}`;}
-    if(c.type==='chief')meta+=S.t>=c.arriveAt?' · in command':'';
+    if(c.type==='chief')meta+=S.t>=c.arriveAt?(S.cmd&&S.cmd.sub.xfer?(S.cmd.ic===c.id?' · in command':' · on scene, not yet in command'):' · in command'):'';
+    if(S.cmd&&S.cmd.ic===c.id&&c.type!=='chief')meta+=' · IC';
     const me=r.querySelector('.cometa');if(me._h!==meta){me.innerHTML=meta;me._h=meta;}
     const tl=M.coTasks(S,c);const th=tl.map(x=>{if(x.line){const l=x.line;return`<div class="cot"><span>${esc(x.label)} <small>${esc(lineStatus(l))} · ${M.diaTxt(l.dia)} in. ${l.len} ft</small></span><button class="btn ghost sm co-wd" data-line="${l.id}">Withdraw</button></div>`;}
       const t=x.task;const left=!t.done&&t.end>S.t?` · ${fmt(t.end-S.t)}`:t.done&&M.CONT[t.kind]?' · in place':'';return`<div class="cot"><span>${esc(t.label)}<small>${S.t<t.start?' · starts on arrival':left}</small></span><button class="btn ghost sm co-rel" data-task="${t.id}">Release</button></div>`;}).join('');
     const te=r.querySelector('.cotasks');if(te._h!==th){te.innerHTML=th;te._h=th;}
     const ts=r.querySelector('.co-task');if(!ts)continue;const k=ts.value;const tg=r.querySelector('.co-tgt'),op=r.querySelector('.co-opt');
     const th2=k?tgtHTML(k,c):null;tg.hidden=th2==null;if(th2!=null)setOpts(tg,th2,k==='line'?defaultLine(lineTargets()):k==='supply'?(S.cos.find(e=>e.type==='engine'&&!e.supplied&&!e.supplyBy)||{}).id:'');
-    const oh=k?optHTML(k,c):null;op.hidden=oh==null;if(oh!=null)setOpts(op,oh,k==='supply'?'forward':'auto');
+    const oh=k?optHTML(k,c):null;op.hidden=oh==null;if(oh!=null)setOpts(op,oh,k==='supply'?'forward':'auto');cfTloSync(r,c,k,tg);
     const need=k?needOf(k,c,op.value):0;const busy=k&&free<need;const go=r.querySelector('.co-go');const lab=busy?'Reassign':'Assign';if(go.textContent!==lab)go.textContent=lab;go.classList.toggle('warn',!!busy);
     go.title=busy?`${c.name} has ${free} free; this needs ${need}. Reassign releases its current tasks.`:'';}}
 $('#coList').addEventListener('change',e=>{const s=e.target.closest('select');if(!s)return;s._touched=!!s.value;s.classList.remove('need');if(s.classList.contains('co-task')){const r=s.closest('.corow2');r.querySelector('.co-tgt')._touched=false;r.querySelector('.co-opt')._touched=false;r.querySelector('.co-tgt')._h=null;r.querySelector('.co-opt')._h=null;}renderCompanies();});
@@ -134,7 +135,7 @@ $('#coList').addEventListener('click',e=>{const r=e.target.closest('.corow2');if
   const a={kind:'assign',co,task:k};if(replace)a.replace=true;
   if(k==='line'){a.target=tg.value;if(op.value&&op.value!=='auto')a.pre=op.value;}else if(k==='hvent')a.opening=tg.value;else if(k==='vvent'||k==='pullceiling')a.zone=tg.value;
   else if(k==='search1'||k==='search2')a.floor=tg.value;else if(k==='ladder'||k==='expo')a.side=tg.value;else if(k==='supply'){a.to=tg.value;a.mode=op.value;}
-  ts._touched=false;tg._touched=false;op._touched=false;ts.value='';order(a);});
+  cfTloArgs(r,a);ts._touched=false;tg._touched=false;op._touched=false;ts.value='';order(a);});
 /* ---------- precipitation overlay (drawn over the photo in scene units) ---------- */
 const WX={kind:null,ps:[],t:performance.now()};
 function drawWeather(c){const S=A.S;if(!S||A.screen<3)return;const e=S.scn.env||{};const kind=e.precip;if(kind!=='rain'&&kind!=='snow'){WX.kind=null;return;}

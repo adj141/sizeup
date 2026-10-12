@@ -14,7 +14,20 @@ The fire behavior is a simplified teaching model grounded in UL FSRI (Fire Safet
 
 Image and source credits are in [CREDITS.md](CREDITS.md).
 
-## What's new (Oct 11, 2026): multi-side buildings and the 360
+## What's new (Oct 11, 2026, night): Command fundamentals mode (optional)
+
+- **Off by default; with it off nothing changes.** Turn it on in Set up → Command. It's a generic teaching layer in SizeUp's own wording, citing public sources (Brunacini's *Fire Command*, a public fire-department SOP, FEMA NIMS). Not affiliated with, endorsed by, or a substitute for any commercial incident-command certification program. Each part has its own switch.
+- **Guided initial radio report.** The radio box becomes a pick-list builder: unit on scene, building, conditions, actions and strategy, command position, command name and location, plus free text. Each step is checked live against the fire and the sides you've seen, and the assembled report reads back as you build it.
+- **Command position.** Investigating, fast attack or command post. In fast attack the IC can direct only their own company until a command post is set up (60 s) or command is transferred. At a command post the officer no longer counts as crew.
+- **Task, location, objective** on every company assignment.
+- **Progress reports (conditions, actions, needs)** from companies: on status changes, as priority traffic (low air, conditions worsening) and on request. Acknowledge them, and assign to answer the need.
+- **Benchmarks you declare** (all clear per floor, under control, loss stopped), checked against the model with times. Under control is now declared by the IC; the model's own detection is used for grading (hint only if Hints is on).
+- **PAR prompts** (timer, after benchmarks, after strategy changes) and a **10-minute strategy check**.
+- **Transfer of command** when the chief arrives: arrive and look, contact (face to face or radio), progress report, confirm assignments, announce. Each step takes drill time.
+- **Command debrief:** a scorecard by the eight functions of command (Brunacini, *Fire Command*; weights are SizeUp teaching values), the radio report grade, and a benchmark timeline.
+- **Your department's terms.** Pick-list wording, command names, accountability locations and every time are editable, saved in presets and exported with drills.
+
+## Earlier (Oct 11, 2026): multi-side buildings and the 360
 
 - **Four sides.** Tabs above the picture (or a swipe on a phone) switch between Sides A, B, C and D. Each side is drawn live on the same drill clock from its own windows and doors, with the eave rules applied to that side. Smoke from the other sides rises over the roofline.
 - **The 360 costs time.** The first look at each of Sides B, C and D costs drill time (default 30 s, editable on the Task times tab). After that, switching is free. Every view is logged with its time.

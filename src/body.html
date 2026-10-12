@@ -71,7 +71,7 @@
    <div class="reading" id="reading" style="margin-top:12px"></div>
   </div>
   <div class="sheet">
-   <div class="tabs" id="setupTabs" role="tablist" aria-label="Setup sections"><button role="tab" data-tab="cond" class="on" aria-selected="true">Fire &amp; smoke</button><button role="tab" data-tab="wx" aria-selected="false">Time &amp; weather</button><button role="tab" data-tab="disp" aria-selected="false">Dispatch</button><button role="tab" data-tab="times" aria-selected="false">Task times</button></div>
+   <div class="tabs" id="setupTabs" role="tablist" aria-label="Setup sections"><button role="tab" data-tab="cond" class="on" aria-selected="true">Fire &amp; smoke</button><button role="tab" data-tab="wx" aria-selected="false">Time &amp; weather</button><button role="tab" data-tab="disp" aria-selected="false">Dispatch</button><button role="tab" data-tab="times" aria-selected="false">Task times</button><button role="tab" data-tab="cmd" aria-selected="false">Command</button></div>
    <div class="tabp on" id="tab-cond">
     <div class="ctl"><div class="lbl">Contents (fuel) <span class="val" id="vFuel"></span></div>
       <div class="seg red" data-key="fuel"><button data-v="modern">Modern synthetic</button><button data-v="legacy">Legacy</button></div></div>
@@ -106,6 +106,7 @@
    </div>
    <div class="tabp" id="tab-disp"><div id="dispatch"></div></div>
    <div class="tabp" id="tab-times"><div id="settings"></div></div>
+   <div class="tabp" id="tab-cmd"><div id="cmdSetup"></div></div>
     <div class="ctl" style="border:0;padding-bottom:0;display:grid;gap:10px"><button class="btn primary" id="toBoard">Run size-up drill
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       <button class="btn ghost" id="surprise">Surprise me: random conditions, answers hidden</button><div class="hint" id="setupSum"></div></div>
@@ -142,8 +143,11 @@
       <div class="seg" data-key="stepSize" data-num style="margin-top:10px"><button data-v="30">30 s</button><button data-v="60">1 min</button><button data-v="120">2 min</button><button data-v="300">5 min</button></div>
     </div>
     <div class="card calls soloOnly" id="callsCard"></div>
+    <div class="card cf-irr" id="irrBox" hidden></div>
+    <div class="card cf-card" id="cmdCard" hidden></div>
+    <div class="card cf-card" id="canCard" hidden></div>
     <div class="card resp">
-      <div><label class="l" for="radio">Initial radio report</label>
+      <div id="radioWrap"><label class="l" for="radio">Initial radio report</label>
         <textarea id="radio" placeholder="e.g. Engine 1 on scene, two-story wood-frame residential, heavy black smoke from floor 1 Side A, pushing from the porch eaves…"></textarea>
         <div class="elements">Commonly includes: unit on scene · building description · conditions · actions / strategy · command · needs</div></div>
       <div><span class="l">Strategy</span>
