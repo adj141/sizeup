@@ -61,7 +61,8 @@ try{R=SizeupRender.create(cv);}catch(e){console.error(e);R=null;}
 if(!R)$('#glfail').style.display='block';
 window.__sizeup.R=()=>R;
 function layout(){const w=stage.clientWidth||300,B=curView(),W=B&&B.has?B.W:(A.B?A.B.W:1200),H=B&&B.has?B.H:(A.B?A.B.H:800),wide=innerWidth>=960;
-  let maxH=A.screen===4?(wide?innerHeight*(A.mode==='crew'?.78:.6):innerHeight*.42):(wide?innerHeight*.72:innerHeight*.48);
+  const tb=document.querySelector('.topbar');if(tb)document.documentElement.style.setProperty('--tb',tb.offsetHeight+'px');
+  let maxH=A.screen===4?(wide?innerHeight*(A.mode==='crew'?.78:.6):innerHeight*.32):(wide?innerHeight*.72:innerHeight*.48);
   const h=Math.round(Math.max(wide?0:Math.min(240,maxH),Math.min(w*H/W,Math.max(220,maxH)))); // a very wide side picture is letterboxed on a phone so the overlays fitstage.style.height=h+'px';dpr=Math.min(devicePixelRatio||1,1.6);
   for(const c of [cv,ov]){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
   const sc=Math.min(w/W,h/H);rect={x:(w-W*sc)/2,y:(h-H*sc)/2,w:W*sc,h:H*sc};}

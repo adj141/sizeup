@@ -6,7 +6,7 @@ const DIAS=['1.5','1.75','2','2.5','3'];
 const SET_GROUPS=[
  ['Hoselines',[['stretchBase','Stretch: base time','s'],['stretchPerFt','Stretch: per foot of hose needed','s/ft'],['perFloor','Each floor above the first','s'],['charge','Charge the line and advance','s'],['reposition','Reposition a line','s']]],
  ['Water supply',[['layBase','Supply lay: base time','s'],['layPerFt','Supply lay: per foot to the hydrant','s/ft'],['hookup','Hydrant hookup and charge','s']]],
- ['Truck & support work',[['horizontal','Horizontal vent','s'],['vertical','Vertical vent (roof)','s'],['aerialFactor','Aerial speeds roof work (multiplier)','×'],['ppv','PPV fan set-up','s'],['pullCeiling','Pull ceiling','s'],['ladder','Ladder a side','s'],['lights','Scene lighting set-up','s']]],
+ ['Truck & support work',[['horizontal','Horizontal vent','s'],['vertical','Vertical vent (roof)','s'],['aerialFactor','Aerial speeds roof work (multiplier)','×'],['ppv','PPV fan set-up','s'],['pullCeiling','Pull ceiling','s'],['forceGarage','Force the garage door','s'],['ladder','Ladder a side','s'],['lights','Scene lighting set-up','s']]],
  ['Search, RIT & rehab',[['searchBase','Search: base time','s'],['searchPerFloor','Search: one floor area','s'],['secondaryFactor','Secondary search (multiplier)','×'],['rit','RIT in place','s'],['rehab','Rehab set-up','s']]],
  ['Distances',[['setback','Engine setback to the front door','ft'],['hydrantDist','Hydrant distance','ft'],['roomRun','Hose run inside to a room','ft'],['floorRun','Hose per floor (stairs)','ft'],['sideRunBD','Extra hose around to Side B/D','ft'],['sideRunC','Extra hose around to Side C','ft']]],
  ['360 & sides',[['walkSide','360: first look at each of Sides B, C, D','s'],['fence','Fence in the way of a stretch','s'],['expoProtect','Protect an exposure: set-up','s'],['expoHeat','Flame time on a side before an unprotected exposure ignites','s']]],
@@ -37,8 +37,8 @@ function coCardHTML(c,i){const fl=TYPE_FLAGS[c.type]||[];const eq=c.eq||{};
     <div class="pres">${(eq.pre||[]).map((p,j)=>`<div class="prow" data-j="${j}"><input class="pr-name" value="${esc(p.name)}" aria-label="Preconnect name"><select class="pr-dia" aria-label="Diameter">${DIAS.map(d=>`<option value="${d}"${d===String(p.dia)?' selected':''}>${M.diaTxt(d)} in.</option>`).join('')}</select><input class="pr-len" type="number" min="50" step="50" value="${p.len}" aria-label="Length, ft">ft<input class="pr-gpm" type="number" min="50" step="10" value="${p.gpm}" aria-label="Flow, gpm">gpm<button class="iconbtn pr-del" aria-label="Remove preconnect">✕</button></div>`).join('')}
     <button class="btn ghost sm pr-add">+ Preconnect</button></div>`;}
   if(fl.length)h+=`<div class="corow flags">${fl.map(k=>`<label class="chk"><input type="checkbox" class="co-flag" data-k="${k}"${eq[k]?' checked':''}>${EQ_FLAGS[k]}</label>`).join('')}</div>`;
-  if(c.type==='chief')h+=`<div class="corow muted">Command: arrives, takes command. No crew tasks in this model.</div>`;
-  if(c.type==='medic')h+=`<div class="corow muted">Can set up rehab / EMS standby (helps crews recover in the heat).</div>`;
+  if(c.type==='chief')h+=`<div class="corow muted">Command: arrives and stays Staged until command is transferred to him by radio from the first-arriving officer (the working IC); then he is the IC. No crew tasks in this model.</div>`;
+  if(c.type==='medic')h+=`<div class="corow muted">Can set up rehab / EMS standby (helps crews recover in the heat), and can be assigned firefighting tasks by name. Quick orders never pick the medic.</div>`;
   return h+'</details>';}
 function renderDispatch(){const sc=A.scn,el=$('#dispatch');if(!sc||!el)return;const P=loadPresets();
   const cur=sc.presetName==='generic'?'generic':sc.presetName&&sc.presetName.startsWith('custom:')?sc.presetName:'';
@@ -88,7 +88,7 @@ function renderSettings(){const sc=A.scn,el=$('#settings');if(!sc||!el)return;
 $('#settings').addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('set-in'))return;const v=+t.value;if(!isFinite(v)||v<0){t.value=A.scn.settings[t.dataset.k];return;}A.scn.settings[t.dataset.k]=v;rebuild();renderSetup();});
 $('#settings').addEventListener('click',e=>{if(e.target.id==='setReset'){A.scn.settings={...M.DEF_SET};rebuild();renderSettings();renderSetup();toast('Task times reset to the default teaching values.');}});
 /* ---------- company board ---------- */
-function coTaskList(c){return Object.keys(M.TASKDEF).filter(k=>!M.canDo(c,k)&&(k!=='expo'||M.feats(A.B,null,'exposure').length));}
+function coTaskList(c){return Object.keys(M.TASKDEF).filter(k=>!M.canDo(c,k)&&(k!=='expo'||M.feats(A.B,null,'exposure').length)&&(k!=='forcegarage'||A.B.openings.some(o=>o.type==='garage')));}
 function needOf(k,c,pre){if(k==='line'){if(pre&&pre!=='auto'){const [e,i]=pre.split(':');const E=A.S.cos.find(x=>x.id===e);const p=E&&E.eq.pre[+i];if(p)return +p.dia>=2.5?3:2;}return 2;}return M.TASKDEF[k].need;}
 function tgtHTML(k,c){const B=A.B,S=A.S;
   if(k==='line')return`<option value="">Line to…</option>`+lineOptsHTML(lineTargets());
@@ -96,6 +96,7 @@ function tgtHTML(k,c){const B=A.B,S=A.S;
   if(k==='vvent')return`<option value="">Roof over…</option>`+B.zones.filter(z=>z.floor===String(B.stories)&&!z.hidden||z.attic).map(z=>`<option value="${z.id}">${esc(z.name)}</option>`).join('');
   if(k==='search1'||k==='search2')return`<option value="">Floor…</option>`+[...new Set(B.zones.filter(z=>!z.attic).map(z=>z.floor))].sort().map(f=>`<option value="${f}">Floor ${f}</option>`).join('');
   if(k==='pullceiling'){const att=B.zones.find(z=>z.attic);return`<option value="">Room…</option>`+(att?B.conns.filter(q=>q.type==='ceiling'&&(q.a===att.id||q.b===att.id)).map(q=>q.a===att.id?q.b:q.a).filter(id=>!zoneOf(id).attic).map(id=>`<option value="${id}">${esc(zname(id))}</option>`).join(''):'');}
+  if(k==='forcegarage')return`<option value="">Garage door…</option>`+B.openings.filter(o=>o.type==='garage').map(o=>`<option value="${o.id}"${S.o[o.id].state!=='closed'?' disabled':''}>${esc(o.name)}${S.o[o.id].state!=='closed'?' (open)':''}</option>`).join('');
   if(k==='ladder')return`<option value="">Side…</option>`+['A','B','C','D'].map(s=>`<option value="${s}"${S.laddered[s]?' disabled':''}>Side ${s}${S.laddered[s]?' (done)':''}</option>`).join('');
   if(k==='expo')return`<option value="">Exposure…</option>`+M.feats(B,null,'exposure').map(f=>`<option value="${f.side}">${esc(f.name)} (Side ${f.side})${S.expo[f.side]&&S.expo[f.side].prot?' (protected)':''}</option>`).join('');
   if(k==='supply')return S.cos.filter(e=>e.type==='engine').map(e=>`<option value="${e.id}"${e.supplied||e.supplyBy?' disabled':''}>To ${esc(e.name)}${e===c?' (itself)':''}${e.supplied?' (supplied)':e.supplyBy?' (supply coming)':''}</option>`).join('');
@@ -105,17 +106,19 @@ function optHTML(k,c){const S=A.S;
     for(const e of S.cos.filter(e=>e.type==='engine'&&(e===c||e.arriveAt<=tA)))(e.eq.pre||[]).forEach((p,i)=>{const used=S.water.lines.find(l=>l.eng===e.id&&l.pre===i);h+=`<option value="${e.id}:${i}"${used?' disabled':''}>${e===c?'':esc(e.id)+' '}${esc(p.name)}: ${M.diaTxt(p.dia)} in. ${p.len} ft ${p.gpm} gpm${used?` (Line ${used.id})`:''}</option>`;});return h;}
   if(k==='supply')return'<option value="forward">Forward lay (hydrant → engine)</option><option value="reverse">Reverse lay (engine → hydrant)</option>';
   return null;}
-function stClass(k){return({enroute:'s-en',staged:'s-st',working:'s-wk',available:'s-av'})[k]||'';}
+function stClass(k){return({enroute:'s-en',staged:'s-st',working:'s-wk',available:'s-av',command:'s-cmd'})[k]||'';}
+// the guided transfer card (Command fundamentals with its transfer part on) handles the chief; otherwise the chief's row offers a one-step radio transfer
+function bcRadioBtn(c){const S=A.S;return c.type==='chief'&&S.t>=c.arriveAt&&!M.bcInCommand(S,c)&&!(S.cmd&&S.cmd.sub.xfer);}
 function renderCompanies(){const S=A.S,el=$('#coList');if(!S||!el)return;const cos=S.cos.slice().sort((a,b)=>a.arriveAt-b.arriveAt);
   const sig=cos.map(c=>c.id+c.type).join(',')+(cmdOn()&&cmdSub('tlo')?'|tlo':'');
   if(el._sig!==sig){el._sig=sig;el.innerHTML=cos.map(c=>{const tk=coTaskList(c);return`<div class="corow2" data-co="${esc(c.id)}"><div class="cohead"><b>${esc(c.id)}</b><span class="coname">${esc(c.name)}</span><span class="cost"></span></div>
-      <div class="cometa"></div><div class="cotasks"></div>
+      <div class="cometa"></div><div class="cotasks"></div>${c.type==='chief'?`<div class="coassign co-bc" hidden><button class="btn primary sm co-xfer">Transfer command to ${esc(c.id)} by radio</button></div>`:''}
       ${tk.length?`<div class="coassign"><select class="co-task" aria-label="Task for ${esc(c.name)}"><option value="">Assign ${esc(c.id)} to…</option>${tk.map(k=>`<option value="${k}">${esc(M.TASKDEF[k].label)}</option>`).join('')}</select><select class="co-tgt" aria-label="Target for ${esc(c.name)}" hidden></select><select class="co-opt" aria-label="Option for ${esc(c.name)}" hidden></select>${cfTloHTML(c)}<button class="btn ghost sm co-go">Assign</button></div>`:''}</div>`;}).join('');}
   for(const c of cos){const r=el.querySelector(`.corow2[data-co="${CSS.escape(c.id)}"]`);if(!r)continue;const st=M.coStatus(S,c);const cs=r.querySelector('.cost');
     if(cs.textContent!==st.txt.split(':')[0]){cs.textContent=st.k==='working'?'Working':st.txt.split(' · ')[0];}cs.className='cost '+stClass(st.k);
     const free=M.freeCrew(S,c);let meta=`${S.t<c.arriveAt?'Arrives in '+fmt(c.arriveAt-S.t)+' · ':''}${free} of ${c.staff} free`;
     if(c.type==='engine'){const low=!c.supplied&&c.tankLeft<(+c.eq.tank||0)*M.TASK.lowTankFrac;meta+=` · <span class="${low?'water-low':''}">tank ${Math.round(c.tankLeft)}/${c.eq.tank} gal</span>${c.supplied?' · supplied':c.supplyBy?' · supply coming':''}`;}
-    if(c.type==='chief')meta+=S.t>=c.arriveAt?(S.cmd&&S.cmd.sub.xfer?(S.cmd.ic===c.id?' · in command':' · on scene, not yet in command'):' · in command'):'';
+    if(c.type==='chief'){meta+=S.t>=c.arriveAt?(M.bcInCommand(S,c)?' · in command (IC)':' · on scene, staged until command is transferred'):'';const xb=r.querySelector('.co-bc');if(xb)xb.hidden=!bcRadioBtn(c);}
     if(S.cmd&&S.cmd.ic===c.id&&c.type!=='chief')meta+=' · IC';
     const me=r.querySelector('.cometa');if(me._h!==meta){me.innerHTML=meta;me._h=meta;}
     const tl=M.coTasks(S,c);const th=tl.map(x=>{if(x.line){const l=x.line;return`<div class="cot"><span>${esc(x.label)} <small>${esc(lineStatus(l))} · ${M.diaTxt(l.dia)} in. ${l.len} ft</small></span><button class="btn ghost sm co-wd" data-line="${l.id}">Withdraw</button></div>`;}
@@ -128,12 +131,13 @@ function renderCompanies(){const S=A.S,el=$('#coList');if(!S||!el)return;const c
     go.title=busy?`${c.name} has ${free} free; this needs ${need}. Reassign releases its current tasks.`:'';}}
 $('#coList').addEventListener('change',e=>{const s=e.target.closest('select');if(!s)return;s._touched=!!s.value;s.classList.remove('need');if(s.classList.contains('co-task')){const r=s.closest('.corow2');r.querySelector('.co-tgt')._touched=false;r.querySelector('.co-opt')._touched=false;r.querySelector('.co-tgt')._h=null;r.querySelector('.co-opt')._h=null;}renderCompanies();});
 $('#coList').addEventListener('click',e=>{const r=e.target.closest('.corow2');if(!r)return;const co=r.dataset.co;
+  if(e.target.closest('.co-xfer')){order({kind:'bcxfer',co});return;}
   const wd=e.target.closest('.co-wd');if(wd){order({kind:'withdraw',line:+wd.dataset.line});return;}
   const rl=e.target.closest('.co-rel');if(rl){order({kind:'release',task:+rl.dataset.task});return;}
   if(!e.target.closest('.co-go'))return;const ts=r.querySelector('.co-task'),tg=r.querySelector('.co-tgt'),op=r.querySelector('.co-opt');const k=ts.value;if(!k)return needPick(ts);
   if(!tg.hidden&&!tg.value)return needPick(tg);const c=A.S.cos.find(x=>x.id===co);const replace=M.freeCrew(A.S,c)<needOf(k,c,op.value);
   const a={kind:'assign',co,task:k};if(replace)a.replace=true;
-  if(k==='line'){a.target=tg.value;if(op.value&&op.value!=='auto')a.pre=op.value;}else if(k==='hvent')a.opening=tg.value;else if(k==='vvent'||k==='pullceiling')a.zone=tg.value;
+  if(k==='line'){a.target=tg.value;if(op.value&&op.value!=='auto')a.pre=op.value;}else if(k==='hvent'||k==='forcegarage')a.opening=tg.value;else if(k==='vvent'||k==='pullceiling')a.zone=tg.value;
   else if(k==='search1'||k==='search2')a.floor=tg.value;else if(k==='ladder'||k==='expo')a.side=tg.value;else if(k==='supply'){a.to=tg.value;a.mode=op.value;}
   cfTloArgs(r,a);ts._touched=false;tg._touched=false;op._touched=false;ts.value='';order(a);});
 /* ---------- precipitation overlay (drawn over the photo in scene units) ---------- */

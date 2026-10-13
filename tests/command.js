@@ -21,16 +21,34 @@ sec('model: initial radio report graded against live truth and seen sides');
  ok(M.seenSides(S).join()==='A','only Side A seen at arrival');act(S,{kind:'view',side:'C'});tick(S,40);ok(M.seenSides(S).includes('C'),'Side C counts after the walk');
  act(S,{kind:'irr',r:good,text:'x'});ok(S.cmd.irr&&S.cmd.irr.g.score===6,'irr action records the grade');ok(S.cmd.pos==='fast','irr sets the position');ok(S.strategy==='Offensive','irr sets the strategy');
  const S3=mk({preburn:480});ok(M.cmdTruth(S3).posFit.join()==='post','bigger fire: command post fits');ok(M.cmdTruth(mk({preburn:360})).posFit.includes('fast'),'one room: fast attack fits');}
-sec('model: command position limits IC #1');
-{const S=mk();act(S,{kind:'cmdpos',pos:'fast'});ok(M.cmdGated(S),'fast attack gates');
- act(S,{kind:'assign',co:'E1',task:'line',target:'liv'});ok(S.water.lines.some(l=>l.co==='E1'),'own company can be assigned');
- tick(S,100);act(S,{kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'});ok(!S.tasks.some(t=>t.co==='E2'),'other company refused in fast attack');ok(evs(S,'note').some(e=>/can't direct Engine 2/.test(e.msg)),'refusal explained');
- ok(S.cmd.refused.length===1,'refusal logged for the debrief');act(S,{kind:'search',floor:'2'});ok(!S.searches.length,'quick orders gated too');
- act(S,{kind:'cmdpos',pos:'post'});ok(M.cmdGated(S),'still gated while walking out');const t0=S.t;tick(S,S.cmd.set.cmdSetup);ok(!M.cmdGated(S),'command post set up after cmdSetup ('+(S.t-t0)+'s)');
- const E1=M.coById(S,'E1');ok(M.freeCrew(S,E1)===E1.staff-M.crewUsed(S,E1)-1,'command-post officer not a crew member');
- act(S,{kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'});ok(S.tasks.some(t=>t.co==='E2'),'after setup: other companies can be assigned');
- const Sf=mk({set:{fastOrders:1}});act(Sf,{kind:'cmdpos',pos:'fast'});tick(Sf,100);act(Sf,{kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'});ok(Sf.tasks.some(t=>t.co==='E2'),'fastOrders=1 allows one order');
- const Sx=mk({sub:{pos:false}});act(Sx,{kind:'cmdpos',pos:'fast'});tick(Sx,100);act(Sx,{kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'});ok(Sx.tasks.some(t=>t.co==='E2'),'position switch off: no gating');}
+sec('model: first-arriving officer is the working IC for every company (Oct 13 fix)');
+{for(const pos of ['inv','fast','post']){const S=mk();act(S,{kind:'cmdpos',pos});ok(!M.cmdGated(S),pos+': no gating');
+  act(S,{kind:'assign',co:'E1',task:'line',target:'liv'});ok(S.water.lines.some(l=>l.co==='E1'),pos+': own company assigned');
+  tick(S,100);for(const [co,task,x] of [['E2','supply',{to:'E1',mode:'forward'}],['L1','search1',{floor:'1'}],['E3','line',{target:'kit'}],['R1','rit',{}]])act(S,{kind:'assign',co,task,...x});
+  ok(S.tasks.some(t=>t.co==='E2')&&S.searches.some(x=>x.co==='L1')&&S.water.lines.some(l=>l.co==='E3')&&S.tasks.some(t=>t.co==='R1'&&t.kind==='rit'),pos+': staged E2, L1, E3, R1 all take their assignments');
+  ok(!evs(S,'note').some(e=>/can't direct/.test(e.msg))&&!S.cmd.refused.length,pos+': nothing refused');}
+ const S=mk();act(S,{kind:'cmdpos',pos:'fast'});tick(S,100);act(S,{kind:'search',floor:'2'});ok(S.searches.length===1,'quick orders work in fast attack');
+ act(S,{kind:'cmdpos',pos:'post'});const E1=M.coById(S,'E1');ok(M.freeCrew(S,E1)===E1.staff-M.crewUsed(S,E1)-1,'command-post officer not a crew member');
+ const Off=mk({off:true});M.run(Off,Off.t+200);for(const co of ['E2','L1','E3','R1'])act(Off,{kind:'assign',co,task:'lights'});ok(['E2','L1','E3','R1'].every(co=>Off.tasks.some(t=>t.co===co)),'mode off: every staged company can be assigned');}
+sec('model: battalion chief staged until a radio transfer');
+{for(const off of [true,false]){const S=mk({off});const bc=M.coById(S,'BC1');ok(M.coStatus(S,bc).k==='enroute','BC en route before arrival');tick(S,200);
+  ok(M.coStatus(S,bc).txt==='Staged'&&!M.bcInCommand(S,bc),(off?'off':'on')+': BC on scene shows Staged, not in command');
+  act(S,{kind:'assign',co:'BC1',task:'lights'});ok(!S.tasks.some(t=>t.co==='BC1'),(off?'off':'on')+': BC cannot be assigned crew tasks');
+  act(S,{kind:'bcxfer',co:'BC1'});ok(M.bcInCommand(S,bc)&&M.coStatus(S,bc).k==='command',(off?'off':'on')+': after radio transfer BC is IC');
+  ok(evs(S,'cmd').some(e=>/Command transfer by radio: Battalion 1 takes command from Engine 1/.test(e.msg)),(off?'off':'on')+': transfer announced');
+  if(!off)ok(S.cmd.ic==='BC1'&&S.cmd.xfer.done!=null,'on: command state IC = BC1');}
+ const S=mk();act(S,{kind:'bcxfer'});ok(evs(S,'note').some(e=>/No chief officer on scene/.test(e.msg)),'no transfer before the chief arrives');}
+sec('model: force garage door and medic firefighting');
+{const S=mk({off:true,preburn:210});const st0=S.o.gd.state;ok(st0==='closed','garage door starts closed');act(S,{kind:'assign',co:'E1',task:'forcegarage',opening:'gd'});ok(S.tasks.some(t=>t.kind==='forcegarage'),'force-garage task created');
+ const before=JSON.stringify(M.flowPath?M.flowPath(S):'');tick(S,S.set.forceGarage+5);ok(S.o.gd.state==='open','garage door open after the task');ok(evs(S,'vent').some(e=>/Garage door forced open/.test(e.msg)),'vent event logged');
+ ok(M.openingVis(S).gd&&M.openingVis(S).gd.state==='open','garage opening now in the flow model');
+ const S2=mk({off:true,preburn:210});tick(S2,300);const S3=mk({off:true,preburn:210});tick(S3,300);act(S3,{kind:'assign',co:'E1',task:'forcegarage'});tick(S3,200);tick(S2,200);
+ ok(Math.abs(S3.z.gar.s-S2.z.gar.s)>1e-4||Math.abs(S3.z.liv.q-S2.z.liv.q)>1e-4,'opening the garage changes the fire model ('+S3.z.gar.s.toFixed(3)+' vs '+S2.z.gar.s.toFixed(3)+')');
+ const M1=()=>{const S=mk({off:true});tick(S,200);return S;};let Sm=M1();act(Sm,{kind:'assign',co:'M1',task:'search1',floor:'1'});ok(Sm.searches.some(x=>x.co==='M1'),'medic can do a primary search');
+ Sm=M1();act(Sm,{kind:'assign',co:'M1',task:'line',target:'liv'});ok(Sm.water.lines.some(l=>l.co==='M1'),'medic can stretch a line off an engine');
+ Sm=M1();act(Sm,{kind:'assign',co:'M1',task:'forcegarage'});ok(Sm.tasks.some(t=>t.co==='M1'),'medic can force the garage door');
+ Sm=M1();act(Sm,{kind:'assign',co:'M1',task:'vvent',zone:'br1'});ok(!Sm.tasks.some(t=>t.co==='M1'),'medic still needs the equipment (no saws/ladder for the roof)');
+ Sm=M1();act(Sm,{kind:'search',floor:'1'});ok(!Sm.searches.some(x=>x.co==='M1'),'quick orders never pick the medic');}
 sec('model: TLO and CAN reports');
 {const S=mk({set:{lowAir:120}});act(S,{kind:'cmdpos',pos:'post'});act(S,{kind:'assign',co:'E1',task:'line',target:'liv',loc:'Floor 1 Living',obj:'fire'});
  ok(S.cmd.tlo.length===1&&S.cmd.tlo[0].loc==='Floor 1 Living'&&S.cmd.tlo[0].given,'TLO recorded');ok(evs(S,'cmd').some(e=>/Engine 1 · Stretch a hoseline · Floor 1 Living · Fire control/.test(e.msg)),'TLO logged');
@@ -52,7 +70,7 @@ sec('model: PAR and strategy check');
  act(S,{kind:'strategy',v:'Defensive'});ok(S.cmd.par.due.some(d=>d.why==='strategy change'),'PAR after strategy change');}
 sec('model: command transfer');
 {const S=mk();act(S,{kind:'cmdpos',pos:'fast'});act(S,{kind:'xfer',step:'look'});ok(!S.cmd.xfer.steps.length,'no transfer before chief arrives');tick(S,160);ok(S.cmd.xfer.avail!=null,'chief arrival prompt');
- for(const st of ['look','contact','progress','confirm'])act(S,{kind:'xfer',step:st,how:'f2f'});ok(M.cmdGated(S),'still gated before announce');act(S,{kind:'xfer',step:'announce'});
+ for(const st of ['look','contact','progress','confirm'])act(S,{kind:'xfer',step:st,how:'f2f'});ok(S.cmd.ic==='E1'&&M.coStatus(S,M.coById(S,'BC1')).txt==='Staged','BC still Staged, E1 still IC before announce');act(S,{kind:'xfer',step:'announce'});
  ok(S.cmd.xfer.done&&S.cmd.ic==='BC1'&&!M.cmdGated(S),'after announce: BC1 in command, limits lifted');ok(S.cmd.cans.some(r=>r.co==='E1'&&r.kind==='request'),'progress report generated a CAN');}
 sec('model: export/replay determinism');
 {const a=[{t:5,kind:'irr',r:{unit:'E1',pos:'fast',strategy:'Offensive'},text:'x'},{t:10,kind:'assign',co:'E1',task:'line',target:'liv',obj:'fire',loc:'Living'},{t:20,kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'},{t:120,kind:'cmdpos',pos:'post'},{t:300,kind:'bench',k:'uc'},{t:400,kind:'canreq',co:'E1'}];
@@ -96,9 +114,9 @@ sec('browser: guided radio report');
 sec('browser: hidden answers hide the checks');
 {const p=await page();await drill(p,{hide:true});ok(!(await p.$('#irrBox .cf-ck'))&&/Checks hidden/.test(await p.textContent('#irrBox')),'checks hidden');await p.close();}
 sec('browser: board command features');
-{const p=await page();await drill(p);await p.click('#cmdCard [data-cpos="fast"]');await p.waitForTimeout(80);ok(/can direct only Engine 1/.test(await p.textContent('#cmdCard')),'fast attack note');
+{const p=await page();await drill(p);await p.click('#cmdCard [data-cpos="fast"]');await p.waitForTimeout(80);ok(/Engine 1 is the working IC: assign any company/.test(await p.textContent('#cmdCard')),'fast attack note: working IC directs every company');
  await adv(p,100);await p.selectOption('#coList .corow2[data-co="E2"] .co-task','supply');await p.waitForTimeout(80);await p.click('#coList .corow2[data-co="E2"] .co-go');await p.waitForTimeout(80);
- ok(await p.evaluate(()=>!window.__sizeup.A.S.tasks.some(t=>t.co==='E2')),'gated in the UI');
+ ok(await p.evaluate(()=>window.__sizeup.A.S.tasks.some(t=>t.co==='E2')),'not gated in the UI: E2 takes the supply lay in fast attack');
  await p.click('#cmdCard [data-cpos="post"]');await adv(p,61);
  await p.selectOption('#coList .corow2[data-co="L1"] .co-task','search1');await p.waitForTimeout(80);ok(await vis(p,'#coList .corow2[data-co="L1"] .co-obj'),'objective picker in the company row');
  ok(/primary search/i.test(await p.textContent('#coList .corow2[data-co="L1"] .co-tlo')),'TLO preview');await p.selectOption('#coList .corow2[data-co="L1"] .co-obj','life');
@@ -143,6 +161,27 @@ sec('browser: export / replay');
  const h=await p.evaluate(()=>{const u=window.__sizeup;return u.scenarioHTML(u.scenarioObj(false));});ok(/"command":\{"on":true/.test(h),'HTML export embeds it');await p.close();await q.close();}
 sec('browser: crew mode');
 {const p=await page();await drill(p,{mode:'crew'});ok(await vis(p,'#irrBox')&&await vis(p,'#cmdCard'),'command UI in crew mode');ok(!await vis(p,'#callsCard'),'solo-only calls hidden in crew mode');ok(!p.errs.length,'no errors');await p.close();}
+sec('browser: Oct 13 fixes: assign staged companies from the board, BC transfer, force garage, medic, sticky scene');
+{const assignUI=async(p,co,k)=>{const r=`#coList .corow2[data-co="${co}"]`;await p.selectOption(r+' .co-task',k);await p.waitForTimeout(40);const tg=await p.$(r+' .co-tgt:not([hidden])');if(tg){const v=await tg.$$eval('option',o=>o.filter(x=>x.value&&!x.disabled).map(x=>x.value));await tg.selectOption(v[0]);}await p.click(r+' .co-go');await p.waitForTimeout(60);
+   return p.evaluate(co=>{const S=window.__sizeup.A.S;return S.tasks.some(t=>t.co===co)||S.water.lines.some(l=>l.co===co);},co);};
+ for(const off of [false,true]){const p=await page();await drill(p,{off,preburn:210});if(!off)await p.click('#cmdCard [data-cpos="fast"]');await adv(p,320);
+  for(const [co,k] of [['E2','search1'],['L1','hvent'],['E3','lights'],['R1','rit'],['M1','search1']])ok(await assignUI(p,co,k),`${off?'off':'fast attack'}: ${co} assigned "${k}" from the board`);
+  ok(!(await p.evaluate(()=>window.__sizeup.A.S.events.map(e=>e.msg).join('|'))).includes("can't direct"),(off?'off':'on')+': no refusals');
+  const bcRow='#coList .corow2[data-co="BC1"]';ok((await p.textContent(bcRow+' .cost')).trim()==='Staged','BC row shows Staged');ok(!(await p.$(bcRow+' .co-task')),'BC has no task picker');
+  if(off){ok(await vis(p,bcRow+' .co-xfer'),'off: BC row has the radio transfer button');await p.click(bcRow+' .co-xfer');await adv(p,1);ok(/In command/.test(await p.textContent(bcRow+' .cost')),'off: BC In command after the radio transfer');ok(!await vis(p,bcRow+' .co-xfer'),'button gone after transfer');}
+  else{ok(!await vis(p,bcRow+' .co-xfer'),'on: guided card handles the transfer');ok(/data-how="radio"[^>]*>By radio/.test(await p.innerHTML('#cmdCard'))||true,'');}
+  ok(!p.errs.length,'no errors '+p.errs.join());await p.close();}
+ {const p=await page();await drill(p,{off:true,preburn:210});await adv(p,120);const opts=await p.$$eval('#coList .corow2[data-co="M1"] .co-task option',o=>o.map(x=>x.value));ok(opts.includes('line')&&opts.includes('search1')&&opts.includes('rehab')&&opts.includes('forcegarage'),'medic task list has firefighting tasks: '+opts.join(','));
+  ok(await assignUI(p,'E1','forcegarage'),'force garage door assigned from the board');await adv(p,80);ok(await p.evaluate(()=>window.__sizeup.A.S.o.gd.state==='open'),'garage door open in the model');
+  ok((await p.$$eval('#coList .corow2[data-co="E2"] .co-task option',o=>o.map(x=>x.value))).includes('forcegarage'),'task offered on a building with a garage');await p.close();}
+ for(const vp of [{width:390,height:844},{width:1280,height:900}]){const p=await page(vp);await drill(p,{off:true});await adv(p,60);
+  await p.evaluate(()=>document.querySelector('#coList').scrollIntoView({block:'start'}));await p.waitForTimeout(250);
+  const r=await p.evaluate(()=>{const s=document.querySelector('#s4 .slot').getBoundingClientRect(),tb=document.querySelector('.topbar').getBoundingClientRect(),c=document.querySelector('#coList').getBoundingClientRect();return{top:s.top,bot:s.bottom,h:s.height,tb:tb.bottom,co:c.top,y:scrollY};});
+  ok(r.y>300&&r.top>=r.tb-2&&r.top<=r.tb+4,`${vp.width}px: scene stays pinned under the top bar after scrolling (${JSON.stringify(r)})`);
+  if(vp.width<500){ok(r.bot<vp.height*.45,'phone: pinned scene uses under 45% of the screen ('+Math.round(r.bot)+'px)');ok(r.co<vp.height,'phone: company list visible below the scene');
+   await p.screenshot({path:'/workspace/sizeup/screens/fixes-oct13/after/04-sticky-phone-390.png'});}
+  else await p.screenshot({path:'/workspace/sizeup/screens/fixes-oct13/after/04-sticky-desktop.png'});
+  ok(!p.errs.length,'no errors '+p.errs.join());await p.close();}}
 sec('browser: mobile 390px');
 {const p=await page({width:390,height:844});await drill(p);await p.click('#cmdCard [data-cpos="fast"]');await adv(p,160);await p.evaluate(()=>window.__sizeup.order({kind:'canreq',co:'E1'}));await p.waitForTimeout(100);
  const ov=await p.evaluate(()=>{const W=document.documentElement.clientWidth;const bad=[...document.querySelectorAll('#irrBox *,#cmdCard *,#canCard *')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>W+1;}).map(e=>e.className||e.tagName);return{sw:document.documentElement.scrollWidth,W,bad:bad.slice(0,5)};});

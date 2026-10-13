@@ -40,8 +40,8 @@ const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'A
   {id:'w1bk',extra:true,name:'Side B floor 1 window (Kitchen)',type:'window',side:'B',zone:'kit',hidden:true,x:320,y:338,w:48,h:76},
   {id:'bwB',extra:true,name:'Side B basement window',type:'window',side:'B',zone:'bsmt',hidden:true,level:'B',x:300,y:468,w:60,h:30},
   {id:'w2eD',extra:true,name:'Side D floor 2 window (Primary bedroom)',type:'window',side:'D',zone:'br3',hidden:true,x:470,y:196,w:44,h:70},
-  {id:'gsdD',extra:true,name:'Side D garage side door',type:'door',side:'D',zone:'gar',hidden:true,x:330,y:396,w:46,h:110},
-  {id:'gwD',extra:true,name:'Side D garage window',type:'window',side:'D',zone:'gar',hidden:true,x:600,y:366,w:60,h:44}],
+  {id:'gsdD',extra:true,name:'Side D garage side door',type:'door',side:'D',zone:'gar',hidden:true,x:641,y:396,w:46,h:110},
+  {id:'gwD',extra:true,name:'Side D garage double window',type:'window',side:'D',zone:'gar',hidden:true,x:400,y:367,w:120,h:50}],
  conns:[
   {id:'liv-foy',a:'liv',b:'foy',type:'open'},{id:'liv-kit',a:'liv',b:'kit',type:'open'},{id:'kit-foy',a:'kit',b:'foy',type:'open'},
   {id:'foy-hall2',a:'foy',b:'hall2',type:'stair'},{id:'gar-kit',a:'gar',b:'kit',type:'door',init:'closed',name:'Garage entry door'},
@@ -72,7 +72,7 @@ const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'A
    floors:[{f:'Roof',y0:0,y1:50},{f:'Attic',y0:50,y1:146},{f:'2',y0:146,y1:300},{f:'1',y0:300,y1:456}],
    bldg:{x0:130,x1:860},eaves:[{x0:180,x1:232,y:146},{x0:708,x1:760,y:146}],eaveVents:[{x:470,w:40,y:108,kind:'gable'}],ridge:{x0:460,x1:480,y:44},roofSpots:{},
    zx:{br3:[180,760]},zc:{gar:480,br3:470,liv:300,foy:330,kit:640,br1:300,br2:340,br4:640,hall2:470,bsmt:640,attic:470},
-   desc:'Side D (garage side): 1-story garage wing with a side door and window; the primary bedroom gable above. Neighbor\u2019s 2-story house about 20 ft away. Car on the side parking pad.'}},
+   desc:'Side D (garage side): 1-story garage wing with a wide double window and, at the far end by the AC unit, a side door under a small roof with a light; the primary bedroom gable above. Neighbor\u2019s 2-story house about 20 ft away. Car on the side parking pad.'}},
  features:[
   {side:'B',type:'power',name:'Overhead power lines and service drop',x:270,y:110,w:440,h:150},
   {side:'B',type:'meter',name:'Electric meter',x:465,y:420,w:34,h:44},

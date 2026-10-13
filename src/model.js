@@ -17,7 +17,7 @@ const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTa
   gpm:150};
 /* Editable TEACHING VALUES for task times and distances (not SOP, not FSRI). Each drill carries its own copy in scn.settings. */
 const DEF_SET={stretchBase:35,stretchPerFt:.08,perFloor:30,charge:15,reposition:30,layBase:45,layPerFt:.15,hookup:45,
-  horizontal:15,vertical:300,aerialFactor:.8,ppv:60,searchBase:60,searchPerFloor:120,secondaryFactor:1.3,pullCeiling:30,ladder:45,rit:60,lights:90,rehab:60,
+  horizontal:15,vertical:300,aerialFactor:.8,ppv:60,searchBase:60,searchPerFloor:120,secondaryFactor:1.3,pullCeiling:30,ladder:45,rit:60,lights:90,rehab:60,forceGarage:60,
   setback:50,hydrantDist:400,roomRun:25,floorRun:20,sideRunBD:40,sideRunC:80,
   refStaff:4,shortStaff:.15,cold:1.2,heatPer10:.1,heatCap:.3,
   // multi-side / 360 (teaching values): first look at each other side, fence in the way of a stretch, exposure protection set-up, flame time before an unprotected exposure ignites
@@ -33,20 +33,21 @@ function newCompany(type,id,name,staff,arrive){return{id,type,name,staff,arrive,
 const PRESETS={generic:{name:'Generic first alarm (residential)',companies:()=>[newCompany('engine','E1','Engine 1',4,240),newCompany('medic','M1','Medic 1',2,330),
   newCompany('engine','E2','Engine 2',3,360),newCompany('chief','BC1','Battalion 1',1,390),newCompany('ladder','L1','Ladder 1',4,420),newCompany('engine','E3','Engine 3',3,480),newCompany('rescue','R1','Rescue 1',3,540)]}};
 const TASKDEF={
-  line:{label:'Stretch a hoseline',need:2,types:'elr',pref:'elr'},
+  line:{label:'Stretch a hoseline',need:2,types:'elrm',pref:'elr'},
   supply:{label:'Lay a supply line',need:1,types:'e',pref:'e'},
-  hvent:{label:'Horizontal vent',need:1,types:'elr',pref:'lre'},
-  vvent:{label:'Vertical vent (roof)',need:2,types:'elr',pref:'lre',eq:c=>c.eq.tools&&(c.eq.aerial||c.eq.groundLadders),why:'needs saws/hooks and a ladder or aerial'},
-  ppv:{label:'PPV fan at the entry',need:1,types:'elr',pref:'lre',eq:c=>c.eq.fan,why:'needs a fan'},
-  doorcontrol:{label:'Door control at the entry',need:1,types:'elr',pref:'elr'},
-  search1:{label:'Primary search',need:2,types:'elr',pref:'rle'},
-  search2:{label:'Secondary search',need:2,types:'elr',pref:'rle'},
-  pullceiling:{label:'Pull ceiling',need:2,types:'elr',pref:'lre',eq:c=>c.eq.hooks||c.eq.tools,why:'needs hooks'},
-  ladder:{label:'Ladder the building',need:2,types:'elr',pref:'lre',eq:c=>c.eq.groundLadders||c.eq.aerial,why:'needs ground ladders or an aerial'},
-  rit:{label:'RIT (rapid intervention)',need:2,types:'elr',pref:'rle'},
-  lights:{label:'Scene lighting',need:1,types:'elr',pref:'lre'},
+  hvent:{label:'Horizontal vent',need:1,types:'elrm',pref:'lre'},
+  vvent:{label:'Vertical vent (roof)',need:2,types:'elrm',pref:'lre',eq:c=>c.eq.tools&&(c.eq.aerial||c.eq.groundLadders),why:'needs saws/hooks and a ladder or aerial'},
+  ppv:{label:'PPV fan at the entry',need:1,types:'elrm',pref:'lre',eq:c=>c.eq.fan,why:'needs a fan'},
+  doorcontrol:{label:'Door control at the entry',need:1,types:'elrm',pref:'elr'},
+  search1:{label:'Primary search',need:2,types:'elrm',pref:'rle'},
+  search2:{label:'Secondary search',need:2,types:'elrm',pref:'rle'},
+  pullceiling:{label:'Pull ceiling',need:2,types:'elrm',pref:'lre',eq:c=>c.eq.hooks||c.eq.tools,why:'needs hooks'},
+  ladder:{label:'Ladder the building',need:2,types:'elrm',pref:'lre',eq:c=>c.eq.groundLadders||c.eq.aerial,why:'needs ground ladders or an aerial'},
+  rit:{label:'RIT (rapid intervention)',need:2,types:'elrm',pref:'rle'},
+  lights:{label:'Scene lighting',need:1,types:'elrm',pref:'lre'},
   rehab:{label:'Rehab / EMS standby',need:1,types:'m',pref:'m'},
-  expo:{label:'Protect an exposure',need:2,types:'elr',pref:'elr'}};
+  expo:{label:'Protect an exposure',need:2,types:'elrm',pref:'elr'},
+  forcegarage:{label:'Force the garage door',need:2,types:'elrm',pref:'lre'}};
 const CONT={doorcontrol:1,rit:1,rehab:1,supply:1,expo:1}; // tasks that keep their crew committed until released
 function diaTxt(d){return({'1.5':'1½','1.75':'1¾','2':'2','2.5':'2½','3':'3'})[String(d)]||String(d);}
 function coById(S,id){return S.cos.find(c=>c.id===id);}
@@ -171,7 +172,7 @@ function lineReach(S,l){const r={};const k=l.w||1;const add=(id,w)=>{if(S.z[id])
 function busyMsg(S,c,need,what){const tk=coTasks(S,c).map(x=>x.label).join('; ');const free=freeCrew(S,c);
   return `${c.name} is busy${tk?' ('+tk+')':''}: ${free} of ${c.staff} member${c.staff===1?'':'s'} free${c.type==='engine'?' (1 stays at the pump)':''}, and ${what} needs ${need}. Release or reassign a task, or pick another company.`;}
 function autoPick(S,kind,fit){const d=TASKDEF[kind];let best=null;
-  for(const c of S.cos){if(canDo(c,kind))continue;const tA=Math.max(S.t,c.arriveAt);const r=fit(c,tA);if(!r)continue;
+  for(const c of S.cos){if(canDo(c,kind)||d.pref.indexOf(TYPE_CH[c.type])<0)continue;const tA=Math.max(S.t,c.arriveAt);const r=fit(c,tA);if(!r)continue;
     const k=[tA,d.pref.indexOf(TYPE_CH[c.type]),c.arriveAt];if(!best||k[0]<best.k[0]||(k[0]===best.k[0]&&(k[1]<best.k[1]||(k[1]===best.k[1]&&k[2]<best.k[2]))))best={c,r,k};}
   return best;}
 function addTask(S,c,kind,p,base,label){const tA=Math.max(S.t,c.arriveAt);const d=base*coF(S,c);
@@ -191,7 +192,10 @@ function releaseTask(S,t,log){t.active=false;t.released=S.t;const c=coById(S,t.c
   if(log)ev(S,'order',`${c.name} released from ${t.label}${t.done||CONT[t.kind]?'':' (not finished)'}.`);}
 function releaseAll(S,c){let n=0;for(const t of S.tasks)if(t.co===c.id&&t.active){releaseTask(S,t,true);n++;}
   const ls=S.water.lines.filter(l=>l.co===c.id);for(const l of ls){doAction(S,{kind:'withdraw',line:l.id});n++;}return n;}
+function bcInCommand(S,c){return S.cmd?(S.cmd.xfer.done!=null&&S.cmd.ic===c.id):S.bcCmd===c.id;}
 function coStatus(S,c){if(S.t<c.arriveAt)return{k:'enroute',txt:`En route · ${fmtS(c.arriveAt-S.t)}`};
+  // a chief officer stays Staged on scene until command is transferred to him over the radio; then he is the IC
+  if(c.type==='chief')return bcInCommand(S,c)?{k:'command',txt:'In command (IC)'}:{k:'staged',txt:'Staged'};
   const tk=coTasks(S,c);if(!tk.length)return{k:c.everWorked?'available':'staged',txt:c.everWorked?'Available':'Staged'};
   const parts=tk.map(x=>{if(x.line){const l=x.line;return S.t<l.readyAt?`${x.label} · ${fmtS(l.readyAt-S.t)}`:`${x.label} · ${l.flowing?'flowing':'in position'}`;}
     const t=x.task;return !t.done&&t.end>S.t?`${t.label} · ${fmtS(t.end-S.t)}`:`${t.label}${CONT[t.kind]?' · in place':''}`;});
@@ -230,7 +234,13 @@ function checkFollowup(fu){const said=fu.findings||[];const txt=[fu.text,fu.assi
 /* ---------- actions ---------- */
 function act(S,a){a={...a,t:a.t==null?S.t:a.t};S.pending.push(a);S.pending.sort((x,y)=>x.t-y.t);}
 const CMDK={cmdpos:1,irr:1,bench:1,par:1,_pardone:1,stratcheck:1,canreq:1,canack:1,xfer:1};
-function doAction(S,a){if(!S.cmd)return doAction0(S,a);
+// radio transfer of command to the chief officer (one step). With Command fundamentals on and its guided transfer switched on, the guided steps are used instead.
+function bcTransfer(S,a){const bc=a.co?coById(S,a.co):S.cos.find(c=>c.type==='chief');if(!bc||bc.type!=='chief'||S.t<bc.arriveAt){ev(S,'note','No chief officer on scene to take command.');return;}
+  const first=S.cos.slice().sort((x,y)=>x.arriveAt-y.arriveAt)[0];const C=S.cmd;
+  if(C?C.xfer.done!=null:S.bcCmd){ev(S,'note','Command already transferred.');return;}
+  if(C){C.xfer.steps.push({t:S.t,step:'announce',how:'radio'});C.xfer.done=S.t;C.ic=bc.id;C.bc=bc.id;C.seat=null;C.pos='post';C.postAt=S.t;}else S.bcCmd=bc.id;
+  ev(S,'cmd',`Command transfer by radio: ${bc.name} takes command from ${first?first.name:'the first-arriving officer'}. ${bc.name} is now the IC.`);}
+function doAction(S,a){if(a.kind==='bcxfer'){bcTransfer(S,a);return;}if(!S.cmd)return doAction0(S,a);
   if(CMDK[a.kind]){cmdAct(S,a);return;}
   if(GATED[a.kind]){if(cmdGate(S,a))return;a={...a,_g:1};}
   if(a.kind==='assign'){const n=S.tasks.length+S.water.lines.length;doAction0(S,a);cmdAfterAssign(S,a,n);return;}
@@ -339,6 +349,9 @@ function doAction0(S,a){const F=front(S);const fdo=F&&S.o[F.id];
     if(k==='expo'){const ex=feats(S.B,null,'exposure');const side=a.side||(ex[0]&&ex[0].side);const f=ex.find(f=>f.side===side);if(!f){ev(S,'note','No exposure is marked on that side.');break;}
       const t=addTask(S,c,k,{side},(st.expoProtect+sideRun(st,side))*1,`Protect exposure: Side ${side}`);ev(S,'order',`${c.name}: protect the exposure on Side ${side} (${f.name}; a line between the fire and the exposure, simplified).`);break;}
     if(k==='rit'){const t=addTask(S,c,k,{crew},st.rit,'RIT (rapid intervention)');ev(S,'order',`${c.name} assigned as RIT (${crew} members).`);break;}
+    if(k==='forcegarage'){const gs=S.B.openings.filter(o=>o.type==='garage');const o=gs.find(o=>o.id===a.opening)||gs.find(o=>S.o[o.id]&&S.o[o.id].state==='closed');
+      if(!o){ev(S,'note',gs.length?'The garage door is already open.':'This building has no garage door.');break;}if(S.o[o.id].state!=='closed'){ev(S,'note',`${oname(S,o.id)} is already open.`);break;}
+      const t=addTask(S,c,k,{opening:o.id},st.forceGarage,`Force ${oname(S,o.id).toLowerCase()}`);ev(S,'order',`${c.name}: force the ${oname(S,o.id).toLowerCase()}${t.start>S.t?' on arrival':''} (about ${fmtS(t.end-S.t)}, teaching value).`);break;}
     if(k==='lights'){const t=addTask(S,c,k,{},st.lights,'Scene lighting');ev(S,'order',`${c.name}: set up scene lighting.`);break;}
     if(k==='rehab'){const t=addTask(S,c,k,{},st.rehab,'Rehab / EMS standby');ev(S,'order',`${c.name}: set up rehab and EMS standby.`);break;}
     break;}
@@ -356,6 +369,7 @@ function doAction0(S,a){const F=front(S);const fdo=F&&S.o[F.id];
       ev(S,'vent',`${c.name}: ceiling pulled in ${zname(S,t.zone)}. The ${att.name} is open above it (a line in that room can now reach it), and heat and smoke from the void can come down.`,{src:'FSRI-VV'});}
     else if(t.kind==='ladder'){S.laddered[t.side]=true;ev(S,'order',`${c.name}: Side ${t.side} laddered (secondary egress and access to upper-floor windows).`);}
     else if(t.kind==='rit')ev(S,'order',`${c.name} in place as RIT at the command post.`);
+    else if(t.kind==='forcegarage'){const o=S.o[t.opening];if(o&&o.state==='closed'){o.state='open';ev(S,'vent',`${oname(S,t.opening)} forced open (${c.name}). Opening a door is a ventilation action: the big opening lets air in low and smoke out high.`,{src:'FSRI-CFA'});S.flags.vents=(S.flags.vents||[]);S.flags.vents.push({t:S.t,kind:'garage',zone:o.zone,opening:t.opening});}}
     else if(t.kind==='lights'){S.lights=true;ev(S,'order',`${c.name}: scene lighting is up. Smoke color and the building are easier to read.`);}
     else if(t.kind==='expo'){(S.expo[t.side]=S.expo[t.side]||{heat:0}).prot=true;ev(S,'order',`${c.name}: exposure on Side ${t.side} protected.`);}
     else if(t.kind==='rehab'){S.rehab=true;ev(S,'order',`${c.name}: rehab is set up (crews recover faster in the heat).`);}
@@ -655,7 +669,7 @@ const CMD_TERMS={
   names:'Main Street Command\nOak Street Command\nElm Street Command\nCentral Command',
   acct:'Command post, Side A\nSide A at the first engine\nSide C',
   par:'PAR',can:'Progress report (conditions, actions, needs)'};
-const TASK_OBJ={line:'fire',supply:'water',hvent:'vent',vvent:'vent',ppv:'vent',doorcontrol:'fire',search1:'life',search2:'life',pullceiling:'fire',ladder:'ffs',rit:'ffs',lights:'support',rehab:'support',expo:'expo'};
+const TASK_OBJ={line:'fire',supply:'water',hvent:'vent',vvent:'vent',ppv:'vent',doorcontrol:'fire',search1:'life',search2:'life',pullceiling:'fire',ladder:'ffs',rit:'ffs',lights:'support',rehab:'support',expo:'expo',forcegarage:'vent'};
 function cmdCfg(scn){const c=scn.command;if(!c||!c.on)return null;const T=JSON.parse(JSON.stringify(CMD_TERMS));for(const k in (c.terms||{})){if(typeof T[k]==='object'&&typeof c.terms[k]==='object')Object.assign(T[k],c.terms[k]);else if(c.terms[k]!=null)T[k]=c.terms[k];}
   return{sub:{...CMD_SUB,...(c.sub||{})},set:{...CMD_SET,...(c.set||{})},terms:T};}
 function cmdInit(S){const cfg=cmdCfg(S.scn);if(!cfg)return null;const first=S.cos.slice().sort((a,b)=>a.arriveAt-b.arriveAt)[0];const bc=S.cos.find(c=>c.type==='chief');
@@ -664,7 +678,8 @@ function cmdInit(S){const cfg=cmdCfg(S.scn);if(!cfg)return null;const first=S.co
     inSince:{},lowAir:{},lastPri:{},sent:{},flowSeen:{},posLog:[]};}
 const cmdOn=(S,k)=>!!(S.cmd&&(!k||S.cmd.sub[k]));
 // gated while IC #1 is investigating or in fast attack (or still walking out to set up the command post)
-function cmdGated(S){const C=S.cmd;if(!C||!C.sub.pos||C.xfer.done||!C.pos)return false;if(C.pos==='post')return S.t<C.postAt;return true;}
+// Oct 13 2026 (AJ): the first-arriving officer is the working IC and directs every company in any position, until command is transferred. No gating.
+function cmdGated(S){return false;}
 const GATED={assign:1,line:1,vent:1,search:1,supply:1,doorcontrol:1};
 function cmdGate(S,a){const C=S.cmd;if(!cmdGated(S)||a._g)return false;if(a.kind==='doorcontrol'&&!a.on)return false;if(a.kind==='line'&&a.target==='none')return false;
   if(a.co===C.ic1)return false;const ic=coById(S,C.ic1);const pl=C.terms.pos[C.pos]||C.pos;
@@ -770,6 +785,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;
