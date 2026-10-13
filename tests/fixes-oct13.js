@@ -3,7 +3,7 @@ const {chromium}=require('playwright-core');const fs=require('fs'),cp=require('c
 global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
 const V=eval(fs.readFileSync('/workspace/sizeup/src/visual.js','utf8')+';SizeupVisual');
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('\n# '+n);
-const OUT='/workspace/sizeup/screens/fixes-oct13/';const OLD='file:///workspace/sizeup-publish/index.html#noautoplay',NEW='file:///workspace/sizeup/index.html#noautoplay';
+const OUT='/workspace/sizeup/screens/fixes-oct13/';const OLD='file:///workspace/sizeup/tests/base/builds/pre-oct13-fixes.html#noautoplay',NEW='file:///workspace/sizeup/index.html#noautoplay';
 const scn=o=>({sceneId:'house',origin:o.origin||'liv',fuel:'modern',preburn:o.preburn||210,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,companies:M.PRESETS.generic.companies()});
 sec('model/visual: hidden-side plumes start at the floor they come from');
 {const S=M.create(BLD.house,scn({}));M.run(S,450);const v=V.build(S,BLD.house,M,'D');const eaveY=BLD.house.views.D.eaves[0].y;const f1=BLD.house.views.D.floors.find(f=>f.f==='1').y0;

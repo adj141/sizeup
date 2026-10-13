@@ -8,7 +8,7 @@ function rng(seed){let s=seed>>>0;return()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^
 // and the time from ventilation to flashover is ~2 min (modern) vs >8 min (legacy). [FSRI-VV summary report]
 const FUEL={modern:{tg:250,tau:22,tauT:50,smoke:1.35,load:1000,label:'Modern synthetic contents'},
             legacy:{tg:1400,tau:100,tauT:190,smoke:.85,load:2600,label:'Legacy (natural-material) contents'}};
-const CHASE_K=.0025; // basement-to-attic chase leakage per second (teaching value: eaves show light smoke a few minutes after the basement fills)
+const CHASE_K=.0012; // basement-to-attic chase leakage per second (teaching value, slowed Oct 13: with the stair door closed the eaves show only faint seep smoke about 12-13 min after ignition)
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004,floor:.02}; // floor: the floor assembly over a basement (same leak as a ceiling)
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
 const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,

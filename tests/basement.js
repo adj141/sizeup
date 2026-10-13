@@ -27,8 +27,8 @@ for(const stair of ['closed','open']){const log=[];run(M,B,'bsmt',{doors:{'kit-b
    for(const vis of [r.A,r.C]){const rear=vis.emitters.filter(e=>e.kind==='rear');if(new Set(rear.map(e=>e.key)).size!==rear.length||rear.length>3)stack++;if(rear.some(e=>e.alpha>.4||e.den>Math.max(0,r.srcDen-1)))dil++;}}
  ok(early===0,`${stair}: no smoke above the Side A eave line in the first 5 min while the attic and floor 2 are clear (${early} s with it)`);
  ok(stack===0,`${stair}: at most one rear plume per hidden side`);ok(dil===0,`${stair}: rear plumes diluted (alpha ≤ .4, density below the source)`);
- ok(L[150].at<.05,`${stair}: attic still clear at 2:30 (${L[150].at.toFixed(3)})`);ok(L[480].at>.15,`${stair}: basement-to-attic chase reaches the attic by 8 min (${L[480].at.toFixed(3)})`);
- const eave=L.find(r=>r.A.emitters.some(e=>e.kind==='eave'));ok(!eave||eave.t>=300,`${stair}: eave smoke no earlier than 5 min (${eave&&eave.t})`);}
+ ok(L[150].at<.05,`${stair}: attic still clear at 2:30 (${L[150].at.toFixed(3)})`);ok(L[480].at>.03,`${stair}: basement-to-attic chase is under way by 8 min (${L[480].at.toFixed(3)})`);if(stair==='closed')ok(L[480].at<.15,`closed: the seep alone is still below the eave-smoke threshold at 8 min (Oct 13 slow-down; ${L[480].at.toFixed(3)})`);
+ const eave=L.find(r=>r.A.emitters.some(e=>e.kind==='eave'));ok(!eave||eave.t>=(stair==='closed'?480:300),`${stair}: eave smoke no earlier than ${stair==='closed'?8:5} min (${eave&&eave.t})`);}
 {const O=res.open,Cl=res.closed;ok(O[270].f1>.01&&Cl[270].f1===0,`stair door open: first-floor Side A gaps leak a minute after arrival (open ${O[270].f1.toFixed(3)} vs closed ${Cl[270].f1})`);
  ok(O[300].A.emitters.some(e=>e.kind==='leak'&&e.y>eY),'stair door open: leak emitters on Side A below the eave by 5 min');
  const cl=r=>r.C.emitters.filter(e=>e.kind==='leak'&&e.y>=378).reduce((a,e)=>a+e.rate,0);ok(cl(Cl[210])>cl(O[210])&&cl(Cl[210])>0,`stair door closed: Side C basement-level leaks stronger than with it open at arrival (${cl(Cl[210]).toFixed(1)} vs ${cl(O[210]).toFixed(1)})`);

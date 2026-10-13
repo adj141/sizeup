@@ -21,6 +21,10 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
   const hid={},SO=['A','B','C','D'],vi=SO.indexOf(side);
   const hidSmoke=(o,v)=>{if(!B.ridge)return;const z=B.zones.find(z=>z.id===o.zone);if(!z)return;const broken=v.state!=='closed';const r=v.rate*(broken?1:.15);
     const low=o.level==='B'||z.floor==='B'||z.floor==='1';if(r<=(low?.15:.05))return;
+    const hs0=SO.includes(o.side)?o.side:'C';const rel0=vi<0||hs0==='Roof'?'behind':(SO.indexOf(hs0)-vi+4)%4===2?'behind':'side';
+    // Oct 13 (basement eave fix): a plume over the ridge from the far side needs a real column: an open/failed opening above grade.
+    // Gap leakage and basement-level openings on the far side stay hidden behind the building.
+    if(rel0==='behind'&&(!broken||o.level==='B'||z.floor==='B'))return;
     const hs=SO.includes(o.side)?o.side:'C';const rel=vi<0||hs==='Roof'?'behind':(SO.indexOf(hs)-vi+4)%4===1?'left':(SO.indexOf(hs)-vi+4)%4===3?'right':'behind';
     // left/right plumes come up the building corner from the floor they leave (Oct 13 fix: a floor-1 window around the corner used to
     // start its plume at the top eave, so a dark cloud sat above the 2nd-floor roofline). 'behind' stays at the ridge.
@@ -43,7 +47,8 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
       vis.emitters.push({key:o.id,kind:broken?'open':'leak',x:o.x,y:ey,w:broken?o.w*.85:o.w*(o.cover!=null?1.6:.9),hgt:broken?o.h*k*.55:4*U,rate:v.rate*(broken?34:110)*(o.w>200*U?2:1),vel:v.vel,den:v.den,vol:v.vol,rgb:v.steam>.3?[205,203,198]:broken?v.rgb:v.rgb.map((c,j)=>c*.45+[120,117,112][j]*.55),glow:v.flame>.05?.9:v.glow*.25,pulse:v.pulse,alpha:broken?1:.5,cool:v.col==='white'?.1:.35});total+=v.rate*(broken?1:.3);}
   });
   {const bx=B.bldg||{x0:B.ridge?B.ridge.x0-150*U:0,x1:B.ridge?B.ridge.x1+150*U:B.W};const ey=(B.eaves&&B.eaves[0]?B.eaves[0].y:B.ridge?B.ridge.y+60*U:0);
-   const flY=f=>{const F=(B.floors||[]).find(x=>x.f===f);return F?F.y0:ey;};
+   // a low plume starts at that floor's band on this picture; a side with no basement band (basement below grade there) starts at grade
+   const flY=f=>{const F=(B.floors||[]).find(x=>x.f===f);if(F)return F.y0;const F1=(B.floors||[]).find(x=>x.f==='1');return B.grade||(F1?F1.y1:ey);};
    for(const key in hid){const g=hid[key],rel=g.rel;
      // low (floor 1 / basement) openings: start at the head of that floor just outside the corner, so the plume rises past the eave instead of being born above it
      const x=rel==='left'?(g.fk==='lo'?bx.x0-14*U:bx.x0+(bx.x1-bx.x0)*.06):rel==='right'?(g.fk==='lo'?bx.x1+14*U:bx.x1-(bx.x1-bx.x0)*.06):g.rx/g.r;

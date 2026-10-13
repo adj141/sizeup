@@ -4,7 +4,7 @@ delete require.cache[require.resolve('/workspace/sizeup/src/model.js')];const M0
 // Baselines: every scenario is compared with the Phase 1 model (base/model.js), EXCEPT basement-origin fires, which the basement smoke fix
 // (Oct 11, 2026) deliberately changed: a slow basement-to-attic chase (NIOSH 2018-154, teaching rate) moves attic smoke values. Those are compared
 // with base/model.basementfix.js, a snapshot of the model at that fix, and are also required to DIFFER from Phase 1 (so the change stays deliberate).
-const MB=require('./base/model.basementfix.js');
+const MB=require('./base/model.eavefix-oct13.js'); // Oct 13 eave fix: slower basement-to-attic chase (CHASE_K .0025 -> .0012); was base/model.basementfix.js
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m);}};
 function scn(b,o){return{format:'sizeup-scenario',v:2,sceneId:b.id,origin:o.origin,fuel:o.fuel||'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:o.occ||'random',wind:o.wind||{dir:'calm',spd:0},glass:'fails',seed:o.seed,actions:[],tNow:0,
   companies:M0.PRESETS.generic.companies(),presetName:'generic',env:o.env,windShift:o.ws||null,...(o.command?{command:o.command}:{})};}
