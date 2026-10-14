@@ -61,6 +61,8 @@ const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'A
   B:{img:'house-b',illustrated:true,W:1000,H:546,stories:2,grade:494,
    floors:[{f:'Roof',y0:0,y1:46},{f:'Attic',y0:46,y1:146},{f:'2',y0:146,y1:262},{f:'1',y0:262,y1:440},{f:'B',y0:440,y1:494}],
    bldg:{x0:200,x1:760},eaves:[{x0:200,x1:252,y:146},{x0:708,x1:760,y:146}],eaveVents:[{x:480,w:40,y:104,kind:'gable'}],ridge:{x0:470,x1:490,y:46},roofSpots:{},
+   hideZones:['gar'], // the 1-story garage wing is on the D end, entirely behind the house from Side B
+  
    zx:{br4:[200,480],br1:[480,760]},zc:{liv:620,foy:620,kit:340,br1:620,br2:560,br3:500,br4:340,hall2:480,bsmt:380,gar:480,attic:480},
    desc:'Side B (left as you face the front): gable end, 2 stories, basement window at the rear corner as the grade drops. Overhead power lines from a pole to the service mast. Electric meter. Front porch at the A end.'},
   C:{img:'house-c',illustrated:true,W:1285,H:546,stories:3,grade:494,walkout:true,

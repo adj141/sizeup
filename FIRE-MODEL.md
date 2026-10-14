@@ -54,6 +54,8 @@ The building has four sides: **A** (front), **B** (left as you face A), **C** (r
 
 **Rendering per side.** The picture shows the side you are looking at, on the same drill clock. Smoke and fire are drawn from that side's openings, with the eave rules of section 4h applied to that side's own eave or gable vents. Smoke from openings on the other sides is drawn as **one plume per hidden side**, placed toward that side: from the front, Side B shows at the left edge of the building at eave height, Side D at the right edge, and Side C behind the ridge over the room it comes from (as seen from the side you stand on). Openings that are only leaking around a closed frame count at 0.15× their rate; an opening at grade or basement level (rooms on floor 1 or B) only shows over the roof when its diluted rate is above 0.15, others above 0.05. The plume is one density step lighter than its source, 40% blended toward a grey sky, at 0.38 opacity and a capped rate. [Simplification; drawing only, not the model.] *Why (Oct 11, 2026 fix):* earlier builds drew one dense ridge plume per hidden opening, copying the basement's density, so a basement fire looked like heavy roof/attic smoke from the front within seconds of the basement filling.
 
+**Hidden wings (Oct 13 garage fix) [Drawing simplification].** A low wing that is completely behind the building from a side (the house's 1-story garage, on the D end, seen from Side B) draws no plume of its own on that side; its smoke shows there only once the attic has smoke, from the gable vent and eaves. From a side where such a wing has its own roof (Side A), smoke from its far-side openings rises from the wing's roof, not the main ridge.
+
 ## 2. What each room tracks
 
 | State | Meaning | Range |

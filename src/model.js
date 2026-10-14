@@ -104,7 +104,7 @@ function viewOf(B,side){side=side||'A';const V=(B.views||{})[side]||{};const on=
   if(side==='A')return{...B,side,has:true,openings:ops,zx:V.zx,stories:V.stories||B.stories,desc:V.desc||''};
   if(!V.W)return{side,has:false,desc:V.desc||'',stories:V.stories||B.stories,id:B.id,name:B.name};
   const mid=(V.bldg.x0+V.bldg.x1)/2;
-  return{...B,side,has:true,W:V.W,H:V.H,img:V.img,illustrated:!!V.illustrated,floors:V.floors,bldg:V.bldg,eaves:V.eaves||[],eaveVents:V.eaveVents||[],ridge:V.ridge,roofSpots:V.roofSpots||{},zx:V.zx,
+  return{...B,side,has:true,W:V.W,H:V.H,img:V.img,illustrated:!!V.illustrated,floors:V.floors,bldg:V.bldg,eaves:V.eaves||[],eaveVents:V.eaveVents||[],ridge:V.ridge,roofSpots:V.roofSpots||{},hideZones:V.hideZones||[],zx:V.zx,
     zones:B.zones.map(z=>{const c=V.zc&&V.zc[z.id]!=null?V.zc[z.id]:mid;return{...z,x0:c-70,x1:c+70};}),openings:ops,stories:V.stories||B.stories,desc:V.desc||''};}
 
 function create(B,scn){

@@ -19,7 +19,10 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
   // openings on the other sides: one diluted plume per hidden side, placed toward that side (B/D at the building edge, C behind the ridge
   // over the room it comes from). Gap leakage counts at 0.15x; grade and basement-level openings only clear the roofline when strongly pushing. [simplification]
   const hid={},SO=['A','B','C','D'],vi=SO.indexOf(side);
-  const hidSmoke=(o,v)=>{if(!B.ridge)return;const z=B.zones.find(z=>z.id===o.zone);if(!z)return;const broken=v.state!=='closed';const r=v.rate*(broken?1:.15);
+  const hidSmoke=(o,v)=>{if(!B.ridge)return;const z=B.zones.find(z=>z.id===o.zone);if(!z)return;
+    // Oct 13 (garage peak fix): a wing that is completely hidden behind the building from this side (house garage from Side B) shows no plume
+    // of its own here; its smoke can reach this picture only through the attic (gable vent / eaves, drawn by the attic rules).
+    if(B.hideZones&&B.hideZones.includes(z.id))return;const broken=v.state!=='closed';const r=v.rate*(broken?1:.15);
     const low=o.level==='B'||z.floor==='B'||z.floor==='1';if(r<=(low?.15:.05))return;
     const hs0=SO.includes(o.side)?o.side:'C';const rel0=vi<0||hs0==='Roof'?'behind':(SO.indexOf(hs0)-vi+4)%4===2?'behind':'side';
     // Oct 13 (basement eave fix): a plume over the ridge from the far side needs a real column: an open/failed opening above grade.
@@ -28,8 +31,9 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     const hs=SO.includes(o.side)?o.side:'C';const rel=vi<0||hs==='Roof'?'behind':(SO.indexOf(hs)-vi+4)%4===1?'left':(SO.indexOf(hs)-vi+4)%4===3?'right':'behind';
     // left/right plumes come up the building corner from the floor they leave (Oct 13 fix: a floor-1 window around the corner used to
     // start its plume at the top eave, so a dark cloud sat above the 2nd-floor roofline). 'behind' stays at the ridge.
-    const fk=rel==='behind'?'':low?'lo':'hi';const key=rel+fk;
-    const g=hid[key]||(hid[key]={rel,fk,fl:z.floor,r:0,rx:0,den:0,vel:0,vol:0,rgb:[0,0,0]});if(low&&(z.floor==='B'||o.level==='B'))g.fl='B';g.r+=r;g.rx+=r*(z.x0+z.x1)/2;g.den=Math.max(g.den,v.den);g.vel=Math.max(g.vel,v.vel);g.vol=Math.max(g.vol,v.vol);v.rgb.forEach((c,k)=>g.rgb[k]+=c*r);};
+    const spot=rel==='behind'&&low&&B.roofSpots&&B.roofSpots[z.id];// a low wing with its own roof on this picture: plume rises from that roof, not the main ridge
+    const fk=rel==='behind'?(spot?':'+z.id:''):low?'lo':'hi';const key=rel+fk;
+    const g=hid[key]||(hid[key]={rel,fk,spot,fl:z.floor,r:0,rx:0,den:0,vel:0,vol:0,rgb:[0,0,0]});if(low&&(z.floor==='B'||o.level==='B'))g.fl='B';g.r+=r;g.rx+=r*(z.x0+z.x1)/2;g.den=Math.max(g.den,v.den);g.vel=Math.max(g.vel,v.vel);g.vol=Math.max(g.vol,v.vol);v.rgb.forEach((c,k)=>g.rgb[k]+=c*r);};
   B.openings.forEach((o,i)=>{const v=ov[o.id];if(!v)return;const seed=(i*0.137)%1;
     if(o.hidden){hidSmoke(o,v);return;}
     const top=o.y-o.h/2;const broken=v.state!=='closed';
@@ -51,11 +55,11 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
    const flY=f=>{const F=(B.floors||[]).find(x=>x.f===f);if(F)return F.y0;const F1=(B.floors||[]).find(x=>x.f==='1');return B.grade||(F1?F1.y1:ey);};
    for(const key in hid){const g=hid[key],rel=g.rel;
      // low (floor 1 / basement) openings: start at the head of that floor just outside the corner, so the plume rises past the eave instead of being born above it
-     const x=rel==='left'?(g.fk==='lo'?bx.x0-14*U:bx.x0+(bx.x1-bx.x0)*.06):rel==='right'?(g.fk==='lo'?bx.x1+14*U:bx.x1-(bx.x1-bx.x0)*.06):g.rx/g.r;
-     const y=rel==='behind'?B.ridge.y+30*U:g.fk==='lo'?flY(g.fl==='B'?'B':'1'):ey;
+     const x=g.spot?g.spot.x:rel==='left'?(g.fk==='lo'?bx.x0-14*U:bx.x0+(bx.x1-bx.x0)*.06):rel==='right'?(g.fk==='lo'?bx.x1+14*U:bx.x1-(bx.x1-bx.x0)*.06):g.rx/g.r;
+     const y=g.spot?g.spot.y:rel==='behind'?B.ridge.y+30*U:g.fk==='lo'?flY(g.fl==='B'?'B':'1'):ey;
      const rgb=g.rgb.map((c,k)=>c/g.r*.6+[150,148,145][k]*.4);
      const lo=g.fk==='lo';// a low plume seen around the corner is thinner by the time it clears the roof [drawing simplification]
-     vis.emitters.push({key:'r'+key,kind:'rear',x,y,w:(rel==='behind'?200:90)*U,hgt:10*U,rate:Math.min(lo?4:8,g.r*(lo?6:12)),vel:Math.min(2,g.vel),den:Math.max(0,g.den-1),vol:Math.min(2,g.vol),rgb,alpha:lo?.3:.38,cool:.5});total+=g.r*(lo?.3:.6);}}
+     vis.emitters.push({key:'r'+key,kind:'rear',x,y,w:(rel==='behind'&&!g.spot?200:90)*U,hgt:10*U,rate:Math.min(lo||g.spot?4:8,g.r*(lo?6:12)),vel:Math.min(2,g.vel),den:Math.max(0,g.den-1),vol:Math.min(2,g.vol),rgb,alpha:lo?.3:.38,cool:.5});total+=g.r*(lo?.3:.6);}}
   for(const oid in S.o){const o=S.o[oid];if(o.type!=='roof'||o.state==='closed')continue;const v=ov[oid];const sp=B.roofSpots&&(B.roofSpots[o.over]||B.roofSpots[o.zone]);if(!sp||!v)continue;
     vis.emitters.push({key:oid,kind:'roof',x:sp.x,y:sp.y,w:70*U,hgt:6*U,rate:v.rate*30+2,vel:Math.max(1,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,glow:v.flame>.05?.8:0,cool:.4});total+=v.rate;
     const az=S.z[o.zone];if(az&&az.ign&&!az.out&&az.q>.35){const fh=(60+az.q*110)*U;vis.flames.push({x:sp.x,y:sp.y+8*U,w:70*U,h:fh,i:.8+az.q*.4,seed:.77,lean,asp:1.2});vis.lights.push({x:sp.x,y:sp.y,r:160*U,i:.6*az.q});}}
