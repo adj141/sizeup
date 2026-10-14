@@ -19,7 +19,7 @@ const STRUCT={on:true,       // tests switch this off to prove the rest of the m
   load:4500,                 // TV: structural fuel keeps a room burning roughly an hour or more after the contents are spent (then decay)
   onset:60,                  // TV: finish and framing counted as involved 1 min after flashover (flashover = all exposed combustibles burning; framing is exposed once the finish fails)
   ceilBreach:600,            // TV: 1/2 in. gypsum ceiling fails ~10 min after flashover (interpolated below the 13-26 min type X range)
-  // Floor over a basement fire (Oct 13 fix): the clock runs only while the basement hot layer is severe (T >= sevT, the model's own threshold
+  // Floor over a basement fire (Oct 13 fix; Oct 14: clock counts from basement flashover, matching the cited data): warning when the hot layer is severe (T >= sevT, the model's own threshold
   // for igniting exposed fuel, i.e. the joists), not from ignition. UL/NIST ARRA Appendix C: earlier unsprinklered tests flashed at 7:09 and
   // 5:15 and collapsed at 11:30 and 8:34 (4:21 and 3:19 later); Dutchess County I-joist test flashed ~2 min, collapsed ~4 min (2:00 later);
   // UL full-scale: collapse followed once the floor system became involved.
@@ -27,6 +27,10 @@ const STRUCT={on:true,       // tests switch this off to prove the rest of the m
   floor:{engineered:{warn:0,breach:199,collapse:199},   // warn as soon as the floor is exposed to a severe fire (no reliable warning signs);
                                                          // burn-through/collapse 3:19 of severe exposure (middle of the 2:00-4:21 cited spread)
          dimensional:{warn:0,breach:496,collapse:496}}}; // TV: 3:19 + 4:57 (UL full-scale dimensional avg 11:57 minus engineered avg 7:00)
+/* Basement glass (Oct 14 2026). fallT: model hot-layer T (1.0 ~ flashover) at which basement glass starts to fall out: teaching mapping of the
+   cited 20-35 kW/m2 fallout flux (near-flashover upper layer). k: accumulation rate (TV, ~15-30 s at a flashover-level layer).
+   well: small window-well windows heat more slowly (TV). */
+const BGLASS={on:true,fallT:.9,k:10,well:.6}; // on=false restores the pre-Oct-14 rule (older regression suites)
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004,floor:.02}; // floor: the floor assembly over a basement (same leak as a ceiling)
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
 const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,
@@ -530,9 +534,9 @@ function step(S){const dt=1;
    for(const bz of S.B.zones){const z=zs[bz.id];if(!z.ign||z.out){continue;}if(z.t0==null)z.t0=S.t;
     if(at&&!bz.attic&&z.flashed&&!z.suppressed&&z.q>.5&&!z.ceilGone&&S.t-z.tFlash>=STRUCT.ceilBreach){const cs=S.B.conns.filter(q=>q.type==='ceiling'&&(q.a===bz.id||q.b===bz.id)&&S.c[q.id].state!=='breached');
       if(cs.length){z.ceilGone=S.t;cs.forEach(q=>S.c[q.id].state='breached');ev(S,'collapse',`Ceiling breach: the gypsum ceiling in ${zname(S,bz.id)} has burned through and fire is into the ${at.name.toLowerCase()} above. Ceiling collapse hazard in that room.`,{zone:bz.id,src:'RISE-GYP'});}}
-    if(bz.floor==='B'){if(z.T>=STRUCT.sevT&&!z.suppressed)z.floorExp=(z.floorExp||0)+dt;if(!z.floorExp)continue;const age=z.floorExp;const fl=S.B.conns.filter(q=>q.type==='floor'&&(q.a===bz.id||q.b===bz.id));if(!fl.length||z.suppressed)continue;
+    if(bz.floor==='B'){const sev=z.T>=STRUCT.sevT&&!z.suppressed;if(sev&&z.flashed)z.floorExp=(z.floorExp||0)+dt;if(!sev&&!z.floorExp)continue;const age=z.floorExp||0;const fl=S.B.conns.filter(q=>q.type==='floor'&&(q.a===bz.id||q.b===bz.id));if(!fl.length||z.suppressed)continue;
       const nm=S.B.floorSystem==='dimensional'?'dimensional-lumber':'engineered (I-joist)';
-      if(age>fsys.warn&&!z.floorWarn){z.floorWarn=S.t;ev(S,'collapse',`Collapse warning: the basement fire is now hot enough to involve the unprotected ${nm} floor above it. In UL tests these floors collapsed within minutes of the basement fire becoming severe, with no reliable warning signs. Don't operate on top of it.`,{src:'UL-BSMT'});}
+      if(sev&&!z.floorWarn){z.floorWarn=S.t;ev(S,'collapse',`Collapse warning: the basement fire is now hot enough to involve the unprotected ${nm} floor above it. In UL tests these floors collapsed within minutes of the basement fire becoming severe, with no reliable warning signs. Don't operate on top of it.`,{src:'UL-BSMT'});}
       if(age>=fsys.breach&&!z.floorGone){z.floorGone=S.t;fl.forEach(q=>S.c[q.id].state='breached');ev(S,'collapse',`Floor burn-through: fire has come up through the floor over the basement.`,{src:'UL-SSEL'});}
       if(age>=fsys.collapse&&!z.floorCollapse){z.floorCollapse=S.t;ev(S,'collapse',`Floor collapse likely now: the ${nm} floor over the basement has been exposed to the severe basement fire for ${fmtS(age)} (UL tests: collapse 2:00-4:21 after basement flashover for I-joists; dimensional lumber lasts longer).`,{src:'UL-BSMT'});}}}}
   // ignition of other compartments
@@ -556,7 +560,13 @@ function step(S){const dt=1;
   // window failure from heat (timing is a simplification)
   for(const oid in S.o){const o=S.o[oid];if(o.type!=='window'||o.state!=='closed')continue;const z=zs[o.zone];
     // glass heats from the hot gas layer and fails after enough accumulated exposure; 'hold' keeps glass intact unless the room is very hot
-    const hold=S.scn.glass==='hold';const g=hold?Math.max(0,z.T-.6)*(z.T>.72?1:0):Math.max(0,z.T-.3)*1.0+Math.max(0,z.T-.6)*1.5;
+    const hold=S.scn.glass==='hold';const bo=S.B.openings.find(q=>q.id===oid);const below=bo&&(bo.level==='B'||(S.B.zones.find(q=>q.id===o.zone)||{}).floor==='B');
+    // basement glass (Oct 14 fix): keyed to the basement's own hot layer. Glass cracks at a 60-90 C pane centre-to-edge difference but
+    // falls out (opens a vent) only at roughly 20-35 kW/m2 incident flux, i.e. a near-flashover hot layer [GLASS]; in the FSRI/ISFSI basement
+    // experiments the fires stayed ventilation-limited with the windows as set [FSRI-BSMT]. A small window-well window heats more slowly (TV).
+    if(BGLASS.on&&below&&!hold){const g=Math.max(0,z.T-BGLASS.fallT)*BGLASS.k*(bo.well?BGLASS.well:1);
+      if(g>0){o.fail+=g*dt;if(o.fail>o.failAt*.35){o.state='failed';o.selfFailed=true;ev(S,'fail',`${oname(S,oid)} has failed from heat and is now venting the fire.`,{zone:o.zone,src:'GLASS'});}}continue;}
+    const g=hold?Math.max(0,z.T-.6)*(z.T>.72?1:0):Math.max(0,z.T-.3)*1.0+Math.max(0,z.T-.6)*1.5;
     if(g>0){o.fail+=g*dt;if(o.fail>o.failAt*.35){o.state='failed';o.selfFailed=true;ev(S,'fail',`${oname(S,oid)} has failed from heat and is now venting the fire.`,{zone:o.zone});}}}
   // occupant tenability (FED-like dose; simplification of tenability criteria) [FSRI-VV 4.9, CBYD]
   if(S.victim&&S.victim.status==='inside'){const z=zs[S.victim.zone];S.victim.dose+=dt*(Math.max(0,z.T-.25)*.012+Math.max(0,z.s-.4)*.009);if(S.victim.dose>=1&&!S.victim.untenable){S.victim.untenable=S.t;}}
@@ -816,6 +826,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{BGLASS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

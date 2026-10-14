@@ -1,7 +1,7 @@
 // Structural fuel fix (Oct 13 2026, AJ-approved). Contents burnout does not end a fire; timings cited in FIRE-MODEL.md "Structural fuel and collapse".
 global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++;console.log('  ok:',m);}else{fail++;console.log('  FAIL:',m);}};
-const mk=(b,origin,o={})=>M.create(b,{format:'sizeup-scenario',v:2,sceneId:b.id,origin,fuel:o.fuel||'modern',preburn:0,openings:{},doors:o.doors||{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:7,companies:M.PRESETS.generic.companies(),presetName:'generic'});
+const mk=(b,origin,o={})=>M.create(b,{format:'sizeup-scenario',v:2,sceneId:b.id,origin,fuel:o.fuel||'modern',preburn:0,openings:o.openings||{},doors:o.doors||{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:7,companies:M.PRESETS.generic.companies(),presetName:'generic'});
 const until=(S,t)=>M.run(S,t-S.t);const burning=S=>Object.entries(S.z).filter(([k,z])=>z.ign&&!z.out&&z.q>.05).map(([k])=>k);
 const evT=(S,re)=>{const e=S.events.find(e=>re.test(e.msg));return e?e.t:null;};const mmss=t=>t==null?'-':`${Math.floor(t/60)}:${String(Math.round(t%60)).padStart(2,'0')}`;
 const ST=M.STRUCT;
@@ -13,27 +13,27 @@ ok(ST.floor.dimensional.collapse===496,'dimensional: 3:19 + 4:57 (UL full-scale 
 ok(ST.sevT===.82,'severity threshold = model threshold for igniting exposed fuel (the joists)');
 ok(ST.ceilBreach>=360&&ST.ceilBreach<13*60,'gypsum ceiling burn-through 6-13 min after flashover (teaching value below the 13-26 min type X range)');
 ok(ST.onset>0&&ST.onset<=120,'structure counted as involved within 2 min of flashover (minutes, not tens of minutes)');
-for(const [bid,origin,fuel] of [['house','liv','modern'],['house','bsmt','modern'],['mixed','stL','modern'],['mixed','a2L','modern']]){
-  const b=BLD[bid];const S=mk(b,origin,{fuel});console.log(`# unattended ${bid}/${origin} (${fuel} contents)`);
+for(const [bid,origin,fuel,op] of [['house','liv','modern'],['house','bsmt','modern',{bw1:'open'}],['mixed','stL','modern'],['mixed','a2L','modern']]){
+  const b=BLD[bid];const S=mk(b,origin,{fuel,openings:op});console.log(`# unattended ${bid}/${origin} (${fuel} contents${op?', Side C basement window open before ignition (UL/NIST ARRA openings-open case)':''})`);
   until(S,30*60);const tf=S.z[origin].tFlash,ts=S.z[origin].structural;
   ok(tf!=null&&ts!=null&&ts-tf>=0&&ts-tf<=120,`structure involved ${mmss(ts)}, ${ts-tf} s after flashover at ${mmss(tf)} (cited: flashover involves all exposed fuel; onset ${ST.onset} s)`);
   ok(ts<20*60,`structural involvement well before the 30 min checkpoint (${mmss(ts)})`);
-  const b15=(until(S,15*60),0);const S2=mk(b,origin,{fuel});until(S2,15*60);const n15=burning(S2).length;
+  const b15=(until(S,15*60),0);const S2=mk(b,origin,{fuel,openings:op});until(S2,15*60);const n15=burning(S2).length;
   const n30=burning(S).length;const r30=burning(S).includes(origin)||S.z[origin].ign&&!S.z[origin].out;
   ok(r30&&n30>1,`still burning at 30 min (${n30} spaces burning, origin ${S.z[origin].out?'out':'burning'})`);
   until(S,60*60);const n60=burning(S).length;
   ok(n60>=2&&n60>=n15&&!S.z[origin].out,`still burning and spread at 60 min (${n15} spaces at 15 min -> ${n30} at 30 -> ${n60} at 60)`);
   const at=b.zones.find(z=>z.attic).id;ok(S.z[at].ign,`fire has reached the ${b.zones.find(z=>z.attic).name.toLowerCase()} by 60 min`);
   ok(!S.events.some(e=>/burned itself out/.test(e.msg)),'no "burned itself out" outcome');}
-console.log('# basement floor over a basement fire');
-{const S=mk(BLD.house,'bsmt');let tSev=null;for(let t=0;t<15*60;t++){if(tSev==null&&S.z.bsmt.T>=ST.sevT)tSev=S.t;M.step(S);}
+console.log('# basement floor over a basement fire (Side C basement window open before ignition; with everything closed the fire stays ventilation-limited, FSRI-BSMT)');
+{const S=mk(BLD.house,'bsmt',{openings:{bw1:'open'}});let tSev=null;for(let t=0;t<15*60;t++){if(tSev==null&&S.z.bsmt.T>=ST.sevT)tSev=S.t;M.step(S);}
  const tf=S.z.bsmt.tFlash,w=evT(S,/^Collapse warning/),bt=evT(S,/^Floor burn-through/);
  ok(w!=null&&Math.abs(w-tSev)<=2,`house (engineered, assumed): collapse warning ${mmss(w)} when the basement became severe (${mmss(tSev)}), not at a fixed time from ignition`);
  ok(bt!=null&&bt-tf>=120&&bt-tf<=261,`burn-through ${mmss(bt)}, ${mmss(bt-tf)} after basement flashover ${mmss(tf)} (cited 2:00-4:21)`);
  ok(evT(S,/^Floor collapse likely/)===bt,'collapse likely with the burn-through (E119: flame passage 6:00, collapse 6:03)');
  ok(S.B.conns.filter(c=>c.type==='floor').every(c=>S.c[c.id].state==='breached'),'floor connections breached');}
-{const b={...BLD.house,floorSystem:'dimensional'};const S=mk(b,'bsmt');until(S,20*60);const w=evT(S,/^Collapse warning/),c=evT(S,/^Floor collapse likely/);
- ok(w!=null&&c!=null&&c-w>=495&&c-w<=520,`dimensional lumber: warning ${mmss(w)}, collapse likely ${mmss(c)} (8:16 of severe exposure, teaching value)`);}
+{const b={...BLD.house,floorSystem:'dimensional'};const S=mk(b,'bsmt',{openings:{bw1:'open'}});until(S,20*60);const w=evT(S,/^Collapse warning/),c=evT(S,/^Floor collapse likely/);
+ ok(w!=null&&c!=null&&c-S.z.bsmt.tFlash>=495&&c-S.z.bsmt.tFlash<=520,`dimensional lumber: warning ${mmss(w)}, collapse likely ${mmss(c)} (8:16 of severe exposure, teaching value)`);}
 {const S=mk(BLD.house,'bsmt',{doors:{'kit-bsmt':'open'}});until(S,15*60);
  ok(!S.events.some(e=>/^Floor burn-through/.test(e.msg))||S.z.bsmt.flashed,'stair door open: basement fire stays ventilation-limited and never severe, so the floor clock does not run (limit: see FIRE-MODEL.md)');}
 console.log('# ceiling burn-through into the attic');

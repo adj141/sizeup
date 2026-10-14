@@ -38,7 +38,7 @@ const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'A
   {id:'w2b4',extra:true,name:'Side B floor 2 window (Bedroom 4)',type:'window',side:'B',zone:'br4',hidden:true,x:320,y:203,w:44,h:74},
   {id:'w1bB',extra:true,name:'Side B floor 1 window (Living)',type:'window',side:'B',zone:'liv',hidden:true,x:640,y:338,w:48,h:76},
   {id:'w1bk',extra:true,name:'Side B floor 1 window (Kitchen)',type:'window',side:'B',zone:'kit',hidden:true,x:320,y:338,w:48,h:76},
-  {id:'bwB',extra:true,name:'Side B basement window',type:'window',side:'B',zone:'bsmt',hidden:true,level:'B',x:300,y:468,w:60,h:30},
+  {id:'bwB',extra:true,name:'Side B basement window',type:'window',side:'B',zone:'bsmt',hidden:true,level:'B',well:true,x:300,y:468,w:60,h:30},
   {id:'w2eD',extra:true,name:'Side D floor 2 window (Primary bedroom)',type:'window',side:'D',zone:'br3',hidden:true,x:470,y:196,w:44,h:70},
   {id:'gsdD',extra:true,name:'Side D garage side door',type:'door',side:'D',zone:'gar',hidden:true,x:641,y:396,w:46,h:110},
   {id:'gwD',extra:true,name:'Side D garage double window',type:'window',side:'D',zone:'gar',hidden:true,x:400,y:367,w:120,h:50}],

@@ -1,6 +1,6 @@
 // Oct 13 (2): basement fire must not put smoke at the 2nd-floor eaves, or floating plumes, without a model reason. Run: node basement-eave.js
 const {chromium}=require('playwright-core');const fs=require('fs'),cp=require('child_process');
-global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.STRUCT.on=false;
+global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.STRUCT.on=false;M.BGLASS.on=false;
 const V=eval(fs.readFileSync('/workspace/sizeup/src/visual.js','utf8')+';SizeupVisual');
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('\n# '+n);
 const B=BLD.house,OUT='/workspace/sizeup/screens/basement-eave-oct13/';
@@ -21,7 +21,7 @@ for(const door of ['closed','open']){const S=mk(door);let bad=[],float=[],ridge=
  const e=M.eavesVis(S,'A');ok(e&&e.rate<.15,'seep eave smoke is faint (rate '+(e&&e.rate.toFixed(3))+')');}
 (async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
  const shot=async(url,side,t,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
-  await p.evaluate(async t=>{const u=window.__sizeup,M=u.M;if(M.STRUCT)M.STRUCT.on=false;/* eave-fix regression: structural fuel off (Oct 13; floor burn-through at 6:00 legitimately adds smoke upstairs), see structure.js */await u.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'bsmt',fuel:'modern',preburn:t,openings:{},doors:{'kit-bsmt':'closed'},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});u.A.playing=false;},t);
+  await p.evaluate(async t=>{const u=window.__sizeup,M=u.M;if(M.STRUCT)M.STRUCT.on=false;if(M.BGLASS)M.BGLASS.on=false;/* eave-fix regression: structural fuel off (Oct 13; floor burn-through at 6:00 legitimately adds smoke upstairs), see structure.js */await u.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'bsmt',fuel:'modern',preburn:t,openings:{},doors:{'kit-bsmt':'closed'},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});u.A.playing=false;},t);
   await p.evaluate(s=>{window.__sizeup.setSide(s);window.__sizeup.syncUI();},side);await p.addStyleTag({content:'.toast{display:none!important}'});await p.waitForTimeout(3000);await p.locator('.slot .stage').screenshot({path:file});await p.close();};
  const lum=(a,b)=>+cp.execFileSync('python3',['-c',`
 from PIL import Image,ImageStat
