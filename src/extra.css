@@ -245,3 +245,17 @@ select.need,button.need{outline:3px solid var(--amber);outline-offset:2px}
 @media (min-width:960px){#s4 .board .left{position:sticky;top:var(--tb,58px);max-height:calc(100vh - var(--tb,58px) - 8px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
   #s4 .board .left .slot{position:static;padding-bottom:0}}
 @media (max-width:959px){#s4 .board .left{display:contents}#s4 .board .left .slot{box-shadow:0 8px 12px -8px rgba(0,0,0,.8)}}
+/* Oct 13 pick lists: compact company rows, one panel open at a time */
+#coList{display:grid;gap:6px}
+.corow2{padding:0;gap:0;overflow:hidden}.corow2.open{border-color:#4a5260}
+.cohead{display:flex;align-items:center;gap:8px;width:100%;min-height:48px;padding:8px 10px;background:none;border:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.cohead b{min-width:34px}.cohead .coname{color:#9ca2aa;font-size:13px;white-space:nowrap}.cohead .cosum{flex:1;min-width:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cohead .cost{margin-left:auto}.cochev{color:#9ca2aa;transition:transform .15s}.corow2.open .cochev{transform:rotate(90deg)}
+.copanel{display:grid;gap:8px;padding:0 10px 10px;border-top:1px solid #2c323b}.copanel[hidden]{display:none}.copanel .cometa{margin-top:8px}
+.coquick{display:grid;grid-template-columns:1fr 1fr;gap:6px}.cotk{text-align:left;min-height:46px;padding:6px 10px;display:block;height:auto}.cotk small{display:block;color:#9ca2aa;font-size:11px;font-weight:400}
+.cotk.on,.cochip.on{border-color:#ffb300;color:#ffcc80}
+.comore summary{cursor:pointer;color:#90caf9;font-size:14px;padding:4px 0}.comore[hidden]{display:none}
+.cogrp .l,.cowhere .l{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#9ca2aa;margin:8px 0 4px}
+.cochips{display:flex;flex-wrap:wrap;gap:6px}.cochip{background:#1d2025;border:1px solid #2b2f36;color:#f3f3f1;border-radius:18px;min-height:36px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}.cochip:disabled{opacity:.4;cursor:default}
+.copick{background:#0f1114;border:1px solid #2b2f36;border-radius:10px;padding:8px;align-items:center}.copick-h{flex-basis:100%;font-weight:700;font-size:14px}.cowhere{flex-basis:100%}.cowhere:empty{display:none}
+.copick .co-tgt,.copick .co-task{display:none!important}

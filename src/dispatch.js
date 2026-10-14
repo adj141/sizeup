@@ -109,28 +109,59 @@ function optHTML(k,c){const S=A.S;
 function stClass(k){return({enroute:'s-en',staged:'s-st',working:'s-wk',available:'s-av',command:'s-cmd'})[k]||'';}
 // the guided transfer card (Command fundamentals with its transfer part on) handles the chief; otherwise the chief's row offers a one-step radio transfer
 function bcRadioBtn(c){const S=A.S;return c.type==='chief'&&S.t>=c.arriveAt&&!M.bcInCommand(S,c)&&!(S.cmd&&S.cmd.sub.xfer);}
+// Company board (Oct 13 pick lists): one compact row per company; tapping a row opens one panel at a time with
+// Release/Withdraw, 4 quick tasks, "More tasks" grouped by kind, and a "where?" row for tasks that need a target.
+// The legacy controls (.co-task/.co-tgt/.co-opt/.co-go) stay inside the panel (task and target selects hidden) so the order logic is unchanged.
+const CO_GROUPS=[['fire','Fire attack',['line','doorcontrol','expo']],['search','Search',['search1','search2']],['vent','Ventilation',['hvent','vvent','ppv','forcegarage','pullceiling']],['water','Water supply',['supply']],['sup','Support',['ladder','rit','lights','rehab']]];
+const CO_QUICK={engine:['line','supply','search1','doorcontrol'],ladder:['search1','vvent','hvent','ladder'],rescue:['search1','rit','hvent','search2'],medic:['rehab','line','search1','lights']};
+const grpOf=k=>(CO_GROUPS.find(g=>g[2].includes(k))||[0,'Support'])[1];
+// only tasks the company can do right now: right type/equipment, and at least one target still open (e.g. not every side laddered)
+function coNow(c){return coTaskList(c).filter(k=>{const h=tgtHTML(k,c);if(h==null)return true;const d=document.createElement('select');d.innerHTML=h;return[...d.options].some(o=>o.value&&!o.disabled);});}
+function coOpen(id){A.coOpen=A.coOpen===id?null:id;renderCompanies();}
+function coPick(r,k){const ts=r.querySelector('.co-task');if(!ts)return;ts.value=k;ts._touched=true;const tg=r.querySelector('.co-tgt'),op=r.querySelector('.co-opt');tg._touched=false;op._touched=false;tg._h=null;op._h=null;tg.value='';renderCompanies();
+  // no target, no option and no TLO pickers: assign at once
+  if(tg.hidden&&op.hidden&&!(cmdOn()&&cmdSub('tlo')))r.querySelector('.co-go').click();}
 function renderCompanies(){const S=A.S,el=$('#coList');if(!S||!el)return;const cos=S.cos.slice().sort((a,b)=>a.arriveAt-b.arriveAt);
   const sig=cos.map(c=>c.id+c.type).join(',')+(cmdOn()&&cmdSub('tlo')?'|tlo':'');
-  if(el._sig!==sig){el._sig=sig;el.innerHTML=cos.map(c=>{const tk=coTaskList(c);return`<div class="corow2" data-co="${esc(c.id)}"><div class="cohead"><b>${esc(c.id)}</b><span class="coname">${esc(c.name)}</span><span class="cost"></span></div>
-      <div class="cometa"></div><div class="cotasks"></div>${c.type==='chief'?`<div class="coassign co-bc" hidden><button class="btn primary sm co-xfer">Transfer command to ${esc(c.id)} by radio</button></div>`:''}
-      ${tk.length?`<div class="coassign"><select class="co-task" aria-label="Task for ${esc(c.name)}"><option value="">Assign ${esc(c.id)} to…</option>${tk.map(k=>`<option value="${k}">${esc(M.TASKDEF[k].label)}</option>`).join('')}</select><select class="co-tgt" aria-label="Target for ${esc(c.name)}" hidden></select><select class="co-opt" aria-label="Option for ${esc(c.name)}" hidden></select>${cfTloHTML(c)}<button class="btn ghost sm co-go">Assign</button></div>`:''}</div>`;}).join('');}
-  for(const c of cos){const r=el.querySelector(`.corow2[data-co="${CSS.escape(c.id)}"]`);if(!r)continue;const st=M.coStatus(S,c);const cs=r.querySelector('.cost');
-    if(cs.textContent!==st.txt.split(':')[0]){cs.textContent=st.k==='working'?'Working':st.txt.split(' · ')[0];}cs.className='cost '+stClass(st.k);
+  if(el._sig!==sig){el._sig=sig;el.innerHTML=cos.map(c=>{const tk=coTaskList(c);return`<div class="corow2" data-co="${esc(c.id)}"><button class="cohead" aria-expanded="false"><b>${esc(c.id)}</b><span class="coname">${esc(c.name)}</span><span class="cosum"></span><span class="cost"></span><span class="cochev" aria-hidden="true">›</span></button>
+      <div class="copanel" hidden><div class="cometa"></div><div class="cotasks"></div>${c.type==='chief'?`<div class="coassign co-bc"><button class="btn primary sm co-xfer">Transfer command to ${esc(c.id)} by radio</button></div><div class="muted tiny co-bcnote"></div>`:''}
+      ${tk.length?`<div class="coquick"></div><div class="coassign copick" hidden><div class="copick-h"></div><select class="co-task" aria-label="Task for ${esc(c.name)}" hidden><option value="">Assign ${esc(c.id)} to…</option>${tk.map(k=>`<option value="${k}">${esc(M.TASKDEF[k].label)}</option>`).join('')}</select><select class="co-tgt" aria-label="Target for ${esc(c.name)}" hidden></select><select class="co-opt" aria-label="Option for ${esc(c.name)}" hidden></select><div class="cowhere"></div>${cfTloHTML(c)}<button class="btn ghost sm co-go">Assign</button><button class="btn ghost sm co-cancel">Cancel</button></div><details class="comore"><summary>More tasks</summary><div class="comoreb"></div></details>`:''}</div></div>`;}).join('');}
+  for(const c of cos){const r=el.querySelector(`.corow2[data-co="${CSS.escape(c.id)}"]`);if(!r)continue;const st=M.coStatus(S,c);const cs=r.querySelector('.cost');const open=A.coOpen===c.id;
+    const pill=st.k==='working'?'Working':st.txt.split(' · ')[0];if(cs.textContent!==pill)cs.textContent=pill;cs.className='cost '+stClass(st.k);
+    const pn=r.querySelector('.copanel');if(pn.hidden===open)pn.hidden=!open;r.classList.toggle('open',open);const hd=r.querySelector('.cohead');if(hd.getAttribute('aria-expanded')!==String(open))hd.setAttribute('aria-expanded',open);
+    const sum=st.k==='working'?st.txt.replace(/^Working: /,''):st.k==='enroute'?st.txt:'';const se=r.querySelector('.cosum');if(se.textContent!==sum)se.textContent=sum;
     const free=M.freeCrew(S,c);let meta=`${S.t<c.arriveAt?'Arrives in '+fmt(c.arriveAt-S.t)+' · ':''}${free} of ${c.staff} free`;
     if(c.type==='engine'){const low=!c.supplied&&c.tankLeft<(+c.eq.tank||0)*M.TASK.lowTankFrac;meta+=` · <span class="${low?'water-low':''}">tank ${Math.round(c.tankLeft)}/${c.eq.tank} gal</span>${c.supplied?' · supplied':c.supplyBy?' · supply coming':''}`;}
-    if(c.type==='chief'){meta+=S.t>=c.arriveAt?(M.bcInCommand(S,c)?' · in command (IC)':' · on scene, staged until command is transferred'):'';const xb=r.querySelector('.co-bc');if(xb)xb.hidden=!bcRadioBtn(c);}
+    if(c.type==='chief'){meta+=S.t>=c.arriveAt?(M.bcInCommand(S,c)?' · in command (IC)':' · on scene, staged until command is transferred'):'';const xb=r.querySelector('.co-bc');if(xb)xb.hidden=!bcRadioBtn(c);
+      const nt=r.querySelector('.co-bcnote');const ntx=M.bcInCommand(S,c)?'':S.t<c.arriveAt?'Takes command by radio after arriving.':(S.cmd&&S.cmd.sub.xfer)?'Use the transfer steps in the Command card (radio contact is the first option).':'';if(nt&&nt.textContent!==ntx)nt.textContent=ntx;}
     if(S.cmd&&S.cmd.ic===c.id&&c.type!=='chief')meta+=' · IC';
     const me=r.querySelector('.cometa');if(me._h!==meta){me.innerHTML=meta;me._h=meta;}
     const tl=M.coTasks(S,c);const th=tl.map(x=>{if(x.line){const l=x.line;return`<div class="cot"><span>${esc(x.label)} <small>${esc(lineStatus(l))} · ${M.diaTxt(l.dia)} in. ${l.len} ft</small></span><button class="btn ghost sm co-wd" data-line="${l.id}">Withdraw</button></div>`;}
       const t=x.task;const left=!t.done&&t.end>S.t?` · ${fmt(t.end-S.t)}`:t.done&&M.CONT[t.kind]?' · in place':'';return`<div class="cot"><span>${esc(t.label)}<small>${S.t<t.start?' · starts on arrival':left}</small></span><button class="btn ghost sm co-rel" data-task="${t.id}">Release</button></div>`;}).join('');
     const te=r.querySelector('.cotasks');if(te._h!==th){te.innerHTML=th;te._h=th;}
     const ts=r.querySelector('.co-task');if(!ts)continue;const k=ts.value;const tg=r.querySelector('.co-tgt'),op=r.querySelector('.co-opt');
+    if(open){const now=coNow(c);const q=(CO_QUICK[c.type]||[]).filter(x=>now.includes(x));for(const x of now)if(q.length<4&&!q.includes(x))q.push(x);const rest=now.filter(x=>!q.includes(x));
+      const btn=x=>`<button class="btn ghost cotk${x===k?' on':''}" data-k="${x}">${esc(M.TASKDEF[x].label)}<small>${esc(grpOf(x))}</small></button>`;
+      const qh=q.map(btn).join('')||'<span class="muted tiny">No task this company can take right now.</span>';const qe=r.querySelector('.coquick');if(qe._h!==qh){qe.innerHTML=qh;qe._h=qh;}
+      const mh=CO_GROUPS.map(([g,l,ks])=>{const a=rest.filter(x=>ks.includes(x));return a.length?`<div class="cogrp"><div class="l">${l}</div><div class="cochips">${a.map(x=>`<button class="cochip${x===k?' on':''}" data-k="${x}">${esc(M.TASKDEF[x].label)}</button>`).join('')}</div></div>`:'';}).join('');
+      const mo=r.querySelector('.comore');mo.hidden=!rest.length;const ms=mo.querySelector('summary');const mt=`More tasks (${rest.length})`;if(ms.textContent!==mt)ms.textContent=mt;const mb=r.querySelector('.comoreb');if(mb._h!==mh){mb.innerHTML=mh;mb._h=mh;}}
+    const pk=r.querySelector('.copick');pk.hidden=!k;
     const th2=k?tgtHTML(k,c):null;tg.hidden=th2==null;if(th2!=null)setOpts(tg,th2,k==='line'?defaultLine(lineTargets()):k==='supply'?(S.cos.find(e=>e.type==='engine'&&!e.supplied&&!e.supplyBy)||{}).id:'');
     const oh=k?optHTML(k,c):null;op.hidden=oh==null;if(oh!=null)setOpts(op,oh,k==='supply'?'forward':'auto');cfTloSync(r,c,k,tg);
-    const need=k?needOf(k,c,op.value):0;const busy=k&&free<need;const go=r.querySelector('.co-go');const lab=busy?'Reassign':'Assign';if(go.textContent!==lab)go.textContent=lab;go.classList.toggle('warn',!!busy);
+    // "where?" row: one chip per open target (mirrors the hidden target select)
+    const wh=th2==null?'':`<div class="l">${esc(M.TASKDEF[k].label)}: where?</div><div class="cochips">${[...tg.options].filter(o=>o.value).map(o=>`<button class="cochip${o.value===tg.value?' on':''}" data-tgt="${esc(o.value)}"${o.disabled?' disabled':''}>${esc(o.textContent)}</button>`).join('')}</div>`;
+    const we=r.querySelector('.cowhere');if(we._h!==wh){we.innerHTML=wh;we._h=wh;}
+    const ph=k?esc(M.TASKDEF[k].label):'';const pe=r.querySelector('.copick-h');if(pe.textContent!==ph)pe.textContent=ph;
+    // the Assign button is needed only with an option or TLO picker; otherwise tapping a "where?" chip assigns
+    const go=r.querySelector('.co-go');
+    const need=k?needOf(k,c,op.value):0;const busy=k&&free<need;const lab=busy?'Reassign':'Assign';if(go.textContent!==lab)go.textContent=lab;go.classList.toggle('warn',!!busy);
     go.title=busy?`${c.name} has ${free} free; this needs ${need}. Reassign releases its current tasks.`:'';}}
 $('#coList').addEventListener('change',e=>{const s=e.target.closest('select');if(!s)return;s._touched=!!s.value;s.classList.remove('need');if(s.classList.contains('co-task')){const r=s.closest('.corow2');r.querySelector('.co-tgt')._touched=false;r.querySelector('.co-opt')._touched=false;r.querySelector('.co-tgt')._h=null;r.querySelector('.co-opt')._h=null;}renderCompanies();});
 $('#coList').addEventListener('click',e=>{const r=e.target.closest('.corow2');if(!r)return;const co=r.dataset.co;
+  if(e.target.closest('.cohead')){coOpen(co);return;}
+  const tk=e.target.closest('[data-k]');if(tk){coPick(r,tk.dataset.k);return;}
+  const wt=e.target.closest('[data-tgt]');if(wt){const tg=r.querySelector('.co-tgt');tg.value=wt.dataset.tgt;tg._touched=true;renderCompanies();if(!(cmdOn()&&cmdSub('tlo')))r.querySelector('.co-go').click();return;}
+  if(e.target.closest('.co-cancel')){const ts=r.querySelector('.co-task');ts.value='';ts._touched=false;renderCompanies();return;}
   if(e.target.closest('.co-xfer')){order({kind:'bcxfer',co});return;}
   const wd=e.target.closest('.co-wd');if(wd){order({kind:'withdraw',line:+wd.dataset.line});return;}
   const rl=e.target.closest('.co-rel');if(rl){order({kind:'release',task:+rl.dataset.task});return;}

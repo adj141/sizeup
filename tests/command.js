@@ -83,6 +83,11 @@ async function page(vp){const p=await br.newPage({viewport:vp||{width:1280,heigh
 async function drill(p,o={}){await p.evaluate(async o=>{const M=window.__sizeup.M;await window.__sizeup.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'liv',fuel:'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:o.mode||'solo',hideAnswers:!!o.hide,
   companies:M.PRESETS.generic.companies(),...(o.off?{}:{command:{on:true,sub:{...(o.sub||{})},set:{...(o.set||{})},terms:{}}})});window.__sizeup.A.playing=false;window.__sizeup.syncUI();},o);await p.waitForTimeout(150);}
 const adv=(p,n)=>p.evaluate(n=>{const u=window.__sizeup;const ne=u.advance(n);u.syncUI();u.renderBoard();return ne.length;},n);
+// Oct 13 pick lists: open a company row, tap a task, tap a "where?" chip, then Assign (Assign is needed only when TLO pickers are shown)
+const openCo=async(p,co)=>{const r=`#coList .corow2[data-co="${co}"]`;if(!await p.evaluate(s=>document.querySelector(s).classList.contains('open'),r))await p.click(r+' .cohead');await p.waitForTimeout(40);return r;};
+const pickUI=async(p,co,k,tgt,go)=>{const r=await openCo(p,co);const b=await p.$(`${r} .coquick [data-k="${k}"]`);if(b)await b.click();else{if(!await p.$eval(r+' .comore',d=>d.open))await p.click(r+' .comore summary');await p.click(`${r} .comoreb [data-k="${k}"]`);}await p.waitForTimeout(40);
+  if(await p.$(r+' .cowhere [data-tgt]')){const v=tgt||await p.$eval(r+' .cowhere',w=>(w.querySelector('[data-tgt]:not([disabled])')||{}).dataset.tgt);await p.click(`${r} .cowhere [data-tgt="${v}"]`);await p.waitForTimeout(40);}
+  if(go&&await p.$(r+' .copick:not([hidden]) .co-go'))await p.click(r+' .co-go');await p.waitForTimeout(60);return r;};
 const vis=(p,s)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&!e.hidden&&e.offsetParent!==null;},s);
 sec('browser: mode off = as before');
 {const p=await page();await drill(p,{off:true});ok(!await vis(p,'#irrBox')&&!await vis(p,'#cmdCard')&&!await vis(p,'#canCard'),'no command UI');ok(await vis(p,'#radio'),'free-text radio box shown');ok(!p.errs.length,'no errors '+p.errs.join());await p.close();}
@@ -115,12 +120,12 @@ sec('browser: hidden answers hide the checks');
 {const p=await page();await drill(p,{hide:true});ok(!(await p.$('#irrBox .cf-ck'))&&/Checks hidden/.test(await p.textContent('#irrBox')),'checks hidden');await p.close();}
 sec('browser: board command features');
 {const p=await page();await drill(p);await p.click('#cmdCard [data-cpos="fast"]');await p.waitForTimeout(80);ok(/Engine 1 is the working IC: assign any company/.test(await p.textContent('#cmdCard')),'fast attack note: working IC directs every company');
- await adv(p,100);await p.selectOption('#coList .corow2[data-co="E2"] .co-task','supply');await p.waitForTimeout(80);await p.click('#coList .corow2[data-co="E2"] .co-go');await p.waitForTimeout(80);
+ await adv(p,100);await pickUI(p,'E2','supply','E1',true);
  ok(await p.evaluate(()=>window.__sizeup.A.S.tasks.some(t=>t.co==='E2')),'not gated in the UI: E2 takes the supply lay in fast attack');
  await p.click('#cmdCard [data-cpos="post"]');await adv(p,61);
- await p.selectOption('#coList .corow2[data-co="L1"] .co-task','search1');await p.waitForTimeout(80);ok(await vis(p,'#coList .corow2[data-co="L1"] .co-obj'),'objective picker in the company row');
+ await openCo(p,'L1');await p.click('#coList .corow2[data-co="L1"] [data-k="search1"]');await p.waitForTimeout(80);ok(await vis(p,'#coList .corow2[data-co="L1"] .co-obj'),'objective picker in the company row');
  ok(/primary search/i.test(await p.textContent('#coList .corow2[data-co="L1"] .co-tlo')),'TLO preview');await p.selectOption('#coList .corow2[data-co="L1"] .co-obj','life');
- await adv(p,30);await p.selectOption('#coList .corow2[data-co="L1"] .co-task','search1');await p.waitForTimeout(80);await p.selectOption('#coList .corow2[data-co="L1"] .co-tgt','1');await p.selectOption('#coList .corow2[data-co="L1"] .co-obj','life');await p.waitForTimeout(80);await p.click('#coList .corow2[data-co="L1"] .co-go');await p.waitForTimeout(80);
+ await adv(p,30);await p.click('#coList .corow2[data-co="L1"] .cowhere [data-tgt="1"]');await p.waitForTimeout(80);await p.selectOption('#coList .corow2[data-co="L1"] .co-obj','life');await p.waitForTimeout(80);await p.click('#coList .corow2[data-co="L1"] .co-go');await p.waitForTimeout(80);
  const tl=await p.evaluate(()=>window.__sizeup.A.S.cmd.tlo.slice(-1)[0]);ok(tl&&tl.co==='L1'&&tl.obj==='life'&&/Floor/.test(tl.loc),'TLO from the company row: '+JSON.stringify(tl));
  ok(await vis(p,'#canCard'),'CAN card shown');await p.selectOption('#canCo','E2');await p.click('#canReq');await p.waitForTimeout(80);ok((await p.$$('#canCard .cf-can')).length>=1,'CAN on request shown');
  const n0=(await p.$$('#canCard [data-ack]')).length;await p.click('#canCard [data-ack]');await p.waitForTimeout(80);ok((await p.$$('#canCard [data-ack]')).length===n0-1,'acknowledge');
@@ -162,13 +167,12 @@ sec('browser: export / replay');
 sec('browser: crew mode');
 {const p=await page();await drill(p,{mode:'crew'});ok(await vis(p,'#irrBox')&&await vis(p,'#cmdCard'),'command UI in crew mode');ok(!await vis(p,'#callsCard'),'solo-only calls hidden in crew mode');ok(!p.errs.length,'no errors');await p.close();}
 sec('browser: Oct 13 fixes: assign staged companies from the board, BC transfer, force garage, medic, sticky scene');
-{const assignUI=async(p,co,k)=>{const r=`#coList .corow2[data-co="${co}"]`;await p.selectOption(r+' .co-task',k);await p.waitForTimeout(40);const tg=await p.$(r+' .co-tgt:not([hidden])');if(tg){const v=await tg.$$eval('option',o=>o.filter(x=>x.value&&!x.disabled).map(x=>x.value));await tg.selectOption(v[0]);}await p.click(r+' .co-go');await p.waitForTimeout(60);
-   return p.evaluate(co=>{const S=window.__sizeup.A.S;return S.tasks.some(t=>t.co===co)||S.water.lines.some(l=>l.co===co);},co);};
+{const assignUI=async(p,co,k)=>{await pickUI(p,co,k,null,true);return p.evaluate(co=>{const S=window.__sizeup.A.S;return S.tasks.some(t=>t.co===co)||S.water.lines.some(l=>l.co===co);},co);};
  for(const off of [false,true]){const p=await page();await drill(p,{off,preburn:210});if(!off)await p.click('#cmdCard [data-cpos="fast"]');await adv(p,320);
   for(const [co,k] of [['E2','search1'],['L1','hvent'],['E3','lights'],['R1','rit'],['M1','search1']])ok(await assignUI(p,co,k),`${off?'off':'fast attack'}: ${co} assigned "${k}" from the board`);
   ok(!(await p.evaluate(()=>window.__sizeup.A.S.events.map(e=>e.msg).join('|'))).includes("can't direct"),(off?'off':'on')+': no refusals');
   const bcRow='#coList .corow2[data-co="BC1"]';ok((await p.textContent(bcRow+' .cost')).trim()==='Staged','BC row shows Staged');ok(!(await p.$(bcRow+' .co-task')),'BC has no task picker');
-  if(off){ok(await vis(p,bcRow+' .co-xfer'),'off: BC row has the radio transfer button');await p.click(bcRow+' .co-xfer');await adv(p,1);ok(/In command/.test(await p.textContent(bcRow+' .cost')),'off: BC In command after the radio transfer');ok(!await vis(p,bcRow+' .co-xfer'),'button gone after transfer');}
+  await openCo(p,'BC1');ok(!(await p.$(bcRow+' .coquick [data-k]')),'BC panel: no task buttons');if(off){ok(await vis(p,bcRow+' .co-xfer'),'off: BC row has the radio transfer button');await p.click(bcRow+' .co-xfer');await adv(p,1);ok(/In command/.test(await p.textContent(bcRow+' .cost')),'off: BC In command after the radio transfer');ok(!await vis(p,bcRow+' .co-xfer'),'button gone after transfer');}
   else{ok(!await vis(p,bcRow+' .co-xfer'),'on: guided card handles the transfer');ok(/data-how="radio"[^>]*>By radio/.test(await p.innerHTML('#cmdCard'))||true,'');}
   ok(!p.errs.length,'no errors '+p.errs.join());await p.close();}
  {const p=await page();await drill(p,{off:true,preburn:210});await adv(p,120);const opts=await p.$$eval('#coList .corow2[data-co="M1"] .co-task option',o=>o.map(x=>x.value));ok(opts.includes('line')&&opts.includes('search1')&&opts.includes('rehab')&&opts.includes('forcegarage'),'medic task list has firefighting tasks: '+opts.join(','));
@@ -182,6 +186,23 @@ sec('browser: Oct 13 fixes: assign staged companies from the board, BC transfer,
    await p.screenshot({path:'/workspace/sizeup/screens/fixes-oct13/after/04-sticky-phone-390.png'});}
   else await p.screenshot({path:'/workspace/sizeup/screens/fixes-oct13/after/04-sticky-desktop.png'});
   ok(!p.errs.length,'no errors '+p.errs.join());await p.close();}}
+sec('browser: pick lists (one compact row per company, one panel open)');
+{const D='/workspace/sizeup/screens/picklists-built/';require('fs').mkdirSync(D,{recursive:true});
+ for(const [off,vp,name] of [[true,{width:390,height:844},'phone-cmd-off'],[false,{width:1280,height:900},'desktop-cmd-on'],[false,{width:390,height:844},'phone-cmd-on'],[true,{width:1280,height:900},'desktop-cmd-off']]){const p=await page(vp);await drill(p,{off,preburn:210});await adv(p,200);
+  ok((await p.$$('#coList .copanel:not([hidden])')).length===0,name+': all rows collapsed at first');
+  await openCo(p,'E1');await openCo(p,'L1');ok((await p.$$('#coList .copanel:not([hidden])')).length===1&&await vis(p,'#coList .corow2[data-co="L1"] .copanel'),name+': opening L1 closes E1 (one panel at a time)');
+  const q=await p.$$eval('#coList .corow2[data-co="L1"] .coquick [data-k]',b=>b.map(x=>x.dataset.k));ok(q.length===4,name+': 4 quick buttons ('+q+')');
+  const all=await p.$$eval('#coList .corow2[data-co="L1"] [data-k]',b=>b.map(x=>x.dataset.k));ok(!all.includes('supply')&&!all.includes('rehab'),name+': ladder shows no supply lay or rehab');
+  const groups=await p.$$eval('#coList .corow2[data-co="L1"] .cogrp .l',b=>b.map(x=>x.textContent));ok(groups.every(g=>['Fire attack','Search','Ventilation','Water supply','Support'].includes(g))&&groups.length>=2,name+': More tasks grouped: '+groups);
+  await p.click('#coList .corow2[data-co="L1"] .coquick [data-k="search1"]');await p.waitForTimeout(60);ok(await vis(p,'#coList .corow2[data-co="L1"] .cowhere [data-tgt="1"]'),name+': where? row for the search floor');
+  await p.click('#coList .corow2[data-co="L1"] .comore summary');await p.waitForTimeout(60);
+  if(name.startsWith('phone'))await p.evaluate(()=>window.scrollTo(0,document.querySelector('#coList .corow2[data-co="L1"]').getBoundingClientRect().top+scrollY-330));else await p.evaluate(()=>document.querySelector('#coList').scrollIntoView({block:'start'}));await p.waitForTimeout(250);
+  await p.screenshot({path:D+name+'.png'});
+  const r=await pickUI(p,'L1','lights',null,true);ok(await p.evaluate(()=>window.__sizeup.A.S.tasks.some(x=>x.co==='L1'&&x.kind==='lights')),name+': lighting assigned from the panel');ok(/Scene lighting/.test(await p.textContent(r+' .cosum')),name+': row shows the current task');
+  const rel=await p.$(r+' .co-rel');ok(!!rel,name+': Release button in the panel');
+  await openCo(p,'BC1');ok(!(await p.$('#coList .corow2[data-co="BC1"] [data-k]')),name+': BC panel has no tasks');ok(await vis(p,'#coList .corow2[data-co="BC1"] .co-xfer')===off,name+': BC radio transfer button '+(off?'shown':'left to the guided card'));
+  if(name==='desktop-cmd-off')await p.screenshot({path:D+'desktop-bc-panel.png'});
+  ok(!p.errs.length,name+': no errors '+p.errs.join());await p.close();}}
 sec('browser: mobile 390px');
 {const p=await page({width:390,height:844});await drill(p);await p.click('#cmdCard [data-cpos="fast"]');await adv(p,160);await p.evaluate(()=>window.__sizeup.order({kind:'canreq',co:'E1'}));await p.waitForTimeout(100);
  const ov=await p.evaluate(()=>{const W=document.documentElement.clientWidth;const bad=[...document.querySelectorAll('#irrBox *,#cmdCard *,#canCard *')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>W+1;}).map(e=>e.className||e.tagName);return{sw:document.documentElement.scrollWidth,W,bad:bad.slice(0,5)};});
@@ -191,7 +212,7 @@ sec('browser: mobile 390px');
 sec('browser: mode off matches the Phase 1 build (UI flow)');
 {const flow=async url=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
   await p.evaluate(async()=>{const M=window.__sizeup.M;await window.__sizeup.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'kit',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'random',wind:{dir:'B',spd:15},glass:'fails',seed:77,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});window.__sizeup.A.playing=false;});
-  await p.selectOption('#coList .corow2[data-co="E1"] .co-task','line');await p.waitForTimeout(60);await p.click('#coList .corow2[data-co="E1"] .co-go');
+  await p.evaluate(()=>{const r=document.querySelector('#coList .corow2[data-co="E1"]');const s=r.querySelector('.co-task');s.value='line';s.dispatchEvent(new Event('change',{bubbles:true}));});await p.waitForTimeout(60);await p.evaluate(()=>document.querySelector('#coList .corow2[data-co="E1"] .co-go').click());
   await p.evaluate(()=>{const u=window.__sizeup;u.advance(100);u.order({kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'});u.advance(100);u.setSide('C');u.order({kind:'search',floor:'2'});u.advance(600);u.syncUI();});
   await p.click('#finishBtn');await p.waitForTimeout(300);const r=await p.evaluate(()=>({ev:window.__sizeup.A.S.events.map(e=>e.t+e.kind+e.msg).join('\n'),sum:window.__sizeup.summary().join('\n'),db:document.querySelector('#mBody').innerText}));await p.close();return r;};
  const a=await flow('file:///tmp/basebuild/index.html#noautoplay'),b=await flow(URL);ok(a.ev===b.ev,'same events as Phase 1');ok(a.sum===b.sum,'same summary as Phase 1');const nz=t=>t.split('\n').filter(l=>!/^Each side of the building|Understanding and Fighting Basement Fires/.test(l)).join('\n');ok(nz(a.db)===nz(b.db),'same debrief as Phase 1 (the Behind-the-behavior 360 and basement rule texts were reworded by the Oct 11 basement smoke fix and are excluded)');}

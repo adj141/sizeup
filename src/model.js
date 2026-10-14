@@ -9,6 +9,18 @@ function rng(seed){let s=seed>>>0;return()=>{s=s+0x6D2B79F5|0;let t=Math.imul(s^
 const FUEL={modern:{tg:250,tau:22,tauT:50,smoke:1.35,load:1000,label:'Modern synthetic contents'},
             legacy:{tg:1400,tau:100,tauT:190,smoke:.85,load:2600,label:'Legacy (natural-material) contents'}};
 const CHASE_K=.0012; // basement-to-attic chase leakage per second (teaching value, slowed Oct 13: with the stair door closed the eaves show only faint seep smoke about 12-13 min after ignition)
+/* Structural fuel (Oct 13 2026). Contents burnout does not end a fire: after flashover the interior finish and then the wood framing burn.
+   Cited timings (see FIRE-MODEL.md "Structural fuel and collapse"): unprotected floor systems over a basement fire collapsed 3:28-12:45 after
+   ignition in UL full-scale tests (engineered avg 7:00, dimensional lumber avg 11:57); ASTM E119 unprotected: I-joist flame passage 6:00 /
+   collapse 6:03, 2x10 flame passage 18:30 / collapse 18:45 [UL-SSEL, UL-BSMT]. Gypsum-protected assemblies last longer (E119: I-joist 26:45,
+   2x10 44:45); type X gypsum ceilings fell 13-26 min after flashover in compartment tests [RISE/AWC]. Values below marked TV are teaching values. */
+const STRUCT={on:true,       // tests switch this off to prove the rest of the model is unchanged
+  level:.7,      // TV: share of a fully developed fire the structure keeps up once the contents are spent
+  load:4500,                 // TV: structural fuel keeps a room burning roughly an hour or more after the contents are spent (then decay)
+  onset:60,                  // TV: finish and framing counted as involved 1 min after flashover (flashover = all exposed combustibles burning; framing is exposed once the finish fails)
+  ceilBreach:600,            // TV: 1/2 in. gypsum ceiling fails ~10 min after flashover (interpolated below the 13-26 min type X range)
+  floor:{engineered:{warn:208,breach:360,collapse:420},  // UL full-scale earliest 3:28; E119 flame passage 6:00; full-scale avg 7:00
+         dimensional:{warn:540,breach:717,collapse:717}}}; // TV warn 9:00; UL full-scale avg collapse 11:57 (flame passage at collapse)
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004,floor:.02}; // floor: the floor assembly over a basement (same leak as a ceiling)
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
 const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,
@@ -99,7 +111,7 @@ function create(B,scn){
   const R=rng(scn.seed||1);
   const S={B,scn,t:0,tArr:scn.preburn||360,z:{},o:{},c:{},events:[],fan:null,doorControl:false,
     water:{tank:0,supplyAt:null,supply:false,lines:[],nextId:1},tasks:[],taskLog:[],nextTask:1,views:[],walked:{A:0},followups:[],expo:{},laddered:{},lights:false,rehab:false,wind:{...(scn.wind||{dir:'calm',spd:0})},set:{...DEF_SET,...(scn.settings||{})},crews:[],searches:[],ext:[],pending:[],flags:{},victim:null,rnd:R,hist:[]};
-  for(const z of B.zones)S.z[z.id]={id:z.id,ign:false,tIgn:0,q:0,T:0,s:0,R:1,fuel:1,flashed:false,tFlash:null,vl:false,out:false,wet:0,wetRegrow:600,water:0,steam:0,decay:false,breached:false,dose:0,kd:0,suppressed:false,smold:0,extOnly:true,vf:z.vol||1,attic:!!z.attic,floor:z.floor,showT:0};
+  for(const z of B.zones)S.z[z.id]={id:z.id,ign:false,tIgn:0,q:0,T:0,s:0,R:1,fuel:1,sf:1,structural:null,t0:null,flashed:false,tFlash:null,vl:false,out:false,wet:0,wetRegrow:600,water:0,steam:0,decay:false,breached:false,dose:0,kd:0,suppressed:false,smold:0,extOnly:true,vf:z.vol||1,attic:!!z.attic,floor:z.floor,showT:0};
   // openings added with the multi-side views draw from their own stream, so older drills keep their seeded draws (failure times, occupant)
   const R2=rng(((scn.seed||1)^0x5bd1e995)>>>0);
   for(const o of B.openings)S.o[o.id]={id:o.id,state:(scn.openings&&scn.openings[o.id])||o.init||'closed',fail:0,failAt:40+(o.extra?R2:R)()*50,zone:o.zone,type:o.type,side:o.side,dyn:false};
@@ -127,7 +139,7 @@ function occByTime(B,tod,R){const zs=B.zones.filter(z=>!z.attic&&(!z.hidden||(z.
   if(home.length&&R()<OCC_P.home[tod]){const beds=home.filter(z=>/bed|apartment/i.test(z.name));return pick(tod==='night'&&beds.length?beds:home).id;}
   return null;}
 function front(S){return S.B.openings.find(o=>o.front);}
-function connK(S,c){if(c.type==='door')return c.state==='open'?CONN_K.door_open:CONN_K.door_closed;if(c.type==='ceiling')return c.state==='breached'?CONN_K.ceiling_breached:CONN_K.ceiling;return CONN_K[c.type]||0;}
+function connK(S,c){if(c.type==='door')return c.state==='open'?CONN_K.door_open:CONN_K.door_closed;if(c.type==='ceiling'||c.type==='floor')return c.state==='breached'?CONN_K.ceiling_breached:CONN_K[c.type];return CONN_K[c.type]||0;}
 function openK(S,o){const st=o.state;let k=OPEN_K[o.type]||.5;
   if(st==='closed')return o.type==='window'?.004:.007;
   if(st==='controlled')return .15; // door control: pulled closed to the width of a hoseline [FSRI-VV 4.2]
@@ -457,7 +469,8 @@ function step(S){const dt=1;
       if(w>0&&z.flashed&&z.wet>.5)z.suppressed=true;
       let pot=Math.min(1.25,Math.pow(Math.max(0,age)/M.tg,2));if(z.flashed&&!z.suppressed)pot=2;
       if(z.attic)pot=Math.min(1.25,Math.pow(Math.max(0,age)/(M.tg*1.6),2));
-      pot*=z.fuel>.25?1:z.fuel/.25;pot*=(1-z.wet*.97);
+      // contents first; once they are spent a flashed room keeps burning on the structure (finish, then framing) [see STRUCT]
+      const fC=z.fuel>.25?1:z.fuel/.25,fS=STRUCT.on&&z.structural&&z.sf>.05?STRUCT.level*Math.min(1,z.sf/.25):0;pot*=Math.max(fC,fS);pot*=(1-z.wet*.97);
       const qAir=.03+.62*air[id];
       // oxygen reservoir: the closed building's air lets the fire grow until it is used up, then it decays [FSRI-VV 4.6]
       const over=Math.max(0,z.q-qAir);z.R=clamp(z.R+((own[id]+.02)*.012*(1-z.R)-over*.0105/z.vf)*dt,0,1);
@@ -465,7 +478,9 @@ function step(S){const dt=1;
       z.vl=pot>cap+.03&&z.wet<.3;z.decay=z.vl&&z.R<.15&&qAir<.35;
       const tau=target>z.q?M.tau*(z.flashed?.5:1):(w>0?4:M.tau*1.5);z.q+=(target-z.q)*dt/tau;
       if(w>0)z.q*=1-.06*w;
-      z.fuel=Math.max(0,z.fuel-z.q*dt/M.load);
+      if(STRUCT.on&&!z.structural&&(z.flashed?S.t-z.tFlash>=STRUCT.onset:z.t0!=null&&S.t-z.t0>=STRUCT.onset&&z.q>.3&&S.B.zones.some(q=>q.id===id&&q.attic))){z.structural=S.t;ev(S,'spread',z.flashed?`${zname(S,id)}: fully involved. The interior finish and wood framing are now burning along with the contents, so this fire will not burn itself out when the contents are gone.`:`${zname(S,id)}: fire is burning the roof framing and sheathing (the attic is the structure itself).`,{zone:id,src:'UL-SSEL'});}
+      if(fS>fC){z.sf=Math.max(0,z.sf-z.q*dt/STRUCT.load);if(!z.onStruct){z.onStruct=S.t;ev(S,'spread',`${zname(S,id)}: the contents are spent; the fire is now burning on the structure.`,{zone:id});}}
+      else z.fuel=Math.max(0,z.fuel-z.q*dt/M.load);
       const Ttarget=Math.min(z.q,1.3)*(z.attic?1.0:1.15)/Math.sqrt(z.vf)*(1-z.wet*.6);
       z.T+=(Ttarget-z.T)*dt/(Ttarget>z.T?M.tauT:(w>0?6:240));
       if(!z.flashed&&z.T>=1&&z.q>=.75&&!z.attic){z.flashed=true;z.tFlash=S.t;ev(S,'flashover',`Flashover: ${zname(S,id)}.`,{zone:id,src:'FSRI-VV'});}
@@ -474,7 +489,7 @@ function step(S){const dt=1;
       // knockdown: wet, low heat release and cooled gases, held for a few seconds (simplification)
       if(z.wet>.8&&z.q<.12&&z.T<.3)z.kd+=dt;else z.kd=0;
       if(z.kd>=TASK.kdHold||(z.wet>.85&&z.q<.03)){z.out=true;z.q=0;z.tOut=S.t;z.kd=0;z.smold=0;ev(S,'water',`Fire knocked down: ${zname(S,id)}.`,{zone:id});}
-      else if(z.fuel<.05&&z.q<.05&&!z.vl){z.out=true;z.burnedOut=true;z.q=0;z.tOut=S.t;ev(S,'water',`Fire in ${zname(S,id)} has burned itself out (fuel consumed).`,{zone:id});}
+      else if(z.fuel<.05&&(!z.structural||z.sf<.05)&&z.q<.05&&!z.vl){z.out=true;z.burnedOut=true;z.q=0;z.tOut=S.t;ev(S,'water',STRUCT.on&&z.structural?`Fire in ${zname(S,id)} has decayed after burning through the contents and the structure (total loss of that space).`:`Fire in ${zname(S,id)} has burned itself out (fuel consumed).`,{zone:id});}
     }else{z.q*=.97;z.vl=false;z.decay=false;
       // overhaul: a knocked-down room with fuel left can rekindle once, slowly, only after it has dried out with no water on it
       // and no interior line standing by in reach.
@@ -504,6 +519,16 @@ function step(S){const dt=1;
   // light smoke later [NIOSH 2018-154 reports eave smoke in NIST/UL basement experiments in non-balloon-frame houses; the rate is a teaching value]
   {const at=S.B.zones.find(z=>z.attic);if(at)for(const bz of S.B.zones){if(bz.floor!=='B')continue;const b=zs[bz.id],a=zs[at.id];if(!b.ign||b.s<=a.s)continue;
     const ds=clamp((b.s-a.s)*CHASE_K*dt,0,.01);a.s=clamp(a.s+ds/a.vf,0,1);b.s=clamp(b.s-ds/b.vf,0,1);}}
+  // structure: gypsum ceiling burn-through into the attic, and the floor over a basement fire (warning, burn-through, collapse) [STRUCT]
+  if(STRUCT.on){const at=S.B.zones.find(z=>z.attic);const fsys=STRUCT.floor[S.B.floorSystem]||STRUCT.floor.engineered;
+   for(const bz of S.B.zones){const z=zs[bz.id];if(!z.ign||z.out){continue;}if(z.t0==null)z.t0=S.t;
+    if(at&&!bz.attic&&z.flashed&&!z.suppressed&&z.q>.5&&!z.ceilGone&&S.t-z.tFlash>=STRUCT.ceilBreach){const cs=S.B.conns.filter(q=>q.type==='ceiling'&&(q.a===bz.id||q.b===bz.id)&&S.c[q.id].state!=='breached');
+      if(cs.length){z.ceilGone=S.t;cs.forEach(q=>S.c[q.id].state='breached');ev(S,'collapse',`Ceiling breach: the gypsum ceiling in ${zname(S,bz.id)} has burned through and fire is into the ${at.name.toLowerCase()} above. Ceiling collapse hazard in that room.`,{zone:bz.id,src:'RISE-GYP'});}}
+    if(bz.floor==='B'){const age=S.t-z.t0;const fl=S.B.conns.filter(q=>q.type==='floor'&&(q.a===bz.id||q.b===bz.id));if(!fl.length||z.suppressed)continue;
+      const nm=S.B.floorSystem==='dimensional'?'dimensional-lumber':'engineered (I-joist)';
+      if(age>=fsys.warn&&!z.floorWarn){z.floorWarn=S.t;ev(S,'collapse',`Collapse warning: the unprotected ${nm} floor over the basement fire has been exposed for ${fmtS(age)}. In UL tests unprotected floors over basement fires collapsed 3:28-12:45 after ignition. Don't operate on top of it.`,{src:'UL-BSMT'});}
+      if(age>=fsys.breach&&!z.floorGone){z.floorGone=S.t;fl.forEach(q=>S.c[q.id].state='breached');ev(S,'collapse',`Floor burn-through: fire has come up through the floor over the basement.`,{src:'UL-SSEL'});}
+      if(age>=fsys.collapse&&!z.floorCollapse){z.floorCollapse=S.t;ev(S,'collapse',`Floor collapse likely now: the ${nm} floor over the basement has passed the average collapse time in UL tests (${S.B.floorSystem==='dimensional'?'11:57':'7:00'}).`,{src:'UL-BSMT'});}}}}
   // ignition of other compartments
   for(const id in zs){const z=zs[id];if(z.ign||z.out)continue;
     if(z.T>(z.attic?.6:.82)&&z.wet<.2){z.ign=true;z.tIgn=S.t-FUEL[S.scn.fuel].tg*.55;ev(S,'spread',`Fire has extended into ${zname(S,id)}.`,{zone:id});}}
@@ -559,7 +584,7 @@ function run(S,sec){for(let i=0;i<sec;i++)step(S);}
 function stageOf(S,id){const z=S.z[id];if(!z.ign)return z.s>.25?'Smoke only':'Not involved';if(z.out)return z.burnedOut?'Burned out':'Knocked down';
   if(z.water>0&&z.q<.25)return'Decay (water applied)';
   if(z.wet>.3&&z.q<.25)return'Decay (darkened by water, can regrow)';
-  if(z.fuel<.15)return'Decay (fuel consumed)';
+  if(z.fuel<.15&&z.structural&&z.sf<.15)return'Decay (contents and structure consumed)';if(z.fuel<.15&&z.structural)return'Fully developed: burning the structure';if(z.fuel<.15)return'Decay (fuel consumed)';
   if(z.flashed&&z.q<.5)return'Decay (after flashover)';
   if(z.flashed)return z.vl?'Fully developed (ventilation-limited)':'Fully developed';
   if(z.decay)return'Decay (ventilation-limited, starved for air)';
@@ -785,6 +810,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

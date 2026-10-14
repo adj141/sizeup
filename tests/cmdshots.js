@@ -16,7 +16,7 @@ async function fillIRR(p,full){const pick=(k,v)=>p.click(`#irrBox [data-irr="${k
  await p.click('#cmdCard [data-cpos="post"]');await adv(p,62);
  await p.evaluate(()=>{const u=window.__sizeup;u.order({kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward',obj:'water',loc:'Side A'});u.order({kind:'canack',id:1});});await adv(p,40);
  await p.evaluate(()=>{const u=window.__sizeup;u.order({kind:'assign',co:'L1',task:'search1',floor:'1',obj:'life',loc:'Floor 1'});});await adv(p,10);
- await p.selectOption('#coList .corow2[data-co="E3"] .co-task','line');await p.waitForTimeout(100);
+ await p.click('#coList .corow2[data-co="E3"] .cohead');await p.click('#coList .corow2[data-co="E3"] [data-k="line"]');await p.waitForTimeout(100);
  await p.evaluate(()=>{const S=window.__sizeup.A.S;for(const r of S.cmd.cans)if(r.ack==null&&r.kind!=='priority'&&r.id<S.cmd.canN-2)window.__sizeup.order({kind:'canack',id:r.id});});await adv(p,2);
  await shotEl(p,'#cmdCard','02-board-command.png');
  await p.evaluate(()=>window.__sizeup.order({kind:'canreq',co:'E2'}));await adv(p,1); await shotEl(p,'#canCard','03-can-reports.png');

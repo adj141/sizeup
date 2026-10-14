@@ -155,8 +155,8 @@ function renderCAN(){const el=$('#canCard');if(el.hidden)return;const S=A.S,C=CS
   if(el._h!==h){el.innerHTML=h;el._h=h;}}
 function cfFocusAssign(r){const S=A.S;const task={backup:'line',supply:'supply',relief:'line',ems:'rehab',assign:''}[r.need]||'';
   let co=r.need==='assign'?r.co:null;if(!co&&task){const free=S.cos.filter(c=>c.id!==r.co&&!M.canDo(c,task)).sort((a,b)=>(M.freeCrew(S,b)>0)-(M.freeCrew(S,a)>0)||a.arriveAt-b.arriveAt);co=(free.find(c=>S.t>=c.arriveAt&&M.freeCrew(S,c)>=M.TASKDEF[task].need)||free[0]||{}).id;}
-  const row=co&&$(`#coList .corow2[data-co="${CSS.escape(co)}"]`);if(!row){toast('No company can take that right now. Add companies or release a task.');return;}
-  const ts=row.querySelector('.co-task');if(ts&&task&&[...ts.options].some(o=>o.value===task)){ts.value=task;ts._touched=true;ts.dispatchEvent(new Event('change',{bubbles:true}));}
+  if(co){A.coOpen=co;renderCompanies();}const row=co&&$(`#coList .corow2[data-co="${CSS.escape(co)}"]`);if(!row){toast('No company can take that right now. Add companies or release a task.');return;}
+  const ts=row.querySelector('.co-task');if(ts&&task&&[...ts.options].some(o=>o.value===task)){ts.value=task;ts._touched=true;ts.dispatchEvent(new Event('change',{bubbles:true}));}renderCompanies();
   row.scrollIntoView({behavior:'smooth',block:'center'});row.classList.add('cf-flash');setTimeout(()=>row.classList.remove('cf-flash'),1600);}
 $('#canCard').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
   if(t.id==='canReq'){const co=$('#canCo').value;if(co)order({kind:'canreq',co});return;}

@@ -1,6 +1,6 @@
 // Basement smoke fix (Oct 11, 2026): regression tests. Run: node basement.js
 const fs=require('fs'),cp=require('child_process');global.window={};
-const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.STRUCT.on=false; // basement smoke-fix regression: structural fuel (Oct 13) off; covered by tests/structure.js
 const ld=f=>{delete require.cache[require.resolve(f)];return require(f);};const M0=ld('./base/model.pre-basementfix.js');
 const V=new Function(fs.readFileSync('/workspace/sizeup/src/visual.js','utf8')+';return SizeupVisual;')();
 const V0=new Function(fs.readFileSync('./base/visual.pre-basementfix.js','utf8')+';return SizeupVisual;')();
@@ -15,7 +15,7 @@ sec('other fires (until/unless the fire reaches the basement): gap-leak and eave
   const a=[],c=[];const S0=M0.create(b,scn(b,origin,{doors})),S1=M.create(b,scn(b,origin,{doors}));
   for(let t=0;t<=600;t++){if(S0.z.bsmt&&S0.z.bsmt.ign){console.log(`   (${bid}/${origin} ${JSON.stringify(doors)}: fire reached the basement at ${t}s; compared up to then)`);break;}if(t%30===0)for(const side of ['A','B','C','D']){const k=x=>x.emitters.filter(e=>e.kind!=='rear').map(sig).join('|');const x0=V0.build(S0,b,M0,side),x1=V.build(S1,b,M,side);a.push(k(x0)+JSON.stringify(x0.flames));c.push(k(x1)+JSON.stringify(x1.flames));}M0.step(S0);M.step(S1);}
   n++;if(a.join('#')!==c.join('#')){bad++;console.log('   differs:',bid,origin,JSON.stringify(doors));}
-  ok(JSON.stringify(S0.z)===JSON.stringify(S1.z),`model values identical: ${bid}/${origin}`);}}
+  const SK=z=>JSON.stringify(z,(k,v)=>["sf","structural","t0","onStruct","ceilGone","floorWarn","floorGone","floorCollapse"].includes(k)?undefined:v);ok(SK(S0.z)===SK(S1.z),`model values identical: ${bid}/${origin}`);}}
  ok(bad===0,`leak/open/eave/roof emitters and flames identical in ${n} non-basement cases (${bad} differ)`);}
 
 sec('basement fire: no early roof/attic smoke; first-floor gaps with the stair door open; Side C at grade');

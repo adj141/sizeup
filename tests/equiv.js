@@ -5,12 +5,18 @@ delete require.cache[require.resolve('/workspace/sizeup/src/model.js')];const M0
 // (Oct 11, 2026) deliberately changed: a slow basement-to-attic chase (NIOSH 2018-154, teaching rate) moves attic smoke values. Those are compared
 // with base/model.basementfix.js, a snapshot of the model at that fix, and are also required to DIFFER from Phase 1 (so the change stays deliberate).
 const MB=require('./base/model.eavefix-oct13.js'); // Oct 13 eave fix: slower basement-to-attic chase (CHASE_K .0025 -> .0012); was base/model.basementfix.js
+// Oct 13 structural-fuel fix (AJ-approved): contents burnout no longer ends a fire; finish/framing burn, ceilings burn through into the attic
+// and floors over basement fires warn/burn through/collapse (UL, RISE timings, see FIRE-MODEL.md). Baseline handling:
+//  1. with M.STRUCT.on=false the model must still match the old baselines exactly (proves nothing else changed);
+//  2. with it on, every scenario matches base/model.structure-oct13.js, AND is identical to the old baseline up to the first structural event,
+//     so differences begin only once a room is fully involved (flashover+1 min) or a basement floor has been exposed 3:28+.
+const MS=require('./base/model.structure-oct13.js');const STRUCT_RE=/fully involved|Ceiling breach|Collapse warning|Floor burn-through|Floor collapse|burning on the structure/;
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m);}};
 function scn(b,o){return{format:'sizeup-scenario',v:2,sceneId:b.id,origin:o.origin,fuel:o.fuel||'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:o.occ||'random',wind:o.wind||{dir:'calm',spd:0},glass:'fails',seed:o.seed,actions:[],tNow:0,
   companies:M0.PRESETS.generic.companies(),presetName:'generic',env:o.env,windShift:o.ws||null,...(o.command?{command:o.command}:{})};}
 function run(MM,b,o,acts,T){const S=MM.create(b,JSON.parse(JSON.stringify(scn(b,o))));MM.run(S,S.scn.preburn);for(const a of acts)MM.act(S,{...a,t:S.scn.preburn+a.t});MM.run(S,S.scn.preburn+T);
   return JSON.stringify({ev:S.events.map(e=>[e.t,e.kind,e.msg]),z:Object.values(S.z).map(z=>[z.q,z.T,z.s,z.ign,z.out,z.flashed].map(x=>typeof x==='number'?+x.toFixed(6):x)),w:S.water.lines.map(l=>[l.id,l.flowing,l.zone]),v:S.victim,uc:S.underControl,sum:MM.summary?JSON.stringify(MM.summary(S)):''});}
-const houses=Object.values(B);let n=0,nb=0,nbt=0;
+const houses=Object.values(B);let n=0,nb=0,nbt=0,ns=0,ns0=0,preArr=0;
 const ACTS=[[],[{t:20,kind:'assign',co:'E1',task:'line',target:null}],[{t:10,kind:'assign',co:'L1',task:'search1',floor:'2'},{t:15,kind:'doorcontrol',on:true},{t:40,kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'}],
   [{t:5,kind:'strategy',v:'Offensive'},{t:30,kind:'assign',co:'L1',task:'hvent',opening:null},{t:60,kind:'view',side:'C'},{t:90,kind:'assign',co:'E1',task:'line',target:null}],
   [{t:0,kind:'strategy',v:'Defensive'},{t:100,kind:'assign',co:'E1',task:'line',target:null,ext:true},{t:200,kind:'assign',co:'L1',task:'ladder',side:'A'}]];
@@ -18,8 +24,15 @@ for(const b of houses){const zs=b.zones.filter(z=>!z.attic&&!/hall|stair|garage/
   for(const [i,origin] of zs.entries())for(let k=0;k<ACTS.length;k++){const seed=1000+i*31+k*7;
     const t1=b.openings.find(o=>o.zone===origin)||b.openings[0];const acts=ACTS[k].map(a=>({...a,target:a.task==='line'?origin:a.target,opening:a.task==='hvent'?t1.id:a.opening}));
     const o={origin,seed,preburn:[240,360,480][k%3],wind:k===3?{dir:'A',spd:20}:undefined,env:k===4?{tod:'night',precip:'snow',temp:20,wind:{dir:'B',spd:10}}:undefined,ws:k===2?{at:120,dir:'C',spd:15}:null};
-    const bz=b.zones.find(z=>z.id===origin).floor==='B';const a=run(bz?MB:M0,b,o,acts,900),bb=run(M,b,o,acts,900);ok(a===bb,`${b.id}/${origin}/acts${k}${bz?' (basement-fix baseline)':''}`);n++;
+    const bz=b.zones.find(z=>z.id===origin).floor==='B';M.STRUCT.on=false;const a=run(bz?MB:M0,b,o,acts,900),bb=run(M,b,o,acts,900);ok(a===bb,`${b.id}/${origin}/acts${k}${bz?' (basement-fix baseline)':''}`);n++;
     if(bz)nb+=run(M0,b,o,acts,900)!==bb?1:0,nbt++;
     // a scenario carrying a command block that is switched off is also identical
-    const c=run(M,b,{...o,command:{on:false,sub:{},set:{},terms:{}}},acts,900);ok(a===c,`${b.id}/${origin}/acts${k} command off`);}}
-ok(nbt>0&&nb>0,`basement-origin scenarios changed vs Phase 1 as intended (${nb}/${nbt})`);console.log(`equiv: ${n} scenarios x2, ${pass} pass, ${fail} fail`);process.exit(fail?1:0);
+    const c=run(M,b,{...o,command:{on:false,sub:{},set:{},terms:{}}},acts,900);ok(a===c,`${b.id}/${origin}/acts${k} command off`);
+    M.STRUCT.on=true;const nw=run(M,b,o,acts,900);ok(nw===run(MS,b,o,acts,900),`${b.id}/${origin}/acts${k} structural baseline`);
+    ok(nw===run(M,b,{...o,command:{on:false,sub:{},set:{},terms:{}}},acts,900),`${b.id}/${origin}/acts${k} structural, command off`);
+    const se=JSON.parse(nw).ev.find(e=>STRUCT_RE.test(e[2]));if(!se){ok(nw===a,`${b.id}/${origin}/acts${k} no structural event -> unchanged`);ns0++;}
+    else{const T=Math.floor(se[0]-2*o.preburn)-1;/* run() is relative: preburn, then preburn+T more seconds */ns++;if(T>0){const x=JSON.parse(run(bz?MB:M0,b,o,acts,T)),y=JSON.parse(run(M,b,o,acts,T));delete x.ev;delete y.ev;
+      const evOld=JSON.parse(a).ev.filter(e=>e[0]<se[0]),evNew=JSON.parse(nw).ev.filter(e=>e[0]<se[0]);
+      ok(JSON.stringify(x)===JSON.stringify(y)&&JSON.stringify(evOld)===JSON.stringify(evNew),`${b.id}/${origin}/acts${k} identical before first structural event (${se[0]}s)`);}
+      else{preArr++;ok(JSON.stringify(JSON.parse(a).ev.filter(e=>e[0]<se[0]))===JSON.stringify(JSON.parse(nw).ev.filter(e=>e[0]<se[0])),`${b.id}/${origin}/acts${k} events identical before first structural event`);}}}}
+ok(nbt>0&&nb>0,`basement-origin scenarios changed vs Phase 1 as intended (${nb}/${nbt})`);console.log(`structural: ${ns} scenarios reach a structural event within 15 min after arrival (${preArr} of them in the first preburn window after arrival, where only the pre-event event log is compared), ${ns0} unchanged`);console.log(`equiv: ${n} scenarios x2, ${pass} pass, ${fail} fail`);process.exit(fail?1:0);

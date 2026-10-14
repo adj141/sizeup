@@ -1,7 +1,7 @@
 /* Building definitions for the bundled sample photos. Coordinates are in image pixels of the bundled JPEG. */
 const BUILDINGS=(()=>{
 // House: AI-generated photoreal mock from AJ's design set, cleaned. Native 1285x546.
-const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'Attic',construction:'wood',
+const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'Attic',construction:'wood',floorSystem:'engineered',
  floors:[{f:'Roof',y0:0,y1:75},{f:'Attic',y0:75,y1:148},{f:'2',y0:148,y1:262},{f:'1',y0:262,y1:456},{f:'B',y0:456,y1:546}],
  bldg:{x0:232,x1:1129},eaves:[{x0:262,x1:1000,y:146,zone:'attic'}],ridge:{x0:350,x1:830,y:76},
  zones:[
@@ -86,7 +86,7 @@ const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'A
 // Mixed-use: "Odd Fellows Hall, West End" by Cbaile19, CC0, Wikimedia Commons. Bundled at 1440x1077.
 const S=1.5;const r=v=>Math.round(v*S);
 const f3=[257,377,465,551,676,799],f2=[257,377,466,554,675,801];
-const mixed={id:'mixed',name:'3-story mixed-use',W:1440,H:1077,stories:3,atticName:'Cockloft',construction:'ordinary',
+const mixed={id:'mixed',name:'3-story mixed-use',W:1440,H:1077,stories:3,atticName:'Cockloft',construction:'ordinary',floorSystem:'dimensional',
  floors:[{f:'Roof',y0:0,y1:r(40)},{f:'Attic',y0:r(40),y1:r(100)},{f:'3',y0:r(100),y1:r(262)},{f:'2',y0:r(262),y1:r(485)},{f:'1',y0:r(485),y1:r(662)},{f:'B',y0:r(662),y1:1077}],
  bldg:{x0:r(180),x1:r(890)},eaves:[{x0:r(185),x1:r(885),y:r(58),zone:'attic'}],ridge:{x0:r(170),x1:r(900),y:r(36)},
  zones:[
