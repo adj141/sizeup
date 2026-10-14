@@ -10,7 +10,7 @@ const MB=require('./base/model.eavefix-oct13.js'); // Oct 13 eave fix: slower ba
 //  1. with M.STRUCT.on=false the model must still match the old baselines exactly (proves nothing else changed);
 //  2. with it on, every scenario matches base/model.structure-oct13.js, AND is identical to the old baseline up to the first structural event,
 //     so differences begin only once a room is fully involved (flashover+1 min) or a basement floor has been exposed 3:28+.
-const MS=require('./base/model.structure-oct13.js');const STRUCT_RE=/fully involved|Ceiling breach|Collapse warning|Floor burn-through|Floor collapse|burning on the structure/;
+const MS=require('./base/model.structure-oct13.js');/* refreshed for the Oct 13 basement-glass fix (floor clock keyed to basement severity): only basement-origin scenarios changed */const STRUCT_RE=/fully involved|Ceiling breach|Collapse warning|Floor burn-through|Floor collapse|burning on the structure/;
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m);}};
 function scn(b,o){return{format:'sizeup-scenario',v:2,sceneId:b.id,origin:o.origin,fuel:o.fuel||'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:o.occ||'random',wind:o.wind||{dir:'calm',spd:0},glass:'fails',seed:o.seed,actions:[],tNow:0,
   companies:M0.PRESETS.generic.companies(),presetName:'generic',env:o.env,windShift:o.ws||null,...(o.command?{command:o.command}:{})};}

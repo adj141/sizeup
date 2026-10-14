@@ -6,11 +6,11 @@ const until=(S,t)=>M.run(S,t-S.t);const burning=S=>Object.entries(S.z).filter(([
 const evT=(S,re)=>{const e=S.events.find(e=>re.test(e.msg));return e?e.t:null;};const mmss=t=>t==null?'-':`${Math.floor(t/60)}:${String(Math.round(t%60)).padStart(2,'0')}`;
 const ST=M.STRUCT;
 console.log('# cited values (UL-SSEL E119, UL/NIST ARRA full-scale basement tests, RISE/AWC gypsum)');
-ok(ST.floor.engineered.warn===208,'engineered floor collapse warning at 3:28 = earliest collapse in UL full-scale basement tests (3:28-12:45)');
-ok(ST.floor.engineered.breach===360,'I-joist floor burn-through at 6:00 = E119 unprotected I-joist flame passage');
-ok(ST.floor.engineered.collapse===420,'engineered floor collapse likely at 7:00 = UL full-scale engineered average');
-ok(ST.floor.dimensional.collapse===717,'dimensional floor collapse likely at 11:57 = UL full-scale dimensional average');
-for(const f of ['engineered','dimensional'])ok(ST.floor[f].warn>=208&&ST.floor[f].collapse<=765&&ST.floor[f].warn<ST.floor[f].collapse,`${f}: warning and collapse inside the 3:28-12:45 full-scale range`);
+ok(ST.floor.engineered.warn===0,'engineered floor: warning as soon as the basement fire is severe (no reliable warning signs, FSRI)');
+ok(ST.floor.engineered.breach===199&&ST.floor.engineered.collapse===199,'I-joist floor burn-through/collapse after 3:19 of severe exposure (UL/NIST ARRA App. C: 2:00-4:21 after basement flashover)');
+ok(ST.floor.engineered.breach>=120&&ST.floor.engineered.breach<=261,'engineered timing inside the cited 2:00-4:21 post-flashover spread');
+ok(ST.floor.dimensional.collapse===496,'dimensional: 3:19 + 4:57 (UL full-scale avg difference 11:57-7:00), teaching value');
+ok(ST.sevT===.82,'severity threshold = model threshold for igniting exposed fuel (the joists)');
 ok(ST.ceilBreach>=360&&ST.ceilBreach<13*60,'gypsum ceiling burn-through 6-13 min after flashover (teaching value below the 13-26 min type X range)');
 ok(ST.onset>0&&ST.onset<=120,'structure counted as involved within 2 min of flashover (minutes, not tens of minutes)');
 for(const [bid,origin,fuel] of [['house','liv','modern'],['house','bsmt','modern'],['mixed','stL','modern'],['mixed','a2L','modern']]){
@@ -26,12 +26,16 @@ for(const [bid,origin,fuel] of [['house','liv','modern'],['house','bsmt','modern
   const at=b.zones.find(z=>z.attic).id;ok(S.z[at].ign,`fire has reached the ${b.zones.find(z=>z.attic).name.toLowerCase()} by 60 min`);
   ok(!S.events.some(e=>/burned itself out/.test(e.msg)),'no "burned itself out" outcome');}
 console.log('# basement floor over a basement fire');
-{const S=mk(BLD.house,'bsmt');until(S,15*60);const t0=0;
- ok(evT(S,/^Collapse warning/)===208,`house (engineered, assumed): collapse warning ${mmss(evT(S,/^Collapse warning/))}`);
- ok(evT(S,/^Floor burn-through/)===360,`burn-through ${mmss(evT(S,/^Floor burn-through/))}`);ok(evT(S,/^Floor collapse likely/)===420,`collapse likely ${mmss(evT(S,/^Floor collapse likely/))}`);
+{const S=mk(BLD.house,'bsmt');let tSev=null;for(let t=0;t<15*60;t++){if(tSev==null&&S.z.bsmt.T>=ST.sevT)tSev=S.t;M.step(S);}
+ const tf=S.z.bsmt.tFlash,w=evT(S,/^Collapse warning/),bt=evT(S,/^Floor burn-through/);
+ ok(w!=null&&Math.abs(w-tSev)<=2,`house (engineered, assumed): collapse warning ${mmss(w)} when the basement became severe (${mmss(tSev)}), not at a fixed time from ignition`);
+ ok(bt!=null&&bt-tf>=120&&bt-tf<=261,`burn-through ${mmss(bt)}, ${mmss(bt-tf)} after basement flashover ${mmss(tf)} (cited 2:00-4:21)`);
+ ok(evT(S,/^Floor collapse likely/)===bt,'collapse likely with the burn-through (E119: flame passage 6:00, collapse 6:03)');
  ok(S.B.conns.filter(c=>c.type==='floor').every(c=>S.c[c.id].state==='breached'),'floor connections breached');}
-{const b={...BLD.house,floorSystem:'dimensional'};const S=mk(b,'bsmt');until(S,15*60);
- ok(evT(S,/^Collapse warning/)===540&&evT(S,/^Floor collapse likely/)===717,`dimensional lumber: warning ${mmss(evT(S,/^Collapse warning/))} (teaching value), collapse likely ${mmss(evT(S,/^Floor collapse likely/))}`);}
+{const b={...BLD.house,floorSystem:'dimensional'};const S=mk(b,'bsmt');until(S,20*60);const w=evT(S,/^Collapse warning/),c=evT(S,/^Floor collapse likely/);
+ ok(w!=null&&c!=null&&c-w>=495&&c-w<=520,`dimensional lumber: warning ${mmss(w)}, collapse likely ${mmss(c)} (8:16 of severe exposure, teaching value)`);}
+{const S=mk(BLD.house,'bsmt',{doors:{'kit-bsmt':'open'}});until(S,15*60);
+ ok(!S.events.some(e=>/^Floor burn-through/.test(e.msg))||S.z.bsmt.flashed,'stair door open: basement fire stays ventilation-limited and never severe, so the floor clock does not run (limit: see FIRE-MODEL.md)');}
 console.log('# ceiling burn-through into the attic');
 {const S=mk(BLD.house,'liv');until(S,40*60);const r=Object.keys(S.z).find(k=>S.z[k].ceilGone);const tb=r&&S.z[r].ceilGone,tf=r&&S.z[r].tFlash;
  ok(tb!=null&&tb-tf>=ST.ceilBreach&&tb-tf<ST.ceilBreach+30,`${r} ceiling breached ${mmss(tb-tf)} after flashover; event logged`);ok(S.events.some(e=>/^Ceiling breach/.test(e.msg)),'ceiling collapse hazard event');}

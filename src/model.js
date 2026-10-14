@@ -19,8 +19,14 @@ const STRUCT={on:true,       // tests switch this off to prove the rest of the m
   load:4500,                 // TV: structural fuel keeps a room burning roughly an hour or more after the contents are spent (then decay)
   onset:60,                  // TV: finish and framing counted as involved 1 min after flashover (flashover = all exposed combustibles burning; framing is exposed once the finish fails)
   ceilBreach:600,            // TV: 1/2 in. gypsum ceiling fails ~10 min after flashover (interpolated below the 13-26 min type X range)
-  floor:{engineered:{warn:208,breach:360,collapse:420},  // UL full-scale earliest 3:28; E119 flame passage 6:00; full-scale avg 7:00
-         dimensional:{warn:540,breach:717,collapse:717}}}; // TV warn 9:00; UL full-scale avg collapse 11:57 (flame passage at collapse)
+  // Floor over a basement fire (Oct 13 fix): the clock runs only while the basement hot layer is severe (T >= sevT, the model's own threshold
+  // for igniting exposed fuel, i.e. the joists), not from ignition. UL/NIST ARRA Appendix C: earlier unsprinklered tests flashed at 7:09 and
+  // 5:15 and collapsed at 11:30 and 8:34 (4:21 and 3:19 later); Dutchess County I-joist test flashed ~2 min, collapsed ~4 min (2:00 later);
+  // UL full-scale: collapse followed once the floor system became involved.
+  sevT:.82,
+  floor:{engineered:{warn:0,breach:199,collapse:199},   // warn as soon as the floor is exposed to a severe fire (no reliable warning signs);
+                                                         // burn-through/collapse 3:19 of severe exposure (middle of the 2:00-4:21 cited spread)
+         dimensional:{warn:0,breach:496,collapse:496}}}; // TV: 3:19 + 4:57 (UL full-scale dimensional avg 11:57 minus engineered avg 7:00)
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004,floor:.02}; // floor: the floor assembly over a basement (same leak as a ceiling)
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
 const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,
@@ -524,11 +530,11 @@ function step(S){const dt=1;
    for(const bz of S.B.zones){const z=zs[bz.id];if(!z.ign||z.out){continue;}if(z.t0==null)z.t0=S.t;
     if(at&&!bz.attic&&z.flashed&&!z.suppressed&&z.q>.5&&!z.ceilGone&&S.t-z.tFlash>=STRUCT.ceilBreach){const cs=S.B.conns.filter(q=>q.type==='ceiling'&&(q.a===bz.id||q.b===bz.id)&&S.c[q.id].state!=='breached');
       if(cs.length){z.ceilGone=S.t;cs.forEach(q=>S.c[q.id].state='breached');ev(S,'collapse',`Ceiling breach: the gypsum ceiling in ${zname(S,bz.id)} has burned through and fire is into the ${at.name.toLowerCase()} above. Ceiling collapse hazard in that room.`,{zone:bz.id,src:'RISE-GYP'});}}
-    if(bz.floor==='B'){const age=S.t-z.t0;const fl=S.B.conns.filter(q=>q.type==='floor'&&(q.a===bz.id||q.b===bz.id));if(!fl.length||z.suppressed)continue;
+    if(bz.floor==='B'){if(z.T>=STRUCT.sevT&&!z.suppressed)z.floorExp=(z.floorExp||0)+dt;if(!z.floorExp)continue;const age=z.floorExp;const fl=S.B.conns.filter(q=>q.type==='floor'&&(q.a===bz.id||q.b===bz.id));if(!fl.length||z.suppressed)continue;
       const nm=S.B.floorSystem==='dimensional'?'dimensional-lumber':'engineered (I-joist)';
-      if(age>=fsys.warn&&!z.floorWarn){z.floorWarn=S.t;ev(S,'collapse',`Collapse warning: the unprotected ${nm} floor over the basement fire has been exposed for ${fmtS(age)}. In UL tests unprotected floors over basement fires collapsed 3:28-12:45 after ignition. Don't operate on top of it.`,{src:'UL-BSMT'});}
+      if(age>fsys.warn&&!z.floorWarn){z.floorWarn=S.t;ev(S,'collapse',`Collapse warning: the basement fire is now hot enough to involve the unprotected ${nm} floor above it. In UL tests these floors collapsed within minutes of the basement fire becoming severe, with no reliable warning signs. Don't operate on top of it.`,{src:'UL-BSMT'});}
       if(age>=fsys.breach&&!z.floorGone){z.floorGone=S.t;fl.forEach(q=>S.c[q.id].state='breached');ev(S,'collapse',`Floor burn-through: fire has come up through the floor over the basement.`,{src:'UL-SSEL'});}
-      if(age>=fsys.collapse&&!z.floorCollapse){z.floorCollapse=S.t;ev(S,'collapse',`Floor collapse likely now: the ${nm} floor over the basement has passed the average collapse time in UL tests (${S.B.floorSystem==='dimensional'?'11:57':'7:00'}).`,{src:'UL-BSMT'});}}}}
+      if(age>=fsys.collapse&&!z.floorCollapse){z.floorCollapse=S.t;ev(S,'collapse',`Floor collapse likely now: the ${nm} floor over the basement has been exposed to the severe basement fire for ${fmtS(age)} (UL tests: collapse 2:00-4:21 after basement flashover for I-joists; dimensional lumber lasts longer).`,{src:'UL-BSMT'});}}}}
   // ignition of other compartments
   for(const id in zs){const z=zs[id];if(z.ign||z.out)continue;
     if(z.T>(z.attic?.6:.82)&&z.wet<.2){z.ign=true;z.tIgn=S.t-FUEL[S.scn.fuel].tg*.55;ev(S,'spread',`Fire has extended into ${zname(S,id)}.`,{zone:id});}}
