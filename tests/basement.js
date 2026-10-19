@@ -1,6 +1,6 @@
 // Basement smoke fix (Oct 11, 2026): regression tests. Run: node basement.js
 const fs=require('fs'),cp=require('child_process');global.window={};
-const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.STRUCT.on=false;M.BGLASS.on=false; // basement smoke-fix regression (Oct 14 basement glass rule also off): structural fuel (Oct 13) off; covered by tests/structure.js
+const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.STRUCT.on=false;M.BGLASS.on=false;M.ATTIC.on=false; // basement smoke-fix regression (Oct 14 basement glass rule also off; Oct 19 attic-origin rules also off, covered by tests/attic.js): structural fuel (Oct 13) off; covered by tests/structure.js
 const ld=f=>{delete require.cache[require.resolve(f)];return require(f);};const M0=ld('./base/model.pre-basementfix.js');
 const V=new Function(fs.readFileSync('/workspace/sizeup/src/visual.js','utf8')+';return SizeupVisual;')();
 const V0=new Function(fs.readFileSync('./base/visual.pre-basementfix.js','utf8')+';return SizeupVisual;')();

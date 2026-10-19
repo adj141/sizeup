@@ -14,6 +14,11 @@ The fire behavior is a simplified teaching model grounded in UL FSRI (Fire Safet
 
 Image and source credits are in [CREDITS.md](CREDITS.md).
 
+## What's new (Oct 19, 2026): attic fires
+- **No more fire from every eave at once.** A fire that starts in the attic shows heavy smoke from the eaves and gable vents on a 5-min arrival, heaviest over where it started, with no fire showing. The plastic ridge vent melts shut and the eaves pulse as the attic goes ventilation-limited (FSRI attic study).
+- **It keeps burning.** The soffit and gable vents keep a ventilation-limited attic fire going on the roof framing; it no longer starves out after a few minutes.
+- **Burn-through and collapse.** The roof deck burns through over the origin (about 9-10 min), fire then shows there first and spreads along the eaves, and the truss roof is flagged as likely to collapse about 3 min later (NISTIR 7094; NIOSH 2005-132). See FIRE-MODEL.md section 5i.
+
 ## What's new (Oct 11, 2026, late): basement fire smoke
 - **No more instant "roof/attic" smoke on a basement fire.** Smoke from openings on the sides you are not looking at is now one thin, diluted plume per side, placed toward that side (B left, D right, C behind the ridge); gap leakage and grade/basement-level openings rarely clear the roofline.
 - **Stair door matters.** Closed: smoke stays below and leaks at the basement windows and the Side C walk-out (do your 360). Open: the first and second floors fill and leak at their window and door gaps (NIOSH 2018-154: dense smoke at the ground or first floor with modest heat and no visible fire indicates a below-grade fire).

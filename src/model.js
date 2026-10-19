@@ -31,6 +31,35 @@ const STRUCT={on:true,       // tests switch this off to prove the rest of the m
    cited 20-35 kW/m2 fallout flux (near-flashover upper layer). k: accumulation rate (TV, ~15-30 s at a flashover-level layer).
    well: small window-well windows heat more slowly (TV). */
 const BGLASS={on:true,fallT:.9,k:10,well:.6}; // on=false restores the pre-Oct-14 rule (older regression suites)
+/* Attic fire (Oct 19 2026, see FIRE-MODEL.md "Attic fires"). Cited: FSRI attic study [FSRI-ATTIC]: attic fires grew to ventilation-limited
+   in about 5 min (Table 7.1; 7:45 and 8:00 in Exps 3A/4A); the natural soffit/ridge/gable vents cannot support fuel-limited burning, but the
+   ventilation-limited fire keeps burning (Exp 2A: attic still 600-1200 F at 16 min, 2B still burning in one quadrant at 22 min); plastic ridge
+   vents melt shut and the eaves then pulse smoke; once the roof is open (burn-through or vent) air enters at the eaves and gables and the
+   burning concentrates at the roof hole, the gables and the eaves. NISTIR 7094 [NIST-ROOF] (truss roofs): fire into the attic ~8:00, flames
+   lapping the roof 13:00, roof burning 14:00, roof collapse 16:00-17:30 (8-9 min after the fire entered the attic). NIOSH 2005-132
+   [NIOSH-TRUSS]: unprotected trusses can fail after 5-10 min of fire exposure. TV = teaching value. on=false restores the pre-Oct-19 attic. */
+const ATTIC={on:true,
+  tg:300,          // TV: attic growth potential peaks ~5 min after ignition, whatever the room contents (the fuel is the roof structure) [FSRI-ATTIC Table 7.1]
+  vent:.35,        // TV: air from the natural soffit + ridge + gable vents while the ridge vent is still open
+  ventSealed:.25,  // TV: after the plastic ridge vent melts shut (soffits and melted gable vents only): still ventilation-limited, but it keeps burning
+  sealT:.3,        // TV: attic hot-layer level at which the plastic ridge vent melts shut [FSRI-ATTIC 7.6]
+  expo:[.25,.35],  // TV: involvement clock rate = clamp((q-.25)/.35, 0, 1) (a smouldering attic barely counts; a free-burning one counts fully)
+  spreadVL:.0004,  // TV: spread of the involved stretch (fraction of attic length per s, each way) while ventilation-limited (FSRI 2B: still one quadrant)
+  spreadV:.002,    // TV: once the roof is open: the rest of the attic in ~2-4 min (NISTIR 7094: attic flashover ~5.5 min after the fire entered it)
+  burn:360,        // roof deck burn-through over the origin after 6:00 on the involvement clock (NISTIR 7094 test 2: attic 8:00 -> roof burning 14:00)
+  roof:{truss:{collapse:540},     // 9:00 (NISTIR 7094 test 2: attic 8:00 -> collapse 17:00, 3 min after the roof burned; NIOSH: trusses 5-10 min)
+        rafter:{collapse:920}}};  // TV: 9:00 x 1.7 (the UL dimensional-lumber vs engineered floor ratio, 11:57 / 7:00); no attic rafter data found
+// the Oct 19 attic rules apply to fires that START in the attic; an attic reached by extension keeps the earlier rules (regression baselines)
+function atticRules(S){if(!ATTIC.on)return false;const at=S.B.zones.find(z=>z.attic);return!!at&&S.scn.origin===at.id;}
+// position along the attic (0 = Side B end, 1 = Side D end) of picture x on a side; Sides B and D are the gable ends
+// where an attic fire fed from below starts: over the hottest burning top-floor room (side-A coordinates)
+function atticFeedU(S){const B=S.B,top=String(B.stories||2);let best=null,bs=-1;for(const z of B.zones){if(z.floor!==top||z.attic)continue;const q=S.z[z.id];const f=(q.ign&&!q.out?Math.min(1,q.q):0)*.7+Math.min(1,q.T)*.3;if(f>bs){bs=f;best=z;}}
+  return best?atticU(B,'A',(best.x0+best.x1)/2):.5;}
+// the roof spot (top-floor room id) nearest a point along the attic, for drawing a burn-through
+function atticSpot(S,u){const B=S.B,top=String(B.stories||2);let best=null,bd=1e9;for(const z of B.zones){if(z.floor!==top||z.attic||z.hidden||!(B.roofSpots||{})[z.id])continue;const d=Math.abs(atticU(B,'A',(z.x0+z.x1)/2)-u);if(d<bd){bd=d;best=z.id;}}
+  return best||(B.zones.find(z=>z.attic)||{}).id;}
+function atticU(B,side,x){side=side||'A';if(side==='B')return 0;if(side==='D')return 1;const V=side==='A'?B:(B.views||{})[side];const e=V&&V.eaves&&V.eaves[0];
+  if(!e||x==null)return .5;const u=clamp((x-e.x0)/Math.max(1,e.x1-e.x0),0,1);return side==='C'?1-u:u;}
 const CONN_K={open:1,stair:.85,door_open:.9,door_closed:.025,ceiling:.02,ceiling_breached:.6,wall:.004,floor:.02}; // floor: the floor assembly over a basement (same leak as a ceiling)
 const OPEN_K={window:.5,door:1,garage:1.5,roof:1.25};
 const TASK={kdHold:10,rekindleDry:600,rekindleDryExt:120,noFireShutdown:20,lowTankFrac:.25,
@@ -478,12 +507,14 @@ function step(S){const dt=1;
     if(z.ign&&!z.out){const age=S.t-z.tIgn;// once water has darkened a flashed room, the post-flashover boost is gone; growth returns to the normal curve (simplification)
       if(w>0&&z.flashed&&z.wet>.5)z.suppressed=true;
       let pot=Math.min(1.25,Math.pow(Math.max(0,age)/M.tg,2));if(z.flashed&&!z.suppressed)pot=2;
-      if(z.attic)pot=Math.min(1.25,Math.pow(Math.max(0,age)/(M.tg*1.6),2));
+      const AR=z.attic&&atticRules(S);if(z.attic)pot=Math.min(1.25,Math.pow(Math.max(0,age)/(AR?ATTIC.tg:M.tg*1.6),2));
       // contents first; once they are spent a flashed room keeps burning on the structure (finish, then framing) [see STRUCT]
       const fC=z.fuel>.25?1:z.fuel/.25,fS=STRUCT.on&&z.structural&&z.sf>.05?STRUCT.level*Math.min(1,z.sf/.25):0;pot*=Math.max(fC,fS);pot*=(1-z.wet*.97);
-      const qAir=.03+.62*air[id];
+      // a burning attic always has its natural soffit/ridge/gable vents: ventilation-limited, but never starved out [FSRI-ATTIC 7.4]
+      const nv=AR?((S.B.construction==='wood'&&!z.ridgeSealed)?ATTIC.vent:ATTIC.ventSealed):0;
+      const qAir=.03+.62*(air[id]+nv);
       // oxygen reservoir: the closed building's air lets the fire grow until it is used up, then it decays [FSRI-VV 4.6]
-      const over=Math.max(0,z.q-qAir);z.R=clamp(z.R+((own[id]+.02)*.012*(1-z.R)-over*.0105/z.vf)*dt,0,1);
+      const over=Math.max(0,z.q-qAir);z.R=clamp(z.R+((own[id]+nv+.02)*.012*(1-z.R)-over*.0105/z.vf)*dt,0,1);
       const cap=qAir+z.R*1.3;const target=Math.min(pot,cap);
       z.vl=pot>cap+.03&&z.wet<.3;z.decay=z.vl&&z.R<.15&&qAir<.35;
       const tau=target>z.q?M.tau*(z.flashed?.5:1):(w>0?4:M.tau*1.5);z.q+=(target-z.q)*dt/tau;
@@ -539,6 +570,22 @@ function step(S){const dt=1;
       if(sev&&!z.floorWarn){z.floorWarn=S.t;ev(S,'collapse',`Collapse warning: the basement fire is now hot enough to involve the unprotected ${nm} floor above it. In UL tests these floors collapsed within minutes of the basement fire becoming severe, with no reliable warning signs. Don't operate on top of it.`,{src:'UL-BSMT'});}
       if(age>=fsys.breach&&!z.floorGone){z.floorGone=S.t;fl.forEach(q=>S.c[q.id].state='breached');ev(S,'collapse',`Floor burn-through: fire has come up through the floor over the basement.`,{src:'UL-SSEL'});}
       if(age>=fsys.collapse&&!z.floorCollapse){z.floorCollapse=S.t;ev(S,'collapse',`Floor collapse likely now: the ${nm} floor over the basement has been exposed to the severe basement fire for ${fmtS(age)} (UL tests: collapse 2:00-4:21 after basement flashover for I-joists; dimensional lumber lasts longer).`,{src:'UL-BSMT'});}}}}
+  // attic fire (Oct 19): where it is, how far it has spread, ridge vent, roof burn-through and roof collapse [ATTIC]
+  if(atticRules(S)){const at=S.B.zones.find(z=>z.attic);const a=at&&zs[at.id];
+   if(a&&a.ign&&!a.out){if(a.u0==null){a.u0=S.scn.origin===at.id?(S.scn.atticU!=null?clamp(+S.scn.atticU,0,1):.5):atticFeedU(S);a.ext=0;}
+    const roofOpen=Object.values(S.o).some(o=>o.type==='roof'&&o.zone===at.id&&o.state!=='closed');const nm=at.name.toLowerCase();
+    if(S.B.construction==='wood'&&!a.ridgeSealed&&a.T>=ATTIC.sealT&&!roofOpen){a.ridgeSealed=S.t;ev(S,'spread',`The plastic ridge vent over the ${nm} has melted shut. Smoke now pushes from the eaves and soffits; the ${nm} fire is going ventilation-limited, so expect the eaves to pulse and the true size of the fire to be hidden.`,{zone:at.id,src:'FSRI-ATTIC'});}
+    const live=a.wet<.3&&!a.suppressed;const xr=clamp((a.q-ATTIC.expo[0])/ATTIC.expo[1],0,1);
+    if(live&&a.structural!=null)a.expo=(a.expo||0)+xr*dt;
+    const full=Math.max(a.u0,1-a.u0);if(live)a.ext=Math.min(full,a.ext+dt*(roofOpen?ATTIC.spreadV:ATTIC.spreadVL)*clamp(a.q/.5,0,1));
+    if(clamp(a.u0+a.ext,0,1)-clamp(a.u0-a.ext,0,1)>=.5&&!a.halfInv){a.halfInv=S.t;ev(S,'spread',`Fire is spreading through the ${nm}: about half of it is now involved.`,{zone:at.id,src:'FSRI-ATTIC'});}
+    if(a.ext>=full&&a.q>=.9&&!a.fullInv){a.fullInv=S.t;ev(S,'spread',`${at.name} fully involved: fire has spread the length of the ${nm} and is burning the roof deck and framing throughout.`,{zone:at.id,src:'NIST-ROOF'});}
+    const rs=ATTIC.roof[S.B.roofSystem]||ATTIC.roof.truss;const rn=S.B.roofSystem==='rafter'?'rafter (dimensional lumber)':'lightweight truss';
+    if(a.structural!=null&&!a.roofWarn&&a.q>.3){a.roofWarn=S.t;ev(S,'collapse',`Roof collapse warning: fire is burning the ${rn} roof structure. ${S.B.roofSystem==='rafter'?'Dimensional lumber lasts longer than trusses, but a roof burning from below can still fail without warning.':'Unprotected trusses can fail after 5-10 minutes of fire exposure, often without warning.'} No crews on the roof or under it without a risk/benefit decision.`,{zone:at.id,src:'NIOSH-TRUSS'});}
+    if(!a.roofBurn&&(a.expo||0)>=ATTIC.burn&&!roofOpen){a.roofBurn=S.t;const over=atticSpot(S,a.u0);const id='roof:burn';
+      S.o[id]={id,state:'open',zone:at.id,type:'roof',side:'Roof',dyn:true,fail:0,failAt:1e9,over,burn:true};
+      ev(S,'spread',`Roof burn-through: fire has burned through the roof deck over ${over===at.id?'the '+nm:zname(S,over)}. The ${nm} is now venting: replacement air at the eaves and gables will grow the fire fast, with fire at the hole, the gables and the eaves near the origin.`,{zone:at.id,src:'NIST-ROOF'});}
+    if(!a.roofCollapse&&(a.expo||0)>=rs.collapse){a.roofCollapse=S.t;ev(S,'collapse',`Roof collapse likely now: the ${rn} roof has been exposed to the ${nm} fire for about ${fmtS(rs.collapse)} (NISTIR 7094: truss roofs collapsed 8-9 min after the fire entered the attic, about 3 min after the roof itself was burning). Clear the collapse zone.`,{zone:at.id,src:'NIST-ROOF'});}}}
   // ignition of other compartments
   for(const id in zs){const z=zs[id];if(z.ign||z.out)continue;
     if(z.T>(z.attic?.6:.82)&&z.wet<.2){z.ign=true;z.tIgn=S.t-FUEL[S.scn.fuel].tg*.55;ev(S,'spread',`Fire has extended into ${zname(S,id)}.`,{zone:id});}}
@@ -603,6 +650,7 @@ function stageOf(S,id){const z=S.z[id];if(!z.ign)return z.s>.25?'Smoke only':'No
   if(z.fuel<.15&&z.structural&&z.sf<.15)return'Decay (contents and structure consumed)';if(z.fuel<.15&&z.structural)return'Fully developed: burning the structure';if(z.fuel<.15)return'Decay (fuel consumed)';
   if(z.flashed&&z.q<.5)return'Decay (after flashover)';
   if(z.flashed)return z.vl?'Fully developed (ventilation-limited)':'Fully developed';
+  if(z.attic&&atticRules(S)&&(z.fullInv||z.roofBurn)&&z.q>.5)return z.fullInv?'Fully developed':'Fully developed (venting through the roof)';if(z.attic&&atticRules(S)&&z.vl&&z.q>.3)return'Burning, ventilation-limited (roof structure)';
   if(z.decay)return'Decay (ventilation-limited, starved for air)';
   if(z.vl)return'Growth (ventilation-limited)';
   return z.q<.12?'Incipient':'Growth';}
@@ -661,6 +709,16 @@ function eavesVis(S,side){const B=S.B,a=S.z.attic;side=side||'A';
   const bp=bldgPressure(S),vk=vlPush(S);const atticRate=Math.max(0,a.s-.15)*(.6+a.T*1.5);
   const roofOpen=Object.values(S.o).some(o=>o.type==='roof'&&o.state!=='closed');
   const pulse=a.ign&&!a.out&&a.vl&&!roofOpen?1:0;
+  // Oct 19: a burning attic is involved over a stretch around where it started (a.u0 +/- a.ext); smoke is heaviest there and fills the rest
+  // of the attic more lightly, and fire shows only from the involved stretch, and only once the attic is venting (roof open or free-burning) [FSRI-ATTIC 7.5]
+  const AR=atticRules(S),AF=AR&&a.ign&&!a.out&&a.u0!=null;const uOf=x=>atticU(B,side,x);
+  const dist=(x0,x1)=>{if(side==='B'||side==='D')return Math.abs(uOf(x0)-a.u0);const u0=uOf(x0),u1=uOf(x1);const lo=Math.min(u0,u1),hi=Math.max(u0,u1);return a.u0<lo?lo-a.u0:a.u0>hi?a.u0-hi:0;};
+  const loc=(x0,x1)=>{if(!AF)return 1;const d=Math.max(0,dist(x0,x1)-a.ext);return .3+.7*Math.exp(-d/.15);};
+  const venting=roofOpen||!!a.fullInv;
+  const flameAt=(x0,x1)=>{if(!AR)return a.ign&&!a.out&&a.q>.5?a.q:0;if(!AF||!venting||a.q<=.5)return 0;return dist(x0,x1)<=a.ext+.02?a.q:0;};
+  // the part of an eave stretch that is inside the involved stretch (the whole piece on the gable-end sides)
+  const clipX=(x0,x1)=>{if(!AF||side==='B'||side==='D')return[x0,x1];const e=V.eaves[0];const ux=u=>{const k=side==='C'?1-u:u;return e.x0+k*(e.x1-e.x0);};
+    const p=ux(clamp(a.u0-a.ext,0,1)),q=ux(clamp(a.u0+a.ext,0,1));const lo=Math.max(x0,Math.min(p,q)-12),hi=Math.min(x1,Math.max(p,q)+12);return hi>lo?[lo,hi]:[(x0+x1)/2,(x0+x1)/2];};
   // the top-floor rooms under this side's eave (each side's picture maps them along its own eave)
   const tops=B.zones.filter(z=>z.floor===top&&!z.attic&&S.z[z.id]&&(V.zx?V.zx[z.id]:!z.rear));const zr=z=>V.zx?V.zx[z.id]:[z.x0,z.x1];
   // the attic is fed (heat and smoke) mostly over the burning/hot room below it, so weight by that room's fire and heat, not by smoke (which evens out across a floor)
@@ -669,14 +727,18 @@ function eavesVis(S,side){const B=S.B,a=S.z.attic;side=side||'A';
   for(const e of pieces){const cover=[];
     for(const bz of tops){const z=S.z[bz.id];const [zx0,zx1]=zr(bz);const x0=Math.max(e.x0,zx0),x1=Math.min(e.x1,zx1);if(x1-x0<5)continue;cover.push([x0,x1]);
       const push=bp*vk*Math.max(0,z.s-.5)*.45;
-      const share=atticRate*(.12+.88*(fMax>.02?feed(z)/fMax:1));
+      const share=atticRate*(.12+.88*(fMax>.02?feed(z)/fMax:1))*loc(x0,x1);
       if(Math.max(push,share)<=.005)continue;const fromAttic=share>=push;const sm=fromAttic?smokeOf(S,'attic'):gap(smokeOf(S,bz.id));
-      segs.push({x0,x1,y:e.y,zone:bz.id,src:fromAttic?'attic':'push',rate:Math.max(push,share),pulse:fromAttic?pulse:0,...sm});}
+      segs.push({x0,x1,y:e.y,zone:bz.id,src:fromAttic?'attic':'push',rate:Math.max(push,share),pulse:fromAttic?pulse:0,flame:fromAttic?flameAt(x0,x1):0,...sm});}
     if(atticRate>.005){const sm=smokeOf(S,'attic');cover.sort((p,q)=>p[0]-q[0]);let x=e.x0;
-      for(const [c0,c1] of cover.concat([[e.x1,e.x1]])){if(c0-x>20)segs.push({x0:x,x1:c0,y:e.y,zone:'attic',src:'attic',rate:atticRate*.12,pulse,...sm});x=Math.max(x,c1);}}}
-  if(atticRate>.005){const sm=smokeOf(S,'attic');for(const v of (V.eaveVents||[]))segs.push({x0:v.x-v.w/2,x1:v.x+v.w/2,y:v.y,zone:'attic',src:v.kind||'vent',rate:atticRate*(v.kind==='gable'?1.6:1.2),pulse,...sm});}
+      for(const [c0,c1] of cover.concat([[e.x1,e.x1]])){if(c0-x>20)segs.push({x0:x,x1:c0,y:e.y,zone:'attic',src:'attic',rate:atticRate*.12*(AF?Math.max(1,6*loc(x,c0)):1)*loc(x,c0),pulse,flame:flameAt(x,c0),...sm});x=Math.max(x,c1);}}}
+  if(atticRate>.005){const sm=smokeOf(S,'attic');for(const v of (V.eaveVents||[]))segs.push({x0:v.x-v.w/2,x1:v.x+v.w/2,y:v.y,zone:'attic',src:v.kind||'vent',rate:atticRate*(v.kind==='gable'?1.6:1.2)*loc(v.x-v.w/2,v.x+v.w/2),pulse,flame:flameAt(v.x-v.w/2,v.x+v.w/2),...sm});
+    // early attic fire: light smoke from the ridge vent until the plastic vent melts shut [FSRI-ATTIC Table 7.1, 7.6]
+    if(AF&&B.construction==='wood'&&!a.ridgeSealed&&!roofOpen&&V.ridge){const r=V.ridge;const ux=side==='A'||side==='C'?r.x0+(r.x1-r.x0)*(side==='C'?1-a.u0:a.u0):(r.x0+r.x1)/2;const hw=Math.max(15,Math.min((r.x1-r.x0)/2,(r.x1-r.x0)*(.15+a.ext)));
+      segs.push({x0:ux-hw,x1:ux+hw,y:r.y+4,zone:'attic',src:'ridge',rate:atticRate*.9,pulse:0,flame:0,...sm});}}
+  for(const g of segs){if(!AR){delete g.flame;continue;}if(g.flame>0){const [f0,f1]=clipX(g.x0,g.x1);g.fx0=f0;g.fx1=f1;}}
   let best=null;for(const g of segs){g.rgb=SMOKE_RGB[g.col];if(!best||g.rate>best.rate)best=g;}
-  const flame=a.ign&&!a.out&&a.q>.5?a.q:0;
+  const flame=AR?Math.max(0,...segs.map(g=>g.flame||0)):a.ign&&!a.out&&a.q>.5?a.q:0;
   if(!best){const sm=smokeOf(S,'attic');return{rate:0,flame,segs,pulse,pressure:0,...sm,rgb:SMOKE_RGB[sm.col]};}
   return{rate:best.rate,flame,segs,pulse,pressure:Math.max(0,...segs.filter(g=>g.src==='push').map(g=>g.rate)),vol:best.vol,vel:best.vel,den:best.den,col:best.col,P:best.P,rgb:best.rgb,zone:best.zone};}
 function summary(S){const o=S.scn.origin;const burning=Object.values(S.z).filter(z=>z.ign&&!z.out).map(z=>z.id);
@@ -826,6 +888,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{BGLASS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{ATTIC,atticU,atticRules,BGLASS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

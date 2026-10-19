@@ -1,7 +1,7 @@
 /* Building definitions for the bundled sample photos. Coordinates are in image pixels of the bundled JPEG. */
 const BUILDINGS=(()=>{
 // House: AI-generated photoreal mock from AJ's design set, cleaned. Native 1285x546.
-const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'Attic',construction:'wood',floorSystem:'engineered',
+const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'Attic',construction:'wood',floorSystem:'engineered',roofSystem:'truss',
  floors:[{f:'Roof',y0:0,y1:75},{f:'Attic',y0:75,y1:148},{f:'2',y0:148,y1:262},{f:'1',y0:262,y1:456},{f:'B',y0:456,y1:546}],
  bldg:{x0:232,x1:1129},eaves:[{x0:262,x1:1000,y:146,zone:'attic'}],ridge:{x0:350,x1:830,y:76},
  zones:[

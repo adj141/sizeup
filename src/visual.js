@@ -68,7 +68,8 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     for(const g of e.segs){if(g.rate<.012)continue;const n=Math.max(1,Math.round((g.x1-g.x0)/(60*U)));
       for(let i=0;i<n;i++){const x=g.x0+(i+.5)*(g.x1-g.x0)/n;
         vis.emitters.push({key:'eave:'+g.zone+':'+(g.src||'')+':'+Math.round(g.x0)+':'+i,kind:'eave',x,y:g.y!=null?g.y:ey,w:(g.x1-g.x0)/n*(g.src==='gable'?1:.9),hgt:4*U,rate:g.rate*7,vel:Math.min(3,g.vel),den:g.den,vol:g.vol,rgb:g.rgb,alpha:.45+.15*g.den,cool:.4,glow:e.flame?.5:0,pulse:g.pulse?'attic':0});}}
-    if(e.flame>.4&&!e.pulse){const hot=e.segs.filter(g=>g.src==='attic'&&g.rate>=e.rate*.6);for(const g of hot)vis.flames.push({x:(g.x0+g.x1)/2,y:g.y!=null?g.y:ey,w:(g.x1-g.x0)*.8,h:(50+e.flame*90)*U,i:.5+e.flame*.4,seed:.31+g.x0*.001,lean,asp:Math.max(1.5,(g.x1-g.x0)*.8/((50+e.flame*90)*U)*1.6)});}
+    // fire at the eaves only where that stretch of eave is itself burning (Oct 19; older builds: every hot attic segment) [model eavesVis]
+    if(e.flame>.4&&!e.pulse){const hot=e.segs.filter(g=>g.flame!=null?g.flame>.4&&(g.src==='attic'||g.src==='gable'):g.src==='attic'&&g.rate>=e.rate*.6);for(const g0 of hot){const g=g0.fx0!=null?{...g0,x0:g0.fx0,x1:g0.fx1}:g0;if(g.x1-g.x0<8)continue;vis.flames.push({x:(g.x0+g.x1)/2,y:g.y!=null?g.y:ey,w:(g.x1-g.x0)*.8,h:(50+e.flame*90)*U,i:.5+e.flame*.4,seed:.31+g.x0*.001,lean,asp:Math.max(1.5,(g.x1-g.x0)*.8/((50+e.flame*90)*U)*1.6)});}}
     total+=e.rate;}
   vis.lights.sort((a,b)=>b.i-a.i);vis.lights=vis.lights.slice(0,8);
   vis.dim=Math.min(.28,total*.06);
