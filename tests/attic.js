@@ -68,6 +68,36 @@ sec('other origins keep the earlier attic rules (equiv suite checks them against
 {const S2=M.create(b,{origin:'br3',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,companies:M.PRESETS.generic.companies()});
  const S0=M0.create(b,JSON.parse(JSON.stringify(S2.scn)));M.run(S2,25*60);M0.run(S0,25*60);
  ok(!M.atticRules(S2)&&JSON.stringify(S2.events)===JSON.stringify(S0.events),'primary-bedroom fire: same events as the live model for 25 min');}
+sec('attic smoke at a 5-min arrival leaves through the vents, heaviest near the origin (Oct 19 smoke fix; AJ: "thick cloud blanketing the entire roof line")');
+const VIS=(()=>{const src=fs.readFileSync(require.resolve('/workspace/sizeup/src/visual.js'),'utf8');return new Function(src+';return SizeupVisual;')();})();
+for(const u of [undefined,.15,.85]){const S=mk(M,{u});M.run(S,300);const e=M.eavesVis(S,'A');const u0=S.z.attic.u0;const vs=e.vents||[];
+  const near=vs.filter(v=>Math.abs(uOf(v.x)-u0)<.1),far=vs.filter(v=>Math.abs(uOf(v.x)-u0)>.35);const avg=a=>a.reduce((s,v)=>s+v.rate,0)/Math.max(1,a.length);
+  ok(vs.length>=8&&near.length&&far.length&&avg(near)>avg(far)*2.5,`origin ${u==null?'center':'u '+u}: 5:00 soffit-vent smoke near the origin ${avg(near).toFixed(2)} vs far end ${avg(far).toFixed(2)} (${vs.length} vent points)`);
+  const fe=Math.max(...vs.filter(v=>Math.abs(uOf(v.x)-u0)>.35).map(v=>v.rate));ok(fe<e.rate*.5,`origin ${u==null?'center':'u '+u}: far-end vents carry under half the heaviest eave smoke (${fe.toFixed(2)} / ${e.rate.toFixed(2)})`);
+  const V=VIS.build(S,b,M,'A');const U=b.H/800;const ev=V.emitters.filter(m=>m.kind==='eave'||m.kind==='vent');
+  ok(ev.length&&ev.every(m=>m.kind==='vent'&&m.w<=14*U+1e-9),`origin ${u==null?'center':'u '+u}: drawn as narrow vent wisps (${ev.length} vent emitters, none of the wide eave-blanket emitters)`);
+  const near1=V.emitters.filter(m=>m.kind==='vent'&&Math.abs(uOf(m.x)-u0)<.1),far1=V.emitters.filter(m=>m.kind==='vent'&&Math.abs(uOf(m.x)-u0)>.35);
+  ok(Math.min(...near1.map(m=>m.alpha))>Math.max(...far1.map(m=>m.alpha)),`origin ${u==null?'center':'u '+u}: wisps near the origin are more opaque than at the far end`);}
+{const S=mk(M);M.run(S,300);const e=M.eavesVis(S,'A'),c=M.smokeOf(S,'attic');ok(e.vents.every(v=>v.col===c.col&&v.draw.den===c.den&&v.den===e.den),`wisp colour and drawn density come from the model's attic smoke (${c.col}, density ${c.den}), not a preset; the reading on them is the eave reading (density ${e.den})`);}
+sec('attic smoke READING follows the attic state (Oct 19: toned down to match the picture)');
+{const R=M.ATTIC.smoke.read;ok(R.vents.join()==='1,1,1'&&R.half.join()==='2,1,2'&&R.roof.join()==='2,2,2','reading caps [vol,vel,den]: vents only 1/1/1 (Moderate), half involved 2/1/2, roof open 2/2/2, fully involved uncapped (teaching values)');
+ const S=mk(M);const at={};for(let t=0;t<=13*60;t++){if(t===300||t===600||t===780)at[t]={e:M.eavesVis(S,'A'),raw:M.smokeOf(S,'attic'),roof:S.z.attic.roofBurn,full:S.z.attic.fullInv,sealed:S.z.attic.ridgeSealed};M.step(S);}
+ const r=x=>`${M.VOLN[x.vol]} ${x.col}, ${M.VELN[x.vel].toLowerCase()}, ${M.DENN[x.den].toLowerCase()}`;
+ const a5=at[300].e,a10=at[600].e,a13=at[780].e;
+ ok(a5.vol===1&&a5.vel===1&&a5.den===1&&a5.col==='brown'&&a5.pulse===1,`5:00 (vents only, ridge sealed ${mmss(at[300].sealed)}): "${r(a5)}", pulsing (raw attic values ${r(at[300].raw)})`);
+ ok(at[600].roof!=null&&!at[600].full&&a10.vol===2&&a10.vel===2&&a10.den===2&&!a10.pulse,`10:00 (roof burned through at ${mmss(at[600].roof)}): "${r(a10)}", no longer pulsing`);
+ ok(at[780].full!=null&&a13.vol===at[780].raw.vol&&a13.vel===at[780].raw.vel&&a13.den===at[780].raw.den&&a13.vol===3,`13:00 (fully involved ${mmss(at[780].full)}): uncapped attic reading "${r(a13)}"`);
+ ok(a10.vol>=a5.vol&&a13.vol>=a10.vol&&a10.vel>=a5.vel,'volume and velocity only scale up as the attic gets involved');}
+{let worst=0;for(const u of [undefined,.15,.85])for(const fuel of ['modern','legacy']){const S=mk(M,{u,fuel});M.run(S,300);const e=M.eavesVis(S,'A');worst=Math.max(worst,e.vol,e.vel,e.den);}
+ ok(worst<=1,`every origin and fuel at a 5:00 arrival reads no more than Moderate (max index ${worst})`);}
+{const S2=M.create(b,{origin:'br3',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,companies:M.PRESETS.generic.companies()});const S0=M0.create(b,JSON.parse(JSON.stringify(S2.scn)));
+ let same=true;for(let t=0;t<=20*60;t+=30){const e=M.eavesVis(S2,'A'),e0=M0.eavesVis(S0,'A');if(e&&e0&&(e.vol!==e0.vol||e.vel!==e0.vel||e.den!==e0.den||e.col!==e0.col||e.pulse!==e0.pulse))same=false;M.run(S2,30);M0.run(S0,30);}
+ ok(same,'primary-bedroom fire: eave smoke reading identical to the pre-attic model every 30 s for 20 min');}
+{const S=mk(M);for(let t=0;t<=300;t++){const e=M.eavesVis(S,'A');if(S.t===200){ok(e&&e.vents&&e.vents.some(v=>v.src==='ridge'),'before the ridge vent seals (3:20) smoke also shows at ridge-vent points');}M.step(S);}
+ const e=M.eavesVis(S,'A');ok(!e.vents.some(v=>v.src==='ridge'),`after it melts shut (${mmss(S.z.attic.ridgeSealed)}) no ridge-vent smoke at 5:00`);
+ M.run(S,60);const e2=M.eavesVis(S,'A');ok(S.z.attic.vl&&e2.vents.every(v=>v.pulse),'ventilation-limited (6:00): the soffit wisps pulse [FSRI-ATTIC]');}
+{const S2=M.create(b,{origin:'br3',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,companies:M.PRESETS.generic.companies()});M.run(S2,12*60);
+ ok(!('vents' in (M.eavesVis(S2,'A')||{})),'room fires that extend to the attic keep the earlier eave smoke drawing');}
 // timeline.md
 const KEY=/ridge vent|Roof|roof framing|spreading through|fully involved|Fire has extended|burned itself out|decayed|knocked down/;
 let md='# Attic fire timeline, 2-story house (Oct 19 attic fix)\n\nOrigin: attic (centre unless noted), modern contents, calm, seed 5, glass "fails", unattended, 25 min. Times from ignition; AJ\'s case: arrival at 5:00 (T+0).\n\n';
@@ -85,4 +115,39 @@ fs.writeFileSync(OUT+'timeline.md',md);
   for(const t of [5,5.5,8,10,12])await shot(url,'A',t*60,`${OUT}${k}-sideA-${t}min.png`);
   await shot(url,'A',15*60,`${OUT}${k}-sideA-15min.png`);await shot(url,'C',12*60,`${OUT}${k}-sideC-12min.png`);}
  await shot('file:///workspace/sizeup/index.html#noautoplay','A',11*60+30,`${OUT}after-sideA-11.5min-origin-sideB-end.png`,.15);
+ // Oct 19 smoke fix: AJ's view (iPhone 390x844, setup Step 3, Side A, 5 min) and the drill at arrival; before = live f48ba13
+ const OUT2='/workspace/sizeup/screens/attic-smoke-oct19/';fs.mkdirSync(OUT2,{recursive:true});const measure=require('./smoke-measure.js');
+ const view=async(url,vp,u)=>{const ph=vp[0]<500;const p=await br.newPage({viewport:{width:vp[0],height:vp[1]},deviceScaleFactor:ph?3:1,isMobile:ph,hasTouch:ph});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.addStyleTag({content:'.toast{display:none!important}'});
+  await p.evaluate(async u=>{const z=window.__sizeup,M=z.M;await z.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'attic',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',atticU:u,companies:M.PRESETS.generic.companies()});z.A.playing=false;},u);await p.waitForTimeout(3000);return p;};
+ const step3=async p=>{await p.locator('#steps button[data-go="3"]').click();await p.waitForTimeout(3500);};
+ const R={};
+ for(const [k,url] of [['before','file:///workspace/sizeup/tests/base/builds/pre-smoke-f48ba13.html#noautoplay'],['after','file:///workspace/sizeup/index.html#noautoplay']]){
+  for(const [vp,tag] of [[[390,844],'iphone'],[[1280,900],'desktop']]){const p=await view(url,vp);R[k+tag+'drill']=await measure(p);await p.screenshot({path:`${OUT2}${k}-${tag}-drill-arrival-5min.png`});
+   await step3(p);R[k+tag+'setup']=await measure(p);await p.screenshot({path:`${OUT2}${k}-${tag}-setup-step3-5min.png`});if(tag==='iphone')await p.locator('.slot .stage').screenshot({path:`${OUT2}${k}-iphone-setup-step3-5min-stage.png`});await p.close();}}
+ {const p=await view('file:///workspace/sizeup/index.html#noautoplay',[390,844],.15);R.afterU15=await measure(p);await step3(p);await p.locator('.slot .stage').screenshot({path:`${OUT2}after-iphone-setup-step3-5min-origin-sideB-end-stage.png`});await p.close();}
+ const f=m=>`sky ${(m.sky.cov*100).toFixed(0)}% / roof ${(m.roof.cov*100).toFixed(0)}% covered, letterbox ${m.letterboxPx} px`;
+ ok(R.beforeiphonesetup.letterboxPx>500&&R.beforeiphonesetup.sky.cov>.75,`before (live f48ba13) reproduces AJ's view: ${f(R.beforeiphonesetup)}`);
+ for(const k of ['iphonesetup','iphonedrill','desktopsetup','desktopdrill']){const m=R['after'+k],m0=R['before'+k];
+  ok(m.screen===(/setup/.test(k)?3:4)&&m.t===300,`${k}: same model time (5:00) in the setup preview and the drill`);
+  ok(m.letterboxPx===0,`${k}: no smoke pixels outside the photo (${m.letterboxPx} of ${m.letterboxN} letterbox px)`);
+  ok(m.sky.cov<=.65&&m.sky.mass<=m0.sky.mass*.5,`${k}: smoke above the ridge covers ${(m.sky.cov*100).toFixed(0)}% of the sky over the house (cap 65%; before ${(m0.sky.cov*100).toFixed(0)}%), smoke mass ${m.sky.mass.toFixed(0)} vs ${m0.sky.mass.toFixed(0)}`);
+  ok(m.roof.cov<=.5,`${k}: roof face ${(m.roof.cov*100).toFixed(0)}% covered (cap 50%; before ${(m0.roof.cov*100).toFixed(0)}%), not a blanket`);
+  ok(m.thirds[1]>1.8*Math.max(m.thirds[0],m.thirds[2]),`${k}: smoke heaviest over the origin (eave thirds B-end/centre/D-end ${m.thirds.map(x=>x.toFixed(0)).join('/')})`);}
+ {const m=R.afterU15;ok(m.thirds[0]>2*m.thirds[2],`origin at the Side B end: heaviest over that end (thirds ${m.thirds.map(x=>x.toFixed(0)).join('/')})`);}
+ fs.writeFileSync(OUT2+'metrics.json',JSON.stringify(R,null,1));
+ // written reading in the drill and the size-up scoring at 5, 10 and 13 min (same reading as the picture)
+ const TXT={};for(const t of [5,10,13]){const p=await view('file:///workspace/sizeup/index.html#noautoplay',[1280,900]);
+  const r=await p.evaluate(async t=>{const z=window.__sizeup,M=z.M;await z.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'attic',fuel:'modern',preburn:t*60,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});z.A.playing=false;
+   const T=z.truthCalls();const e=M.eavesVis(z.A.S,'A');z.A.calls={floor:T.floor,stage:T.stage.split('|')[0],vol:T.vol,vel:T.vel,den:T.den,col:T.col,fo:T.fo};z.A.locked=false;z.A.lockResult=null;z.syncUI&&z.syncUI();
+   const btn=document.getElementById('lockBtn');if(btn)btn.click();const L=z.A.lockResult;return{text:z.smokeText(),T,e:{vol:e.vol,vel:e.vel,den:e.den,col:e.col},board:[...document.querySelectorAll('*')].some(n=>n.childElementCount===0&&n.textContent===z.smokeText()),rows:L&&L.rows.filter(x=>/Volume|Velocity|Density|Color/.test(x.k)).map(x=>[x.k,x.ok,x.truth])};},t);
+  TXT[t]=r;await p.close();}
+ ok(/^Moderate brown, moderate, moderate · pulsing · from soffit vents \(eaves\)(, ridge vent)?, heaviest near the middle of the roof$/.test(TXT[5].text),`5:00 text: "${TXT[5].text}"`);
+ ok(/^Heavy brown, pressurized, thick · from soffit vents \(eaves\), roof vent/.test(TXT[10].text),`10:00 text: "${TXT[10].text}"`);
+ ok(/^Very heavy brown, /.test(TXT[13].text)&&/roof vent/.test(TXT[13].text),`13:00 text: "${TXT[13].text}"`);
+ for(const t of [5,10,13]){const r=TXT[t];ok(r.T.vol===r.e.vol&&r.T.vel===r.e.vel&&r.T.den===r.e.den,`${t}:00 size-up truth uses the same reading (vol ${r.T.vol}, vel ${r.T.vel}, den ${r.T.den})`);
+  ok(r.board,`${t}:00 the board's Smoke line shows that text`);
+  ok(r.rows&&r.rows.length===4&&r.rows.every(x=>x[1]===true),`${t}:00 calls matching the reading are scored correct (${r.rows&&r.rows.map(x=>x[0]+' '+x[2]).join(', ')})`);}
+ {const S=mk(M);M.run(S,300);const g=M.gradeIRR(S,{unit:'E1',stories:2,constr:'wood',occ:'sfr',size:'medium',problem:'smoke',floor:'Attic',side:'A'});const c=g.rows.find(x=>x.k==='conditions');
+  ok(c.st==='ok',`radio report "Smoke showing" from the attic at 5:00 is graded correct (${c.msg})`);}
+ fs.writeFileSync(OUT2+'smoke-text.json',JSON.stringify(TXT,null,1));
  await br.close();console.log(`\nattic suite: ${pass} pass, ${fail} fail`);process.exit(fail?1:0);})();

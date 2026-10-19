@@ -717,6 +717,7 @@ const SIZEUP_RULES=[
  {id:'bglass',name:'Basement window glass',kind:'fsri',src:['FSRI-BSMT','GLASS'],does:'Basement glass fails only on the basement\'s own hot layer, near flashover (teaching mapping of the 20-35 kW/m2 flux needed for glass to fall out; cracking alone does not open a vent). In the FSRI/ISFSI basement experiments every basement fire stayed ventilation-limited, with the windows as set before ignition or broken by the researchers. A small window-well window heats more slowly (teaching value). With nothing vented, a basement fire stays ventilation-limited with intact windows until the fire service vents.'},
  {id:'attic-fire',name:'Attic fires: ventilation-limited, spreading from the origin, roof burn-through and collapse',kind:'fsri',src:['FSRI-ATTIC','NIST-ROOF','NIOSH-TRUSS'],does:'A fire that starts in the attic grows to ventilation-limited in about 5 min (FSRI attic study, Table 7.1; 7:45-8:00 in Exps 3A/4A) but does not starve out: the soffit, ridge and gable vents keep it burning on the roof framing and sheathing. The plastic ridge vent melts shut early, then smoke pushes and pulses from the eaves. Smoke is heaviest over where the fire started; fire shows at the eaves and gables only over the involved stretch and only once the attic is venting. The roof deck burns through over the origin after 6:00 of involvement and the truss roof is flagged as likely to collapse after 9:00 (NISTIR 7094: roof burning 6 min and collapse 8-9 min after the fire got into the attic; NIOSH: trusses can fail after 5-10 min). Spread rates, vent air and the rafter-roof time are teaching values. Applies to attic-origin fires; an attic reached by extension keeps the earlier rules.',
   quote:'“The openings provided for natural ventilation are not sufficient to maintain steady state burning and fuel limited fire behavior. The size of the fire is limited by the available oxygen and will nearly always become ventilation limited.” (FSRI attic study, 7.4)'},
+ {id:'attic-smoke',name:'Attic fire smoke on the picture: from the soffit and ridge vents, heaviest over the origin',kind:'fsri',src:['FSRI-ATTIC'],does:'An attic-origin fire\'s smoke is drawn as separate wisps from soffit-vent points along the eave (and ridge-vent points until the plastic ridge vent melts shut), pulsing once the attic is ventilation-limited (FSRI attic study 7.5, 7.6). Each vent is weighted by its distance from the fire: full inside the involved stretch, falling to 0.15 of that toward the far end (teaching value). Colour and density are the model\'s attic smoke; vent spacing, puff size and the falloff are drawing values. Smoke and flames are clipped to the photo. The written reading (volume, velocity, density) is capped at Moderate while the smoke only leaks from the vents, rises once about half the attic is involved and after roof burn-through, and is uncapped once the attic is fully involved (teaching values, like the gap-leakage cap); the eaves pulse once the ridge vent has sealed.'},
  {id:'basement',name:'Basement fires: water from the fire\'s own level',kind:'fsri',src:['FSRI-BSMT','NIOSH-BG'],does:'A basement fire is ventilation-limited and feeds on air from the stair door and basement windows. Opening the basement stair door makes the stairway the fire\'s exhaust: a line going down the interior stair gets a crew warning, and crews operating on floor 1 over a burning basement get a collapse-risk warning (collapse itself is not modelled). A line through a walk-out door or basement window (picked as "Room @ opening" in the line list) attacks from the fire\'s own level. What you see outside: with the stair door closed the smoke stays below and leaks at the basement windows and walk-out (often only visible on the 360); with it open the still-cool first and second floors fill and leak at their window and door gaps. NIOSH lists dense smoke at the ground or first floor with modest heat and no visible fire as an indicator of a below-grade fire. Eave smoke comes later and lighter, through a slow basement-to-attic chase: NIOSH reports smoke from the eaves in NIST/UL basement experiments in houses that were not balloon-frame, suspected to come through pipe chases and holes for cables and vent pipes. The warning thresholds, the gap-leak boost and the chase rate are teaching values.',
   quote:'“Each of these suppression methods provided a means of fighting the fire at its own level, without having to operate over the fire on an unrated wood floor assembly as well as remaining out of the exhaust portion of the basement fire flow in the basement stairway.” (FSRI, Understanding and Fighting Basement Fires: conclusions)'},
  {id:'features',name:'Fences, power lines, cars and exposures',kind:'simplification',src:[],does:'Features the builder marks on a side change tactics on that side: a fence adds hose-stretch time (default +30 s) to lines that go through that side; overhead power lines block ground ladders and the aerial on that side (no outside vent of upper windows there); a car blocks the aerial on that side (ground ladders only, slower); and an exposure building collects radiant heat while fire shows from openings on that side, warns, and can ignite unless a company is assigned to protect it. Porches/decks and utility meters are notes only. All of these are simple teaching rules, not measured values.'},
@@ -917,7 +918,14 @@ const ATTIC={on:true,
   spreadV:.002,    // TV: once the roof is open: the rest of the attic in ~2-4 min (NISTIR 7094: attic flashover ~5.5 min after the fire entered it)
   burn:360,        // roof deck burn-through over the origin after 6:00 on the involvement clock (NISTIR 7094 test 2: attic 8:00 -> roof burning 14:00)
   roof:{truss:{collapse:540},     // 9:00 (NISTIR 7094 test 2: attic 8:00 -> collapse 17:00, 3 min after the roof burned; NIOSH: trusses 5-10 min)
-        rafter:{collapse:920}}};  // TV: 9:00 x 1.7 (the UL dimensional-lumber vs engineered floor ratio, 11:57 / 7:00); no attic rafter data found
+        rafter:{collapse:920}},   // TV: 9:00 x 1.7 (the UL dimensional-lumber vs engineered floor ratio, 11:57 / 7:00); no attic rafter data found
+  // Oct 19 (attic smoke fix), drawing/teaching values: smoke leaves at discrete soffit vents (every ~60 px of eave) and ridge-vent points,
+  // weighted by distance from the origin: 1 inside the involved stretch, falling to `floor` with length scale `fall` (fraction of attic length)
+  smoke:{soffitSp:60,ridgeSp:45,floor:.15,fall:.15,
+    // TV: the smoke READING (volume, velocity, density index, the same Light..Very heavy / Lazy..Turbulent / Thin..Very thick scale)
+    // is capped while the smoke only leaks out through the soffit and ridge vents, like gap leakage elsewhere in the model; the caps lift as
+    // the attic gets involved and once the roof burns through; a fully involved attic reads uncapped. [vol, vel, den]
+    read:{vents:[1,1,1],half:[2,1,2],roof:[2,2,2]}}};
 // the Oct 19 attic rules apply to fires that START in the attic; an attic reached by extension keeps the earlier rules (regression baselines)
 function atticRules(S){if(!ATTIC.on)return false;const at=S.B.zones.find(z=>z.attic);return!!at&&S.scn.origin===at.id;}
 // position along the attic (0 = Side B end, 1 = Side D end) of picture x on a side; Sides B and D are the gable ends
@@ -1573,17 +1581,22 @@ function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bld
      both the source of air as well as the exhaust and you may notice a pulsing of smoke out of the eaves. This is a sign that you
      have a ventilation-limited fire in the attic." [FSRI-ATTIC] */
 function eavesVis(S,side){const B=S.B,a=S.z.attic;side=side||'A';
-  const V=side==='A'?{eaves:B.eaves,zx:B.views&&B.views.A&&B.views.A.zx,eaveVents:B.eaveVents}:(B.views||{})[side];
+  const V=side==='A'?{eaves:B.eaves,zx:B.views&&B.views.A&&B.views.A.zx,eaveVents:B.eaveVents,ridge:B.ridge}:(B.views||{})[side];
   if(!a||!V||!V.eaves||!V.eaves.length)return null;const pieces=V.eaves;const top=String(B.stories||2);
   const bp=bldgPressure(S),vk=vlPush(S);const atticRate=Math.max(0,a.s-.15)*(.6+a.T*1.5);
   const roofOpen=Object.values(S.o).some(o=>o.type==='roof'&&o.state!=='closed');
-  const pulse=a.ign&&!a.out&&a.vl&&!roofOpen?1:0;
+  // Oct 19: an attic-origin fire also pulses at the eaves once the ridge vent has melted shut ("Once the ridge vent seals, the eaves will act
+  // as both the source of air as well as the exhaust and you may notice a pulsing of smoke out of the eaves" [FSRI-ATTIC]); not once it is free-burning
+  const pulse=a.ign&&!a.out&&!roofOpen&&(a.vl||(atticRules(S)&&a.ridgeSealed!=null&&!a.fullInv))?1:0;
   // Oct 19: a burning attic is involved over a stretch around where it started (a.u0 +/- a.ext); smoke is heaviest there and fills the rest
   // of the attic more lightly, and fire shows only from the involved stretch, and only once the attic is venting (roof open or free-burning) [FSRI-ATTIC 7.5]
   const AR=atticRules(S),AF=AR&&a.ign&&!a.out&&a.u0!=null;const uOf=x=>atticU(B,side,x);
   const dist=(x0,x1)=>{if(side==='B'||side==='D')return Math.abs(uOf(x0)-a.u0);const u0=uOf(x0),u1=uOf(x1);const lo=Math.min(u0,u1),hi=Math.max(u0,u1);return a.u0<lo?lo-a.u0:a.u0>hi?a.u0-hi:0;};
   const loc=(x0,x1)=>{if(!AF)return 1;const d=Math.max(0,dist(x0,x1)-a.ext);return .3+.7*Math.exp(-d/.15);};
   const venting=roofOpen||!!a.fullInv;
+  // Oct 19: the attic smoke reading for an attic-origin fire follows how involved the attic is and what is venting (ATTIC.smoke.read)
+  const smA=()=>{const sm=smokeOf(S,'attic');if(!AF||a.fullInv)return sm;const c=ATTIC.smoke.read[roofOpen?'roof':a.halfInv?'half':'vents'];
+    return{...sm,vol:Math.min(sm.vol,c[0]),vel:Math.min(sm.vel,c[1]),den:Math.min(sm.den,c[2]),draw:{vol:sm.vol,vel:sm.vel,den:sm.den}};};// draw: the picture keeps the attic's own values (Oct 19 approved look); the reading is capped
   const flameAt=(x0,x1)=>{if(!AR)return a.ign&&!a.out&&a.q>.5?a.q:0;if(!AF||!venting||a.q<=.5)return 0;return dist(x0,x1)<=a.ext+.02?a.q:0;};
   // the part of an eave stretch that is inside the involved stretch (the whole piece on the gable-end sides)
   const clipX=(x0,x1)=>{if(!AF||side==='B'||side==='D')return[x0,x1];const e=V.eaves[0];const ux=u=>{const k=side==='C'?1-u:u;return e.x0+k*(e.x1-e.x0);};
@@ -1597,19 +1610,32 @@ function eavesVis(S,side){const B=S.B,a=S.z.attic;side=side||'A';
     for(const bz of tops){const z=S.z[bz.id];const [zx0,zx1]=zr(bz);const x0=Math.max(e.x0,zx0),x1=Math.min(e.x1,zx1);if(x1-x0<5)continue;cover.push([x0,x1]);
       const push=bp*vk*Math.max(0,z.s-.5)*.45;
       const share=atticRate*(.12+.88*(fMax>.02?feed(z)/fMax:1))*loc(x0,x1);
-      if(Math.max(push,share)<=.005)continue;const fromAttic=share>=push;const sm=fromAttic?smokeOf(S,'attic'):gap(smokeOf(S,bz.id));
+      if(Math.max(push,share)<=.005)continue;const fromAttic=share>=push;const sm=fromAttic?smA():gap(smokeOf(S,bz.id));
       segs.push({x0,x1,y:e.y,zone:bz.id,src:fromAttic?'attic':'push',rate:Math.max(push,share),pulse:fromAttic?pulse:0,flame:fromAttic?flameAt(x0,x1):0,...sm});}
-    if(atticRate>.005){const sm=smokeOf(S,'attic');cover.sort((p,q)=>p[0]-q[0]);let x=e.x0;
+    if(atticRate>.005){const sm=smA();cover.sort((p,q)=>p[0]-q[0]);let x=e.x0;
       for(const [c0,c1] of cover.concat([[e.x1,e.x1]])){if(c0-x>20)segs.push({x0:x,x1:c0,y:e.y,zone:'attic',src:'attic',rate:atticRate*.12*(AF?Math.max(1,6*loc(x,c0)):1)*loc(x,c0),pulse,flame:flameAt(x,c0),...sm});x=Math.max(x,c1);}}}
-  if(atticRate>.005){const sm=smokeOf(S,'attic');for(const v of (V.eaveVents||[]))segs.push({x0:v.x-v.w/2,x1:v.x+v.w/2,y:v.y,zone:'attic',src:v.kind||'vent',rate:atticRate*(v.kind==='gable'?1.6:1.2)*loc(v.x-v.w/2,v.x+v.w/2),pulse,flame:flameAt(v.x-v.w/2,v.x+v.w/2),...sm});
+  if(atticRate>.005){const sm=smA();for(const v of (V.eaveVents||[]))segs.push({x0:v.x-v.w/2,x1:v.x+v.w/2,y:v.y,zone:'attic',src:v.kind||'vent',rate:atticRate*(v.kind==='gable'?1.6:1.2)*loc(v.x-v.w/2,v.x+v.w/2),pulse,flame:flameAt(v.x-v.w/2,v.x+v.w/2),...sm});
     // early attic fire: light smoke from the ridge vent until the plastic vent melts shut [FSRI-ATTIC Table 7.1, 7.6]
     if(AF&&B.construction==='wood'&&!a.ridgeSealed&&!roofOpen&&V.ridge){const r=V.ridge;const ux=side==='A'||side==='C'?r.x0+(r.x1-r.x0)*(side==='C'?1-a.u0:a.u0):(r.x0+r.x1)/2;const hw=Math.max(15,Math.min((r.x1-r.x0)/2,(r.x1-r.x0)*(.15+a.ext)));
       segs.push({x0:ux-hw,x1:ux+hw,y:r.y+4,zone:'attic',src:'ridge',rate:atticRate*.9,pulse:0,flame:0,...sm});}}
   for(const g of segs){if(!AR){delete g.flame;continue;}if(g.flame>0){const [f0,f1]=clipX(g.x0,g.x1);g.fx0=f0;g.fx1=f1;}}
   let best=null;for(const g of segs){g.rgb=SMOKE_RGB[g.col];if(!best||g.rate>best.rate)best=g;}
+  // Oct 19 (attic smoke fix): an attic fire's smoke leaves through the vents, so the picture gets discrete soffit-vent points along the
+  // eave (and ridge-vent points before the ridge vent seals), each weighted continuously by its distance from where the attic fire is,
+  // heaviest at the origin and lighter toward the far end [FSRI-ATTIC 7.5, 7.6]. Vent spacing and the falloff are drawing/teaching values.
+  let vents=null;
+  if(AF&&segs.length){vents=[];const locC=x=>{const d=side==='B'||side==='D'?Math.abs(uOf(x)-a.u0):Math.abs(uOf(x)-a.u0);return ATTIC.smoke.floor+(1-ATTIC.smoke.floor)*Math.exp(-Math.max(0,d-a.ext)/ATTIC.smoke.fall);};
+    const lines=pieces.map(e=>({x0:e.x0,x1:e.x1,y:e.y,src:'soffit',sp:ATTIC.smoke.soffitSp})).concat(segs.filter(g=>g.src==='ridge').map(g=>({x0:g.x0,x1:g.x1,y:g.y,src:'ridge',sp:ATTIC.smoke.ridgeSp})));
+    for(const L of lines){const n=Math.max(1,Math.round((L.x1-L.x0)/L.sp));for(let i=0;i<n;i++){const x=L.x0+(i+.5)*(L.x1-L.x0)/n;let g0=null,r=0;
+      for(const g of segs){if(g.src==='push'||(L.src==='ridge')!==(g.src==='ridge')||x<g.x0||x>g.x1)continue;const rr=g.rate/Math.max(.05,loc(g.x0,g.x1))*locC(x);if(rr>r){r=rr;g0=g;}}
+      if(g0&&r>.01)vents.push({x,y:L.y,src:L.src,rate:r,near:locC(x),pulse:g0.pulse,vol:g0.vol,vel:g0.vel,den:g0.den,col:g0.col,rgb:g0.rgb,draw:g0.draw||{vol:g0.vol,vel:g0.vel,den:g0.den}});}}}
   const flame=AR?Math.max(0,...segs.map(g=>g.flame||0)):a.ign&&!a.out&&a.q>.5?a.q:0;
-  if(!best){const sm=smokeOf(S,'attic');return{rate:0,flame,segs,pulse,pressure:0,...sm,rgb:SMOKE_RGB[sm.col]};}
-  return{rate:best.rate,flame,segs,pulse,pressure:Math.max(0,...segs.filter(g=>g.src==='push').map(g=>g.rate)),vol:best.vol,vel:best.vel,den:best.den,col:best.col,P:best.P,rgb:best.rgb,zone:best.zone};}
+  if(!best){const sm=smA();return{rate:0,flame,segs,pulse,pressure:0,...sm,rgb:SMOKE_RGB[sm.col]};}
+  return{rate:best.rate,flame,segs,...(vents?{vents}:{}),pulse,pressure:Math.max(0,...segs.filter(g=>g.src==='push').map(g=>g.rate)),vol:best.vol,vel:best.vel,den:best.den,col:best.col,P:best.P,rgb:best.rgb,zone:best.zone};}
+// Oct 19: where the attic-origin smoke is showing on a side: soffit vents (and the ridge vent until it seals), heaviest near the origin end
+function atticSmokeWhere(S,side){side=side||'A';if(!atticRules(S))return null;const a=S.z.attic,e=eavesVis(S,side);if(!e||!e.vents||!e.vents.length)return null;
+  const ridge=e.vents.some(v=>v.src==='ridge');const u=a.u0;const near=a.ext>=.45?null:side==='B'||side==='D'?null:u<.34?'the Side B end':u>.66?'the Side D end':'the middle of the roof';
+  return{where:ridge?['soffit vents (eaves)','ridge vent']:['soffit vents (eaves)'],near};}
 function summary(S){const o=S.scn.origin;const burning=Object.values(S.z).filter(z=>z.ign&&!z.out).map(z=>z.id);
   const vis=openingVis(S);let best=null;for(const id in vis){const v=vis[id];const sc=v.rate+v.flame;if(!best||sc>best.sc)best={id,sc,...v};}
   const ev_=eavesVis(S);
@@ -1757,7 +1783,7 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{ATTIC,atticU,atticRules,BGLASS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;
 
@@ -1881,11 +1907,12 @@ function create(canvas){
   /* ---- particle simulation (scene pixel units) ---- */
   function emit(src,U,wind){if(R.smoke.length>=MAXP)return;const vel=src.vel,den=src.den;const w=src.w;
     const x=src.x+rand(-.45,.45)*w,y=src.y+rand(0,1)*(src.hgt||0);
-    const rise=[16,28,42,55][vel]*U*(src.kind==='roof'?1.4:src.kind==='leak'?1.5:1);const burst=[0,25,80,120][vel]*U;
-    const life=(src.kind==='eave'||src.kind==='leak'?rand(3,5.5):rand(4.5,8))*(vel===0?1.25:1);
-    const s0=Math.max((src.kind==='leak'?9:14)*U,w*(src.kind==='eave'||src.kind==='leak'?.35:.75))*rand(.8,1.2),s1=s0*rand(2.2,3)+(70+src.vol*45)*U*(src.kind==='leak'?.5:1);
+    const VT=src.kind==='vent';// Oct 19: attic soffit/ridge vent wisp: narrow source, small puffs that widen only a little as they rise
+    const rise=[16,28,42,55][vel]*U*(src.kind==='roof'?1.4:src.kind==='leak'||VT?1.5:1);const burst=VT?[0,10,20,30][vel]*U:[0,25,80,120][vel]*U;
+    const life=(VT?rand(4.2,6.2):src.kind==='eave'||src.kind==='leak'?rand(3,5.5):rand(4.5,8))*(vel===0?1.25:1);
+    const s0=VT?rand(14,20)*U:Math.max((src.kind==='leak'?9:14)*U,w*(src.kind==='eave'||src.kind==='leak'?.35:.75))*rand(.8,1.2),s1=VT?s0*rand(2,2.5)+(44+src.vol*16)*U:s0*rand(2.2,3)+(70+src.vol*45)*U*(src.kind==='leak'?.5:1);
     const shade=rand(.88,1.08);const rgb=src.rgb.map(c=>Math.min(255,c*shade)/255);
-    R.smoke.push({x,y,vx:rand(-6,6)*U+(src.side||0)*burst*.25,vy:-rise-burst*rand(.5,1),rise,age:0,life,s0,s1,a:[.28,.5,.72,.92][den]*(src.alpha||1),turb:[4,10,18,40][vel]*U,ph:rand(0,99),rot:rand(0,6.28),vr:rand(-.25,.25)*(vel===3?2.5:1),
+    R.smoke.push({x,y,vx:rand(-6,6)*U*(VT?.4:1)+(src.side||0)*burst*.25,vy:-rise-burst*rand(.5,1),rise,age:0,life,s0,s1,a:[.28,.5,.72,.92][den]*(src.alpha||1),turb:[4,10,18,40][vel]*U,ph:rand(0,99),rot:rand(0,6.28),vr:rand(-.25,.25)*(vel===3?2.5:1),
       rgb,seed:rand(0,1),glow:src.glow||0,wind:wind*U,ev:rand(0,10),evr:[.18,.3,.45,.8][vel],cool:src.cool==null?.35:src.cool});}
   R.update=(dt,vis)=>{R.time+=dt;R.vis=vis;if(!vis)return;const U=H/800,wind=vis.wind||0;
     vis.emitters.forEach((s,i)=>{if(s.rate<=0)return;const k='e'+(s.key||i);
@@ -1915,6 +1942,8 @@ function create(canvas){
     const E=(vis&&vis.env)||{};gl.uniform3fv(pr.u.u_amb,E.amb||[1,1,1]);gl.uniform1f(pr.u.u_gk,E.gk||1);gl.uniform1f(pr.u.u_fog,E.fog||0);gl.uniform3fv(pr.u.u_fogc,E.fogc||[.7,.72,.75]);gl.uniform1f(pr.u.u_flood,E.flood||0);
     gl.drawArrays(gl.TRIANGLES,0,6);
     if(!vis)return;
+    // Oct 19: clip smoke and flames to the photo (never draw over the letterbox bars around a letterboxed picture)
+    gl.enable(gl.SCISSOR_TEST);gl.scissor(Math.round(view.x*dpr),Math.round(ch-(view.y+view.h)*dpr),Math.round(view.w*dpr),Math.round(view.h*dpr));
     // smoke particles (premultiplied alpha), sorted: older (higher) first so fresh dense smoke sits in front at the opening
     const EV=vis.env||{};const LT=vis.lights||[];const U=H/800;let n=0;const sm=R.smoke.slice().sort((a,b)=>b.age/b.life-a.age/a.life);
     for(const p of sm){const k=p.age/p.life;const sz=(p.s0+(p.s1-p.s0)*Math.sqrt(k))*.5;const a=p.a*Math.min(1,k/.12)*(k>.3?Math.pow((1-k)/.7,1.5):1);if(a<.01)continue;
@@ -1934,7 +1963,7 @@ function create(canvas){
     if(fires.length){let m=0;for(const f of fires){const w=f.w*.5,h=f.h;const c=[[-1,0],[1,0],[-1,1],[-1,1],[1,0],[1,1]];
         for(const[u,v]of c){const o=m*FL;vb[o]=f.x+u*w*1.6*(1+v*.2*(f.hv?0:1))+ (f.lean||0)*v*h*.3;vb[o+1]=f.y-v*h;vb[o+2]=u*1.0;vb[o+3]=v;vb[o+4]=f.i;vb[o+5]=f.seed;vb[o+6]=f.lean||0;vb[o+7]=f.asp||1;vb[o+8]=f.hv||0;vb[o+9]=f.ow||.5;vb[o+10]=0;m++;}}
       gl.blendFunc(gl.ONE,gl.ONE);drawBatch(P.fire,m);}
-    gl.disable(gl.BLEND);};
+    gl.disable(gl.BLEND);gl.disable(gl.SCISSOR_TEST);};
   R.count=()=>R.smoke.length;
   return R;}
 return{create};})();
@@ -2006,7 +2035,13 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     const az=S.z[o.zone];if(az&&az.ign&&!az.out&&az.q>.35){const fh=(60+az.q*110)*U;vis.flames.push({x:sp.x,y:sp.y+8*U,w:70*U,h:fh,i:.8+az.q*.4,seed:.77,lean,asp:1.2});vis.lights.push({x:sp.x,y:sp.y,r:160*U,i:.6*az.q});}}
   // eave / soffit smoke: one short run of emitters per smoky stretch of eave (localized, weighted by that zone) [see model eavesVis]
   const e=M.eavesVis(S,side);if(e&&e.segs&&e.rate>.02){const ey=B.eaves[0].y;
-    for(const g of e.segs){if(g.rate<.012)continue;const n=Math.max(1,Math.round((g.x1-g.x0)/(60*U)));
+    /* Oct 19 (attic smoke fix): a fire that started in the attic pushes smoke out through the soffit and ridge vents, so it is drawn as
+       separate wisps/columns from vent points (narrow, small puffs, opacity and rate falling off away from the origin) instead of a
+       blanket of wide eave emitters. Pressure push from rooms below (src 'push') keeps the earlier drawing. [FSRI-ATTIC 7.5, 7.6] */
+    if(e.vents){for(const v0 of e.vents){const v={...v0,...(v0.draw||{})};const rel=Math.min(1,v.rate/Math.max(.05,e.rate));
+        vis.emitters.push({key:'vent:'+v.src+':'+Math.round(v.x),kind:'vent',x:v.x,y:v.y,w:(v.src==='ridge'?10:14)*U,hgt:3*U,rate:v.rate*(v.src==='ridge'?3.5:4.5),vel:Math.min(1,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,
+          alpha:(.5+.13*v.den)*(.3+.7*rel),cool:.45,glow:e.flame?.4:0,pulse:v.pulse?'attic':0});}}
+    for(const g of e.segs){if(e.vents&&g.src!=='push')continue;if(g.rate<.012)continue;const n=Math.max(1,Math.round((g.x1-g.x0)/(60*U)));
       for(let i=0;i<n;i++){const x=g.x0+(i+.5)*(g.x1-g.x0)/n;
         vis.emitters.push({key:'eave:'+g.zone+':'+(g.src||'')+':'+Math.round(g.x0)+':'+i,kind:'eave',x,y:g.y!=null?g.y:ey,w:(g.x1-g.x0)/n*(g.src==='gable'?1:.9),hgt:4*U,rate:g.rate*7,vel:Math.min(3,g.vel),den:g.den,vol:g.vol,rgb:g.rgb,alpha:.45+.15*g.den,cool:.4,glow:e.flame?.5:0,pulse:g.pulse?'attic':0});}}
     // fire at the eaves only where that stretch of eave is itself burning (Oct 19; older builds: every hot attic segment) [model eavesVis]
@@ -2082,7 +2117,8 @@ window.__sizeup.R=()=>R;
 function layout(){const w=stage.clientWidth||300,B=curView(),W=B&&B.has?B.W:(A.B?A.B.W:1200),H=B&&B.has?B.H:(A.B?A.B.H:800),wide=innerWidth>=960;
   const tb=document.querySelector('.topbar');if(tb)document.documentElement.style.setProperty('--tb',tb.offsetHeight+'px');
   let maxH=A.screen===4?(wide?innerHeight*(A.mode==='crew'?.78:.6):innerHeight*.32):(wide?innerHeight*.72:innerHeight*.48);
-  const h=Math.round(Math.max(wide?0:Math.min(240,maxH),Math.min(w*H/W,Math.max(220,maxH)))); // a very wide side picture is letterboxed on a phone so the overlays fitstage.style.height=h+'px';dpr=Math.min(devicePixelRatio||1,1.6);
+  const h=Math.round(Math.max(wide?0:Math.min(240,maxH),Math.min(w*H/W,Math.max(220,maxH)))); // a very wide side picture is letterboxed on a phone so the overlays fit
+  stage.style.height=h+'px';dpr=Math.min(devicePixelRatio||1,1.6); // Oct 19: this statement had been swallowed by the comment above since 4a1b5fc (stage height unset, render at 1x on phones)
   for(const c of [cv,ov]){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
   const sc=Math.min(w/W,h/H);rect={x:(w-W*sc)/2,y:(h-H*sc)/2,w:W*sc,h:H*sc};}
 new ResizeObserver(()=>layout()).observe(stage);
@@ -2228,11 +2264,11 @@ function windText(){const w=(A.S&&A.screen===4&&A.S.wind)||A.scn.wind;return w.d
 /* ---------- readings ---------- */
 function dominant(seen){const S=A.S;const v=M.openingVis(S);let best=null;for(const o of A.B.openings){const x=v[o.id];if(!x||(seen&&!seenO(o)))continue;const sc=x.rate+x.flame*.5;if(sc>.01&&(!best||sc>best.sc))best={...x,sc,name:o.name,id:o.id};}
   const e=M.eavesVis(S);if(e&&e.rate>.04&&(!best||e.rate*1.2>best.sc))best={...e,sc:e.rate,name:'eaves / cornice',id:'eaves'};return best;}
-function smokeWhere(){const S=A.S;const v=M.openingVis(S);const behind=A.B.openings.some(o=>!seenO(o)&&v[o.id]&&v[o.id].rate>.05);const list=A.B.openings.filter(o=>seenO(o)&&v[o.id]&&v[o.id].rate>.01).sort((a,b)=>v[b.id].rate-v[a.id].rate).map(o=>(o.hidden?o.name:o.name.replace(/ \(.+\)/,''))+(v[o.id].state==='closed'?' (around the closed '+o.type+')':''));const e=M.eavesVis(S);if(e&&e.rate>.02)list.push(A.B.id==='mixed'?'cornice':'eaves');for(const id in S.o)if(S.o[id].type==='roof'&&S.o[id].state!=='closed'&&v[id]&&v[id].rate>.02)list.push('roof vent');if(behind)list.push('behind the roofline (a side you have not walked)');return [...new Set(list)];}
+function smokeWhere(){const S=A.S;const v=M.openingVis(S);const behind=A.B.openings.some(o=>!seenO(o)&&v[o.id]&&v[o.id].rate>.05);const list=A.B.openings.filter(o=>seenO(o)&&v[o.id]&&v[o.id].rate>.01).sort((a,b)=>v[b.id].rate-v[a.id].rate).map(o=>(o.hidden?o.name:o.name.replace(/ \(.+\)/,''))+(v[o.id].state==='closed'?' (around the closed '+o.type+')':''));const e=M.eavesVis(S);const aw=M.atticSmokeWhere&&M.atticSmokeWhere(S);if(e&&e.rate>.02)list.push(...(aw?aw.where:[A.B.id==='mixed'?'cornice':'eaves']));for(const id in S.o)if(S.o[id].type==='roof'&&S.o[id].state!=='closed'&&v[id]&&v[id].rate>.02)list.push('roof vent');if(behind)list.push('behind the roofline (a side you have not walked)');return [...new Set(list)];}
 // on the board, the readings only cover sides you have seen (Side A, plus each side walked in the 360)
 function seenO(o){if(A.screen!==4||!A.S)return true;const s=o.side||'A';return s==='A'||A.S.walked[s]!=null;}
 function fireShowing(){const S=A.S;const v=M.openingVis(S);return A.B.openings.filter(o=>seenO(o)&&v[o.id]&&v[o.id].flame>.05).map(o=>o.name);}
-function smokeText(){const d=dominant(true);if(!d){const w=smokeWhere();return w.length?'Smoke showing '+w.join(', '):'Nothing showing';}const w=smokeWhere();const e=A.S.scn.env||{};const dark=e.tod==='night'&&!A.S.lights,fogv=e.precip==='fog';return `${dark?'(hard to read in the dark) ':fogv?'(partly hidden by fog) ':''}${M.VOLN[d.vol]} ${dark?'dark-looking, colour uncertain':d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}`;}
+function smokeText(){const d=dominant(true);if(!d){const w=smokeWhere();return w.length?'Smoke showing '+w.join(', '):'Nothing showing';}const w=smokeWhere();const e=A.S.scn.env||{};const dark=e.tod==='night'&&!A.S.lights,fogv=e.precip==='fog';return `${dark?'(hard to read in the dark) ':fogv?'(partly hidden by fog) ':''}${M.VOLN[d.vol]} ${dark?'dark-looking, colour uncertain':d.col}, ${M.VELN[d.vel].toLowerCase()}, ${M.DENN[d.den].toLowerCase()}${d.pulse?' · pulsing':''} · from ${w.slice(0,4).join(', ')}${w.length>4?'…':''}${(()=>{const aw=d.id==='eaves'&&M.atticSmokeWhere&&M.atticSmokeWhere(A.S);return aw&&aw.near?', heaviest near '+aw.near:'';})()}`;}
 function burningText(){const S=A.S;const b=Object.values(S.z).filter(z=>z.ign&&!z.out);if(!b.length)return underControl()?'Under control: all fire knocked down':Object.values(S.z).some(z=>z.out)?'Knocked down':'No fire';return b.map(z=>`${zname(z.id)}: ${M.stageOf(S,z.id).toLowerCase()}`).join(' · ');}
 function hostile(){const S=A.S,o=S.z[A.scn.origin];let s=0,why=[];
   if(o.vl&&!o.flashed&&o.T>.3){s+=3;why.push('ventilation-limited and hot: new air will speed it up');}

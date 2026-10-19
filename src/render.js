@@ -118,11 +118,12 @@ function create(canvas){
   /* ---- particle simulation (scene pixel units) ---- */
   function emit(src,U,wind){if(R.smoke.length>=MAXP)return;const vel=src.vel,den=src.den;const w=src.w;
     const x=src.x+rand(-.45,.45)*w,y=src.y+rand(0,1)*(src.hgt||0);
-    const rise=[16,28,42,55][vel]*U*(src.kind==='roof'?1.4:src.kind==='leak'?1.5:1);const burst=[0,25,80,120][vel]*U;
-    const life=(src.kind==='eave'||src.kind==='leak'?rand(3,5.5):rand(4.5,8))*(vel===0?1.25:1);
-    const s0=Math.max((src.kind==='leak'?9:14)*U,w*(src.kind==='eave'||src.kind==='leak'?.35:.75))*rand(.8,1.2),s1=s0*rand(2.2,3)+(70+src.vol*45)*U*(src.kind==='leak'?.5:1);
+    const VT=src.kind==='vent';// Oct 19: attic soffit/ridge vent wisp: narrow source, small puffs that widen only a little as they rise
+    const rise=[16,28,42,55][vel]*U*(src.kind==='roof'?1.4:src.kind==='leak'||VT?1.5:1);const burst=VT?[0,10,20,30][vel]*U:[0,25,80,120][vel]*U;
+    const life=(VT?rand(4.2,6.2):src.kind==='eave'||src.kind==='leak'?rand(3,5.5):rand(4.5,8))*(vel===0?1.25:1);
+    const s0=VT?rand(14,20)*U:Math.max((src.kind==='leak'?9:14)*U,w*(src.kind==='eave'||src.kind==='leak'?.35:.75))*rand(.8,1.2),s1=VT?s0*rand(2,2.5)+(44+src.vol*16)*U:s0*rand(2.2,3)+(70+src.vol*45)*U*(src.kind==='leak'?.5:1);
     const shade=rand(.88,1.08);const rgb=src.rgb.map(c=>Math.min(255,c*shade)/255);
-    R.smoke.push({x,y,vx:rand(-6,6)*U+(src.side||0)*burst*.25,vy:-rise-burst*rand(.5,1),rise,age:0,life,s0,s1,a:[.28,.5,.72,.92][den]*(src.alpha||1),turb:[4,10,18,40][vel]*U,ph:rand(0,99),rot:rand(0,6.28),vr:rand(-.25,.25)*(vel===3?2.5:1),
+    R.smoke.push({x,y,vx:rand(-6,6)*U*(VT?.4:1)+(src.side||0)*burst*.25,vy:-rise-burst*rand(.5,1),rise,age:0,life,s0,s1,a:[.28,.5,.72,.92][den]*(src.alpha||1),turb:[4,10,18,40][vel]*U,ph:rand(0,99),rot:rand(0,6.28),vr:rand(-.25,.25)*(vel===3?2.5:1),
       rgb,seed:rand(0,1),glow:src.glow||0,wind:wind*U,ev:rand(0,10),evr:[.18,.3,.45,.8][vel],cool:src.cool==null?.35:src.cool});}
   R.update=(dt,vis)=>{R.time+=dt;R.vis=vis;if(!vis)return;const U=H/800,wind=vis.wind||0;
     vis.emitters.forEach((s,i)=>{if(s.rate<=0)return;const k='e'+(s.key||i);
@@ -152,6 +153,8 @@ function create(canvas){
     const E=(vis&&vis.env)||{};gl.uniform3fv(pr.u.u_amb,E.amb||[1,1,1]);gl.uniform1f(pr.u.u_gk,E.gk||1);gl.uniform1f(pr.u.u_fog,E.fog||0);gl.uniform3fv(pr.u.u_fogc,E.fogc||[.7,.72,.75]);gl.uniform1f(pr.u.u_flood,E.flood||0);
     gl.drawArrays(gl.TRIANGLES,0,6);
     if(!vis)return;
+    // Oct 19: clip smoke and flames to the photo (never draw over the letterbox bars around a letterboxed picture)
+    gl.enable(gl.SCISSOR_TEST);gl.scissor(Math.round(view.x*dpr),Math.round(ch-(view.y+view.h)*dpr),Math.round(view.w*dpr),Math.round(view.h*dpr));
     // smoke particles (premultiplied alpha), sorted: older (higher) first so fresh dense smoke sits in front at the opening
     const EV=vis.env||{};const LT=vis.lights||[];const U=H/800;let n=0;const sm=R.smoke.slice().sort((a,b)=>b.age/b.life-a.age/a.life);
     for(const p of sm){const k=p.age/p.life;const sz=(p.s0+(p.s1-p.s0)*Math.sqrt(k))*.5;const a=p.a*Math.min(1,k/.12)*(k>.3?Math.pow((1-k)/.7,1.5):1);if(a<.01)continue;
@@ -171,7 +174,7 @@ function create(canvas){
     if(fires.length){let m=0;for(const f of fires){const w=f.w*.5,h=f.h;const c=[[-1,0],[1,0],[-1,1],[-1,1],[1,0],[1,1]];
         for(const[u,v]of c){const o=m*FL;vb[o]=f.x+u*w*1.6*(1+v*.2*(f.hv?0:1))+ (f.lean||0)*v*h*.3;vb[o+1]=f.y-v*h;vb[o+2]=u*1.0;vb[o+3]=v;vb[o+4]=f.i;vb[o+5]=f.seed;vb[o+6]=f.lean||0;vb[o+7]=f.asp||1;vb[o+8]=f.hv||0;vb[o+9]=f.ow||.5;vb[o+10]=0;m++;}}
       gl.blendFunc(gl.ONE,gl.ONE);drawBatch(P.fire,m);}
-    gl.disable(gl.BLEND);};
+    gl.disable(gl.BLEND);gl.disable(gl.SCISSOR_TEST);};
   R.count=()=>R.smoke.length;
   return R;}
 return{create};})();

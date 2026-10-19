@@ -65,7 +65,13 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     const az=S.z[o.zone];if(az&&az.ign&&!az.out&&az.q>.35){const fh=(60+az.q*110)*U;vis.flames.push({x:sp.x,y:sp.y+8*U,w:70*U,h:fh,i:.8+az.q*.4,seed:.77,lean,asp:1.2});vis.lights.push({x:sp.x,y:sp.y,r:160*U,i:.6*az.q});}}
   // eave / soffit smoke: one short run of emitters per smoky stretch of eave (localized, weighted by that zone) [see model eavesVis]
   const e=M.eavesVis(S,side);if(e&&e.segs&&e.rate>.02){const ey=B.eaves[0].y;
-    for(const g of e.segs){if(g.rate<.012)continue;const n=Math.max(1,Math.round((g.x1-g.x0)/(60*U)));
+    /* Oct 19 (attic smoke fix): a fire that started in the attic pushes smoke out through the soffit and ridge vents, so it is drawn as
+       separate wisps/columns from vent points (narrow, small puffs, opacity and rate falling off away from the origin) instead of a
+       blanket of wide eave emitters. Pressure push from rooms below (src 'push') keeps the earlier drawing. [FSRI-ATTIC 7.5, 7.6] */
+    if(e.vents){for(const v0 of e.vents){const v={...v0,...(v0.draw||{})};const rel=Math.min(1,v.rate/Math.max(.05,e.rate));
+        vis.emitters.push({key:'vent:'+v.src+':'+Math.round(v.x),kind:'vent',x:v.x,y:v.y,w:(v.src==='ridge'?10:14)*U,hgt:3*U,rate:v.rate*(v.src==='ridge'?3.5:4.5),vel:Math.min(1,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,
+          alpha:(.5+.13*v.den)*(.3+.7*rel),cool:.45,glow:e.flame?.4:0,pulse:v.pulse?'attic':0});}}
+    for(const g of e.segs){if(e.vents&&g.src!=='push')continue;if(g.rate<.012)continue;const n=Math.max(1,Math.round((g.x1-g.x0)/(60*U)));
       for(let i=0;i<n;i++){const x=g.x0+(i+.5)*(g.x1-g.x0)/n;
         vis.emitters.push({key:'eave:'+g.zone+':'+(g.src||'')+':'+Math.round(g.x0)+':'+i,kind:'eave',x,y:g.y!=null?g.y:ey,w:(g.x1-g.x0)/n*(g.src==='gable'?1:.9),hgt:4*U,rate:g.rate*7,vel:Math.min(3,g.vel),den:g.den,vol:g.vol,rgb:g.rgb,alpha:.45+.15*g.den,cool:.4,glow:e.flame?.5:0,pulse:g.pulse?'attic':0});}}
     // fire at the eaves only where that stretch of eave is itself burning (Oct 19; older builds: every hot attic segment) [model eavesVis]
