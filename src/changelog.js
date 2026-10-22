@@ -1,6 +1,9 @@
 /* What's New (Oct 21). One entry per release, newest first. To publish a release, add an entry at the top:
    v = release id (also the version label), date = shown to the user, items = 1-3 short plain-language bullets for firefighters. */
 const CHANGELOG=[
+ {v:'2026.10.22',date:'Oct 22, 2026',title:'Smoke you can read',items:[
+   'Smoke seeping around a closed window or door now looks light, the way it did in the UL FSRI house fire experiments. Heavy, pushing smoke means a real opening: a failed window or an open door.',
+   'No more smoke cloud floating in the sky away from the house. Smoke from a window around the corner now rises at the corner of the roof.']},
  {v:'2026.10.21',date:'Oct 21, 2026',title:'New look',items:[
    'Cleaner, phone-style screens: fewer words, one main button per screen, tabs during the drill.',
    'Tap a unit to assign it from a pop-up list. Command transfer, scene facts and quick orders open the same way.',

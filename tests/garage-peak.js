@@ -28,8 +28,8 @@ ok(firstB&&firstB.es.every(isAttic),`first Side B smoke at ${firstB&&firstB.t}s 
 ok(firstB&&Math.max(...firstB.es.map(e=>e.rate))<1,`and faint (max rate ${firstB&&Math.max(...firstB.es.map(e=>e.rate)).toFixed(2)})`);
 ok(firstB&&firstB.t>=10*60,`not before 10 min (first at ${firstB&&(firstB.t/60).toFixed(1)} min)`);
 sec('other origins unchanged by the fix (no garage zone involved)');
-{let bad=0,n=0;for(const o of ['liv','kit','br1','br3','bsmt']){const a=M.create(b,{...JSON.parse(JSON.stringify(scn)),origin:o});for(let t=0;t<=600;t++){if(a.z.gar.ign)break;if(t%60===0)for(const sd of 'ABCD'){n++;if(JSON.stringify(V.build(a,b,M,sd).emitters)!==JSON.stringify(V0.build(a,b,M,sd).emitters))bad++;}M.step(a);}}
- ok(bad===0,`emitters identical old vs new for non-garage fires (${n} frames, ${bad} differ)`);}
+{M.GAPS.on=false;/* Oct 22: compared with the Oct 22 smoke fixes off (they change gap smoke and corner plumes for every fire) */let bad=0,n=0;for(const o of ['liv','kit','br1','br3','bsmt']){const a=M.create(b,{...JSON.parse(JSON.stringify(scn)),origin:o});for(let t=0;t<=600;t++){if(a.z.gar.ign)break;if(t%60===0)for(const sd of 'ABCD'){n++;if(JSON.stringify(V.build(a,b,M,sd).emitters)!==JSON.stringify(V0.build(a,b,M,sd).emitters))bad++;}M.step(a);}}
+ M.GAPS.on=true;ok(bad===0,`emitters identical old vs new for non-garage fires (${n} frames, ${bad} differ)`);}
 (async()=>{const OUT='/workspace/sizeup/screens/garage-peak-oct13/';fs.mkdirSync(OUT,{recursive:true});
  const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const shot=async(url,side,t,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);

@@ -10,7 +10,7 @@ sec('model/visual: hidden-side plumes start at the floor they come from');
  const rear=v.emitters.filter(e=>e.kind==='rear'&&e.key!=='rbehind');ok(rear.length>0,'side D at 7:30 (floor 1 only): around-the-corner plumes from the floor-1 windows');
  ok(rear.every(e=>e.y>=f1-1),'all floor-1 plumes start at floor-1 height ('+rear.map(e=>Math.round(e.y)).join(',')+') not at the 2nd-floor eave ('+eaveY+')');
  const bx=BLD.house.views.D.bldg;ok(rear.every(e=>e.x<bx.x0||e.x>bx.x1),'they rise just outside the building corner, not over the roof');
- M.run(S,180);const v2=V.build(S,BLD.house,M,'D');ok(v2.emitters.some(e=>e.kind==='rear'&&e.y===eaveY),'once upper-floor windows fail (10:30) a plume at the eave is justified and drawn');
+ M.run(S,180);const v2=V.build(S,BLD.house,M,'D');ok(v2.emitters.some(e=>e.kind==='rear'&&e.y>=eaveY&&e.y<f1),'once upper-floor windows fail (10:30) a 2nd-floor plume is justified and drawn (Oct 22: it starts at 2nd-floor window height and rises past the eave corner)');
  const S0=M.create(BLD.house,scn({}));M.run(S0,250);ok(!V.build(S0,BLD.house,M,'D').emitters.some(e=>e.kind==='rear'),'4:10, nothing failed yet: no hidden-side plume at all');
  // Side A unaffected for the 'behind' plume
  const SA=M.create(BLD.house,scn({}));M.run(SA,450);ok(V.build(SA,BLD.house,M,'A').emitters.filter(e=>e.kind==='rear').every(e=>e.key==='rbehind'||e.y>=BLD.house.floors.find(f=>f.f==='1').y0-1),'side A: floor-1 plumes also start low');}

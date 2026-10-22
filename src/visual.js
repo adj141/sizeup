@@ -34,6 +34,10 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     const spot=rel==='behind'&&low&&B.roofSpots&&B.roofSpots[z.id];// a low wing with its own roof on this picture: plume rises from that roof, not the main ridge
     const fk=rel==='behind'?(spot?':'+z.id:''):low?'lo':'hi';const key=rel+fk;
     const g=hid[key]||(hid[key]={rel,fk,spot,fl:z.floor,r:0,rx:0,den:0,vel:0,vol:0,rgb:[0,0,0]});if(low&&(z.floor==='B'||o.level==='B'))g.fl='B';g.r+=r;g.rx+=r*(z.x0+z.x1)/2;g.den=Math.max(g.den,v.den);g.vel=Math.max(g.vel,v.vel);g.vol=Math.max(g.vol,v.vol);v.rgb.forEach((c,k)=>g.rgb[k]+=c*r);};
+  /* Oct 22 (smoke fix): smoke seeping through the gaps of INTACT glass is drawn as light seepage that hugs the window head and thins out
+     within about a storey, instead of a dark jet that climbed past the floor above (it read as heavy smoke from the 2nd-floor windows).
+     [FSRI-HV08 9.3, Fig. 481: smoke visible from the windows of the closed two-story house, gone once the fire is ventilation-limited] */
+  const gap=!M.GAPS||M.GAPS.on;
   B.openings.forEach((o,i)=>{const v=ov[o.id];if(!v)return;const seed=(i*0.137)%1;
     if(o.hidden){hidSmoke(o,v);return;}
     const top=o.y-o.h/2;const broken=v.state!=='closed';
@@ -48,15 +52,24 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
       const qw=ww*1.25;vis.flames.push({x:o.x,y:base,w:qw,h:fh,i:.9+v.flame*.45,seed,lean,asp:qw/Math.max(1,fh)*1.6,hv:inside/fh,ow:(ww/2)/(qw*.8)});
       if(o.cover!=null&&v.flame>.5)vis.flames.push({x:o.x,y:o.cover+14*U,w:ww*1.6,h:(30+50*v.flame)*U,i:.6+v.flame*.4,seed:seed+.5,lean,asp:ww*1.6/((30+50*v.flame)*U)*1.6});}
     if(v.rate>.01){const k=o.type==='door'||o.type==='garage'?.45:v.frac;const ey=o.cover!=null?o.cover:top+(broken?o.h*.08:0);
-      vis.emitters.push({key:o.id,kind:broken?'open':'leak',x:o.x,y:ey,w:broken?o.w*.85:o.w*(o.cover!=null?1.6:.9),hgt:broken?o.h*k*.55:4*U,rate:v.rate*(broken?34:110)*(o.w>200*U?2:1),vel:v.vel,den:v.den,vol:v.vol,rgb:v.steam>.3?[205,203,198]:broken?v.rgb:v.rgb.map((c,j)=>c*.45+[120,117,112][j]*.55),glow:v.flame>.05?.9:v.glow*.25,pulse:v.pulse,alpha:broken?1:.5,cool:v.col==='white'?.1:.35});total+=v.rate*(broken?1:.3);}
+      vis.emitters.push({key:o.id,kind:broken?'open':'leak',x:o.x,y:ey,w:broken?o.w*.85:o.w*(o.cover!=null?1.6:.9),hgt:broken?o.h*k*.55:4*U,rate:v.rate*(broken?34:gap?45:110)*(o.w>200*U?2:1),vel:v.vel,den:v.den,vol:v.vol,rgb:v.steam>.3?[205,203,198]:broken?v.rgb:v.rgb.map((c,j)=>c*.45+[120,117,112][j]*.55),glow:v.flame>.05?.9:v.glow*.25,pulse:v.pulse,alpha:broken?1:gap?.34:.5,...(gap&&!broken?{gap:true}:{}),cool:v.col==='white'?.1:.35});total+=v.rate*(broken?1:.3);}
   });
   {const bx=B.bldg||{x0:B.ridge?B.ridge.x0-150*U:0,x1:B.ridge?B.ridge.x1+150*U:B.W};const ey=(B.eaves&&B.eaves[0]?B.eaves[0].y:B.ridge?B.ridge.y+60*U:0);
    // a low plume starts at that floor's band on this picture; a side with no basement band (basement below grade there) starts at grade
    const flY=f=>{const F=(B.floors||[]).find(x=>x.f===f);if(F)return F.y0;const F1=(B.floors||[]).find(x=>x.f==='1');return B.grade||(F1?F1.y1:ey);};
    for(const key in hid){const g=hid[key],rel=g.rel;
      // low (floor 1 / basement) openings: start at the head of that floor just outside the corner, so the plume rises past the eave instead of being born above it
-     const x=g.spot?g.spot.x:rel==='left'?(g.fk==='lo'?bx.x0-14*U:bx.x0+(bx.x1-bx.x0)*.06):rel==='right'?(g.fk==='lo'?bx.x1+14*U:bx.x1-(bx.x1-bx.x0)*.06):g.rx/g.r;
-     const y=g.spot?g.spot.y:rel==='behind'?B.ridge.y+30*U:g.fk==='lo'?flY(g.fl==='B'?'B':'1'):ey;
+     /* Oct 22 (floating plume fix): an upper-floor plume from around the corner rises at the corner of the upper-floor eave, not 6% in from the
+        whole building's footprint. On Side A of the house the footprint includes the 1-storey garage, so the Side D 2nd-floor plume was born
+        in empty sky above the garage roof. */
+     const ey0=Math.min(...(B.eaves||[]).map(e=>e.y)),ue=(B.eaves||[]).filter(e=>e.y<=ey0+1).reduce((a,e)=>a?{x0:Math.min(a.x0,e.x0),x1:Math.max(a.x1,e.x1)}:{x0:e.x0,x1:e.x1},null)||bx;
+     const hx0=gap?Math.max(bx.x0,ue.x0)+(ue.x1-ue.x0)*.01:bx.x0+(bx.x1-bx.x0)*.06,hx1=gap?Math.min(bx.x1,ue.x1)-(ue.x1-ue.x0)*.01:bx.x1-(bx.x1-bx.x0)*.06;
+     // ...and it starts at window height on that floor's band, so it visibly rises past the eave corner instead of appearing above it
+     const FB=(B.floors||[]).find(f=>f.f===g.fl),hy=gap&&FB?(FB.y0+FB.y1)/2:ey;
+     let x=g.spot?g.spot.x:rel==='left'?(g.fk==='lo'?bx.x0-14*U:hx0):rel==='right'?(g.fk==='lo'?bx.x1+14*U:hx1):g.rx/g.r;
+     // a far-side plume over the ridge stays over the ridge: on a gable end (Sides B/D) the ridge is short and the room's x is not on this picture
+     if(gap&&rel==='behind'&&!g.spot)x=Math.max(B.ridge.x0-40*U,Math.min(B.ridge.x1+40*U,x));
+     const y=g.spot?g.spot.y:rel==='behind'?B.ridge.y+30*U:g.fk==='lo'?flY(g.fl==='B'?'B':'1'):hy;
      const rgb=g.rgb.map((c,k)=>c/g.r*.6+[150,148,145][k]*.4);
      const lo=g.fk==='lo';// a low plume seen around the corner is thinner by the time it clears the roof [drawing simplification]
      vis.emitters.push({key:'r'+key,kind:'rear',x,y,w:(rel==='behind'&&!g.spot?200:90)*U,hgt:10*U,rate:Math.min(lo||g.spot?4:8,g.r*(lo?6:12)),vel:Math.min(2,g.vel),den:Math.max(0,g.den-1),vol:Math.min(2,g.vol),rgb,alpha:lo?.3:.38,cool:.5});total+=g.r*(lo?.3:.6);}}

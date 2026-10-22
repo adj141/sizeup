@@ -30,7 +30,8 @@ const STRUCT={on:true,       // tests switch this off to prove the rest of the m
 /* Basement glass (Oct 14 2026). fallT: model hot-layer T (1.0 ~ flashover) at which basement glass starts to fall out: teaching mapping of the
    cited 20-35 kW/m2 fallout flux (near-flashover upper layer). k: accumulation rate (TV, ~15-30 s at a flashover-level layer).
    well: small window-well windows heat more slowly (TV). */
-const BGLASS={on:true,fallT:.9,k:10,well:.6}; // on=false restores the pre-Oct-14 rule (older regression suites)
+const BGLASS={on:true,fallT:.9,k:10,well:.6};
+const GAPS={on:true}; // Oct 22 smoke fixes: gap-smoke cap (openingVis), light gap seepage and upper-floor corner plume anchor (visual.js); on=false restores the pre-Oct-22 behaviour for older regression suites // on=false restores the pre-Oct-14 rule (older regression suites)
 /* Attic fire (Oct 19 2026, see FIRE-MODEL.md "Attic fires"). Cited: FSRI attic study [FSRI-ATTIC]: attic fires grew to ventilation-limited
    in about 5 min (Table 7.1; 7:45 and 8:00 in Exps 3A/4A); the natural soffit/ridge/gable vents cannot support fuel-limited burning, but the
    ventilation-limited fire keeps burning (Exp 2A: attic still 600-1200 F at 16 min, 2B still burning in one quadrant at 22 min); plastic ridge
@@ -691,7 +692,11 @@ function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bld
     let rate=0;if(open)rate=z.s*(.4+z.T)*(ctrl?.35:1)*(o.type==='roof'?1.6:1)*(S.fan&&S.fan.on&&S.fan.at!==oid?1.7:1);
     else if(z.s>.3)rate=Math.max(0,(z.s-.3)*(z.T*.3+bp*vk*.25)); // pushing through gaps around closed windows/doors; fades once the fire is starved [FSRI-HV08]
     if(!open&&bg&&z.floor!=='B'&&z.s>.15)rate=Math.max(rate,(z.s-.15)*(.08+z.T*.3+bp*vk*.25)); // below-grade fire: smoky, still-cool floors above it leak at their door and window gaps [NIOSH 2018-154; the .08 is a teaching value]
-    if(!open){const cap=rate>.05?2:1;sm.vol=Math.min(sm.vol,cap);sm.vel=Math.min(sm.vel,cap);} // leakage through gaps: what you see is limited by the gap, not the fire [simplification]
+    if(!open){const cap=GAPS.on?1:rate>.05?2:1;sm.vol=Math.min(sm.vol,cap);sm.vel=Math.min(sm.vel,cap);} // leakage through gaps: what you see is limited by the gap, not the fire
+    /* Oct 22 (smoke fix): smoke through the gaps of intact glass reads at most Moderate volume and Moderate velocity. In the FSRI two-story house
+       (closed, family-room fire) smoke was "visible coming from the windows at 390 seconds but no smoke is visible at 510 seconds" and "smoke being
+       forced out of the gaps ... greatly diminished or stopped" once the fire went ventilation-limited [FSRI-HV08 9.3, Fig. 481]. Heavy, pressurized
+       smoke needs a real opening. GAPS.on=false restores the pre-Oct-22 cap (2 when the leak rate is above .05). */
     let flame=0;if(open&&z.ign&&!z.out){if(z.flashed&&z.q>.7)flame=clamp(z.q*.6,0,1.2);else if(z.q>.6&&o.type!=='door')flame=(z.q-.6)*.8;}
     if(o.type==='door'&&open&&!z.flashed)flame*=.3;
     if(z.water>0)flame*=.25;
@@ -913,6 +918,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,GAPS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

@@ -119,8 +119,9 @@ function create(canvas){
   function emit(src,U,wind){if(R.smoke.length>=MAXP)return;const vel=src.vel,den=src.den;const w=src.w;
     const x=src.x+rand(-.45,.45)*w,y=src.y+rand(0,1)*(src.hgt||0);
     const VT=src.kind==='vent';// Oct 19: attic soffit/ridge vent wisp: narrow source, small puffs that widen only a little as they rise
-    const rise=[16,28,42,55][vel]*U*(src.kind==='roof'?1.4:src.kind==='leak'||VT?1.5:1);const burst=VT?[0,10,20,30][vel]*U:[0,25,80,120][vel]*U;
-    const life=(VT?rand(4.2,6.2):src.kind==='eave'||src.kind==='leak'?rand(3,5.5):rand(4.5,8))*(vel===0?1.25:1);
+    const GP=!!src.gap;// Oct 22: gap seepage from intact glass: slower rise, no burst, shorter life (thins out within about a storey) [FSRI-HV08 9.3]
+    const rise=[16,28,42,55][vel]*U*(src.kind==='roof'?1.4:GP?.9:src.kind==='leak'||VT?1.5:1);const burst=GP?0:VT?[0,10,20,30][vel]*U:[0,25,80,120][vel]*U;
+    const life=(GP?rand(2.2,3.6):VT?rand(4.2,6.2):src.kind==='eave'||src.kind==='leak'?rand(3,5.5):rand(4.5,8))*(vel===0?1.25:1);
     const s0=VT?rand(14,20)*U:Math.max((src.kind==='leak'?9:14)*U,w*(src.kind==='eave'||src.kind==='leak'?.35:.75))*rand(.8,1.2),s1=VT?s0*rand(2,2.5)+(44+src.vol*16)*U:s0*rand(2.2,3)+(70+src.vol*45)*U*(src.kind==='leak'?.5:1);
     const shade=rand(.88,1.08);const rgb=src.rgb.map(c=>Math.min(255,c*shade)/255);
     R.smoke.push({x,y,vx:rand(-6,6)*U*(VT?.4:1)+(src.side||0)*burst*.25,vy:-rise-burst*rand(.5,1),rise,age:0,life,s0,s1,a:[.28,.5,.72,.92][den]*(src.alpha||1),turb:[4,10,18,40][vel]*U,ph:rand(0,99),rot:rand(0,6.28),vr:rand(-.25,.25)*(vel===3?2.5:1),

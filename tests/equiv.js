@@ -12,6 +12,10 @@ const MB=require('./base/model.eavefix-oct13.js'); // Oct 13 eave fix: slower ba
 //     so differences begin only once a room is fully involved (flashover+1 min) or a basement floor has been exposed 3:28+.
 const MS=require('./base/model.structure-oct13.js');/* Oct 14: snapshot refreshed for the basement-glass rule (BGLASS); only fires with basement glass involved changed. The structural checks below run with BGLASS off. *//* refreshed for the Oct 13 basement-glass fix (floor clock keyed to basement severity): only basement-origin scenarios changed */const STRUCT_RE=/fully involved|Ceiling breach|Collapse warning|Floor burn-through|Floor collapse|burning on the structure/;
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m);}};
+/* Oct 22 smoke fix: gap smoke through intact glass now reads at most Moderate volume/velocity (GAPS). It changes no fire behaviour, only the
+   smoke reading of closed openings (which appears in summary()). The baselines are compared with it off; a check at the end proves the fire
+   (events, zones, water, victim, control) is identical with it on. */
+M.GAPS.on=false;
 function scn(b,o){return{format:'sizeup-scenario',v:2,sceneId:b.id,origin:o.origin,fuel:o.fuel||'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:o.occ||'random',wind:o.wind||{dir:'calm',spd:0},glass:'fails',seed:o.seed,actions:[],tNow:0,
   companies:M0.PRESETS.generic.companies(),presetName:'generic',env:o.env,windShift:o.ws||null,...(o.command?{command:o.command}:{})};}
 function run(MM,b,o,acts,T){const S=MM.create(b,JSON.parse(JSON.stringify(scn(b,o))));MM.run(S,S.scn.preburn);for(const a of acts)MM.act(S,{...a,t:S.scn.preburn+a.t});MM.run(S,S.scn.preburn+T);
@@ -35,4 +39,9 @@ for(const b of houses){const zs=b.zones.filter(z=>!z.attic&&!/hall|stair|garage/
       const evOld=JSON.parse(a).ev.filter(e=>e[0]<se[0]),evNew=JSON.parse(nwG).ev.filter(e=>e[0]<se[0]);
       ok(JSON.stringify(x)===JSON.stringify(y)&&JSON.stringify(evOld)===JSON.stringify(evNew),`${b.id}/${origin}/acts${k} identical before first structural event (${se[0]}s)`);}
       else{preArr++;ok(JSON.stringify(JSON.parse(a).ev.filter(e=>e[0]<se[0]))===JSON.stringify(JSON.parse(nwG).ev.filter(e=>e[0]<se[0])),`${b.id}/${origin}/acts${k} events identical before first structural event`);}}}}
+{let same=0,tot=0,rd=0;for(const b of houses)for(const z of b.zones.filter(z=>!z.attic).slice(0,6))for(let k=0;k<ACTS.length;k+=2){const o={origin:z.id,seed:2000+k,preburn:[240,360,480][k%3]};
+  const t1=b.openings.find(q=>q.zone===z.id)||b.openings[0];const acts=ACTS[k].map(a=>({...a,target:a.task==='line'?z.id:a.target,opening:a.task==='hvent'?t1.id:a.opening}));
+  M.GAPS.on=false;const off=JSON.parse(run(M,b,o,acts,900));M.GAPS.on=true;const on=JSON.parse(run(M,b,o,acts,900));M.GAPS.on=false;tot++;
+  if(JSON.stringify([off.ev,off.z,off.w,off.v,off.uc])===JSON.stringify([on.ev,on.z,on.w,on.v,on.uc]))same++;if(off.sum!==on.sum)rd++;}
+ ok(same===tot,`Oct 22 gap-smoke cap changes no fire behaviour: ${same}/${tot} scenarios identical in events, zones, water, victim and control (${rd} differ only in the smoke reading)`);M.GAPS.on=true;}
 ok(nbt>0&&nb>0,`basement-origin scenarios changed vs Phase 1 as intended (${nb}/${nbt})`);console.log(`structural: ${ns} scenarios reach a structural event within 15 min after arrival (${preArr} of them in the first preburn window after arrival, where only the pre-event event log is compared), ${ns0} unchanged`);console.log(`equiv: ${n} scenarios x2, ${pass} pass, ${fail} fail`);process.exit(fail?1:0);
