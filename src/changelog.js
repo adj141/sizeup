@@ -1,0 +1,27 @@
+/* What's New (Oct 21). One entry per release, newest first. To publish a release, add an entry at the top:
+   v = release id (also the version label), date = shown to the user, items = 1-3 short plain-language bullets for firefighters. */
+const CHANGELOG=[
+ {v:'2026.10.21',date:'Oct 21, 2026',title:'New look',items:[
+   'Cleaner, phone-style screens: fewer words, one main button per screen, tabs during the drill.',
+   'Tap a unit to assign it from a pop-up list. Command transfer, scene facts and quick orders open the same way.',
+   'Version number and this What’s New list, under About.']},
+ {v:'2026.10.19',date:'Oct 19, 2026',title:'Attic fires',items:[
+   'Attic fires start where you tap and spread from there, breathing through the soffit and ridge vents.',
+   'Flames at the eaves only after the roof burns through. The fire keeps burning the structure and warns of truss roof collapse.',
+   'Attic smoke shows as light wisps from the vents, heaviest over the fire. Sharper picture on phones.']},
+ {v:'2026.10.14',date:'Oct 14, 2026',title:'Basement timing',items:[
+   'Basement windows fail only near basement flashover, so a closed basement fire stays starved for air.',
+   'The first-floor collapse clock runs only while the basement fire is severe.']},
+ {v:'2026.10.13',date:'Oct 13, 2026',title:'Command and companies',items:[
+   'The first-arriving officer is the IC and assigns every company. The chief stays staged until command is transferred by radio.',
+   'Force the garage door, give the medic firefighting tasks, and pick tasks from shorter lists. Garage Sides C and D redrawn.',
+   'Fires burn into the structure instead of burning out. Ceiling burn-through, basement floor collapse, and smoke fixes for garage and basement fires.']},
+ {v:'2026.10.11',date:'Oct 11, 2026',title:'360 and command practice',items:[
+   'Walk all four sides (360) and send a follow-up report. Walk-out basements.',
+   'Optional command practice: guided radio report, command position, benchmarks, PAR and command transfer.',
+   'Basement smoke comes out where it really leaks, not straight up through the roof.']},
+ {v:'2026.10.09',date:'Oct 9, 2026',title:'First release',items:[
+   'Photograph a building, set the fire, and run a size-up drill.',
+   'Companies and dispatch, task times, time of day and weather, with wind-driven fire.',
+   'Fire goes out when water reaches it. Smoke at the eaves only from the right floors.']}
+];

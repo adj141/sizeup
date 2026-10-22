@@ -1,11 +1,11 @@
 const {chromium}=require('playwright-core');const OUT='/workspace/sizeup/screens/command/';
-(async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
+(async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});require('./ui-reveal.js')(br);
 async function setup(vp){const p=await br.newPage({viewport:vp,deviceScaleFactor:vp.width<500?2:1});p.on('pageerror',e=>console.log('ERR',e.message));await p.goto('file:///workspace/sizeup/index.html#noautoplay');await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
  await p.evaluate(async()=>{const M=window.__sizeup.M;await window.__sizeup.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'liv',fuel:'modern',preburn:360,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies(),command:{on:true,sub:{},set:{},terms:{}}});window.__sizeup.A.playing=false;});
  await p.waitForTimeout(400);return p;}
 const adv=(p,n)=>p.evaluate(n=>{const u=window.__sizeup;const ne=u.advance(n);if(ne.length)u.A.latest=ne.map(e=>e.msg);u.syncUI();u.renderBoard();},n);
 const hideToast=p=>p.addStyleTag({content:'.toast{display:none!important}'+(p.viewportSize().width>500?'.topbar{position:static!important}':'')});
-const shotEl=async(p,sel,name)=>{await p.evaluate(s=>document.querySelector(s).scrollIntoView({block:'center'}),sel);await p.waitForTimeout(250);await p.locator(sel).screenshot({path:OUT+name});};
+const shotEl=async(p,sel,name)=>{await p.evaluate(s=>{const u=window.__sizeup;if(u.reveal)u.reveal(s);document.querySelector(s).scrollIntoView({block:'center'});},sel);await p.waitForTimeout(250);await p.locator(sel).screenshot({path:OUT+name});};
 async function fillIRR(p,full){const pick=(k,v)=>p.click(`#irrBox [data-irr="${k}"][data-v="${v}"]`),sel=(k,v)=>p.selectOption(`#irrBox [data-irrs="${k}"]`,v);
  await pick('stories','2');await sel('constr','wood');await sel('occ','sfr');await sel('size','medium');await pick('problem','smoke');await pick('floor','1');await pick('side','A');await sel('task','line');await sel('loc','liv');await pick('strategy','Offensive');
  if(full){await pick('problem','working');await pick('pos','fast');await sel('name','Main Street Command');await sel('cmdLoc','Side A');await sel('res','none');}}

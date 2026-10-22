@@ -99,10 +99,10 @@ function drawOverlay(){const c=octx;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,
       if(out)arrow(o.x,o.y-o.h/2-12*U,-1,'#ff7043');if(inn)arrow(o.x,o.y+o.h/2-14*U,1,'#64b5f6');}}}
 
 /* ---------- navigation ---------- */
-const TITLES={1:['SizeUp','Capture the building'],2:['Tap where the fire starts','Set the fire origin'],3:['Set up the drill','Fire, weather and the assignment'],4:['Command board','Size-up drill']};
+const TITLES={1:['New Drill','Capture'],2:['Fire Origin','Fire origin'],3:['Conditions','Conditions'],4:['Drill','Drill']};
 function show(n){if(n>A.maxScreen)return;const prev=A.screen;A.screen=n;$$('.screen').forEach(s=>s.classList.toggle('on',s.id==='s'+n));
   const slot=$('#s'+n+' .slot');if(slot){slot.appendChild(stage);stage.style.display='';}else{document.body.appendChild(stage);stage.style.display='none';}
-  $('#ttl').textContent=TITLES[n][0];$('#sub').textContent=`Step ${n} of 4 · ${TITLES[n][1]}`;$('#backBtn').hidden=n===1;stage.classList.toggle('tapmode',n===2||n===3);
+  $('#ttl').textContent=n===4?TITLES[4][0]:'';$('#sub').textContent=n===4?'':`Step ${n} of 4 · ${TITLES[n][1]}`;$('#backBtn').hidden=n===1||n===4;stage.classList.toggle('tapmode',n===2||n===3);
   if(n>=3&&(!A.S||prev<3)){rebuild();warm(4);}if(n<4)A.playing=false;
   layout();syncUI();if(n===3)renderSetup();if(n===4){renderBoard();buildInjects();}scrollTo({top:0});}
 $('#backBtn').onclick=()=>show(Math.max(1,A.screen-1));
@@ -148,13 +148,13 @@ function renderSetup(){if(!A.B)return;const sc=A.scn;renderCmdSetup();
   $('#olist').innerHTML=A.B.openings.map(o=>{const st=sc.openings[o.id]||o.init||'closed';return `<div class="oitem"><span>${esc(o.name)}</span><div class="seg" data-op="${o.id}"><button data-v="closed" class="${st==='closed'?'on':''}">Closed</button><button data-v="${o.type==='window'?'failed':'open'}" class="${st!=='closed'?'on':''}">${o.type==='window'?'Broken/open':'Open'}</button></div></div>`;}).join('');
   $('#dlist').innerHTML=A.B.conns.filter(c=>c.type==='door').map(c=>{const st=sc.doors[c.id]||c.init||'closed';return `<div class="oitem"><span>${esc(c.name||c.id)}</span><div class="seg" data-dr="${c.id}"><button data-v="open" class="${st==='open'?'on':''}">Open</button><button data-v="closed" class="${st==='closed'?'on':''}">Closed</button></div></div>`;}).join('');
   const occ=sc.occupant;$('#occSel').innerHTML=`<option value="none">No occupant reported</option><option value="random">Occupant reported, location unknown (random, hidden)</option><option value="bytime">Unknown: likely by time of day (hidden, simplification)</option>`+A.B.zones.filter(z=>!z.attic).map(z=>`<option value="${z.id}">Occupant in ${esc(z.name)}</option>`).join('');$('#occSel').value=occ;
-  const frc=fireRoomConn();$('#vFrd').textContent=frc?frc.name:'(no door: open to the rest of the floor)';$$('.seg[data-key=frdoor] button').forEach(b=>{b.disabled=!frc;b.classList.toggle('on',!!frc&&(sc.doors[frc.id]||frc.init)===b.dataset.v);});
+  const frc=fireRoomConn();$('#vFrd').textContent=frc?frc.name:'None, open to floor';$('.seg[data-key=frdoor]').hidden=!frc;$('#vFrd').closest('.row').classList.toggle('stack',!!frc);$$('.seg[data-key=frdoor] button').forEach(b=>{b.disabled=!frc;b.classList.toggle('on',!!frc&&(sc.doors[frc.id]||frc.init)===b.dataset.v);});
   $('#reading').innerHTML=readingHTML();
   if(A.S){const nf=Object.values(A.S.o).filter(o=>o.state!=='closed'&&o.type==='window').length;$('#preHint').textContent=`At arrival: ${M.stageOf(A.S,A.scn.origin).toLowerCase()}${nf?` · ${nf} window${nf>1?'s':''} already open/failed`:''}. The clock starts running at arrival.`;}syncUI();}
 $('#olist').onclick=e=>{const b=e.target.closest('button');const sg=e.target.closest('[data-op]');if(!b||!sg)return;A.scn.openings[sg.dataset.op]=b.dataset.v;rebuild();warm(3);renderSetup();};
 $('#dlist').onclick=e=>{const b=e.target.closest('button');const sg=e.target.closest('[data-dr]');if(!b||!sg)return;A.scn.doors[sg.dataset.dr]=b.dataset.v;rebuild();warm(3);renderSetup();};
 $('#occSel').onchange=e=>{A.scn.occupant=e.target.value;rebuild();renderSetup();};
-$('#toBoard').onclick=()=>{reach(4);A.irr=null;A.irrEdit=false;A.scn.actions=[];A.scn.tNow=0;A.fu={findings:[]};if(A.side!=='A'){A.side='A';setTexture();}rebuild();warm(4);show(4);startClock();toast(A.playing?'Drill clock running. The fire keeps developing until you act. Pause any time.':'Drill clock paused. Press Play to start.');};
+$('#toBoard').onclick=()=>{reach(4);A.irr=null;A.irrEdit=false;A.scn.actions=[];A.scn.tNow=0;A.fu={findings:[]};if(A.side!=='A'){A.side='A';setTexture();}rebuild();warm(4);show(4);startClock();toast(A.playing?'Clock running. The fire grows until you act.':'Clock paused. Tap Play to start.');};
 $('#surprise').onclick=()=>{const sc=A.scn,r=Math.random;sc.fuel=r()<.75?'modern':'legacy';sc.preburn=[180,300,480,720,900][Math.floor(r()*5)];sc.occupant=r()<.6?'random':'none';
   for(const c of A.B.conns)if(c.type==='door')sc.doors[c.id]=r()<.5?'open':'closed';sc.openings={};if(r()<.35){const w=A.B.openings.filter(o=>o.type==='window'&&!o.hidden);sc.openings[w[Math.floor(r()*w.length)].id]='failed';}
   sc.wind={dir:['calm','A','B','C','D'][Math.floor(r()*5)],spd:Math.floor(r()*3)};sc.preburn=[150,210,300,480,720,900][Math.floor(r()*6)];sc.seed=(r()*1e9)|0;A.hidden=true;A.locked=false;reach(4);sc.actions=[];sc.tNow=0;rebuild();warm(4);show(4);startClock();toast('Conditions randomized. Answers are hidden until you lock in your size-up.');};
@@ -196,7 +196,7 @@ function syncUI(){const sc=A.scn;
   const fo=A.S&&A.screen>=3&&!underControl()&&Object.values(A.S.z).some(z=>z.flashed&&!z.out)&&!isHidden();$('#foChip').classList.toggle('show',!!fo);
   const uc=A.screen===4&&underControl()&&A.ucDismissed!==A.S.underControl;$('#ucBanner').classList.toggle('show',!!uc);if(uc){const b=A.S.cmd&&A.S.cmd.sub.bench&&A.S.cmd.bench.find(x=>x.k==='uc'&&x.ok);$('#ucT').textContent=b?`Under control declared at T+${fmt(b.t-A.S.tArr)}. Clock paused.`:`All fire knocked down at T+${fmt(A.S.underControl-A.S.tArr)}. Clock paused.`;}
   $('#clock').classList.toggle('show',A.screen===4);$('#clock').classList.toggle('paused',!A.playing);$('#clock').textContent=A.playing?`▶ T+${fmt(now())} · ${A.speed}×`:`❚❚ PAUSED · T+${fmt(now())}`;
-  $('#cbT').textContent=`T+${fmt(now())}`;$('#cbS').textContent=A.playing?`running ${A.speed}× · since arrival`:'paused · since arrival';$('#cbClock').classList.toggle('run',A.playing);
+  $('#cbT').textContent=`T+${fmt(now())}`;$('#cbS').textContent=A.playing?`Running ${A.speed}×`:'Paused';$('#cbClock').classList.toggle('run',A.playing);
   $('#legend').classList.toggle('show',A.screen===4&&A.showFlow&&!isHidden());
   $$('#steps button').forEach(b=>{const n=+b.dataset.go;b.disabled=n>A.maxScreen;b.classList.toggle('on',n===A.screen);b.classList.toggle('done',n<A.screen);});
   $$('.modesw button').forEach(b=>b.classList.toggle('on',b.dataset.mode===A.mode));document.body.classList.toggle('crew',A.mode==='crew');document.body.classList.toggle('solo',A.mode==='solo');
@@ -229,9 +229,11 @@ function cues(d){if(!d)return[['Smoke','Nothing visible from Side A. Little or n
    ['Velocity',['Lazy: may mean an early or distant fire, smoke that has cooled, or a fire starved for air.','Moderate: some heat and pressure behind the smoke.','Pressurized: heat is pushing smoke out and pressure is building.','Turbulent: a widely taught warning sign of high heat and a possible hostile fire event.'][d.vel]+(d.pulse?' Pulsing: the fire is trying to pull air through gaps (FSRI).':'')],
    ['Density',['Thin: less fuel in the smoke itself.','Moderate density.','Thick: smoke is fuel. Thicker smoke means more fuel and faster fire spread.','Very thick: high potential for a hostile fire event and near-zero visibility inside.'][d.den]],
    ['Color',{white:'White: often steam or early heating, or smoke that has traveled and cooled.',gray:'Gray: a mix. Read it with velocity and density.','gray-black':'Dark gray: fuel-rich smoke. Read it with velocity.',brown:'Brown: often taught as unfinished wood (structure) burning.',black:'Black: high heat and incomplete combustion, rich in fuel. Common with ventilation-limited modern contents.'}[d.col]]];}
-function readingHTML(){if(!A.S)return'';const d=dominant();const st=M.stageOf(A.S,A.scn.origin);
-  return `<b>At arrival (T+0)</b> <span class="muted">· ${esc(M.FUEL[A.scn.fuel].label)} · ${Math.round(A.scn.preburn/60)} min after ignition</span><div style="margin:6px 0"><b>Fire room:</b> ${esc(zname(A.scn.origin))}: ${esc(st)}</div>
-  <b>Reading smoke</b> <span class="muted">· from the model, not set by hand</span><ul>${cues(d).map(([k,v])=>`<li><b>${k}:</b> ${esc(v)}</li>`).join('')}</ul><div><b>Smoke showing:</b> ${esc(smokeText())}</div><div style="margin-top:6px"><b>Hostile fire event indicators:</b> ${meter()} <span class="muted">(training estimate)</span></div>`;}
+function readingHTML(){if(!A.S)return'';const d=dominant();const st=M.stageOf(A.S,A.scn.origin);const h=hostile();
+  const row=(k,v,sm)=>`<div class="row"><span class="k">${k}${sm?`<small>${esc(sm)}</small>`:''}</span><span class="v">${v}</span></div>`;
+  const cs=cues(d);const short={Volume:d?['Light','Moderate','Heavy','Very heavy'][d.vol]:'',Velocity:d?['Lazy','Moderate','Pressurized','Turbulent'][d.vel]:'',Density:d?['Thin','Moderate','Thick','Very thick'][d.den]:'',Color:d?({white:'White',gray:'Gray','gray-black':'Dark gray',brown:'Brown',black:'Black'})[d.col]:'',Smoke:'None'};
+  return `<div class="list">${row('Fire Room',esc(st),zname(A.scn.origin))}${cs.map(([k,v])=>row(k,esc(short[k]||''),v)).join('')}${row('Smoke Showing','',smokeText())}${row('Hostile Event Risk',`<span class="${h.pct>.66?'red':''}">${esc(h.l)}</span>`,'Training estimate')}</div>
+  <div class="secf">${esc(M.FUEL[A.scn.fuel].label)} · ${Math.round(A.scn.preburn/60)} min after ignition · from the model, not set by hand.</div>`;}
 
 /* ---------- command board ---------- */
 const ICON={home:'<path d="M3 11L12 4l9 7v9h-6v-6H9v6H3z" fill="currentColor"/>',brick:'<path d="M3 5h18v4H3zM3 10h8v4H3zM12 10h9v4h-9zM3 15h18v4H3z" fill="currentColor"/>',
@@ -256,10 +258,10 @@ function renderBoard(){if(!A.B||A.screen!==4||!A.S)return;const F=A.facts,S=A.S,
   $$('#facts .ed').forEach(i=>{i.oninput=()=>{A.facts[i.dataset.f]=i.textContent.trim();};i.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();i.blur();}};});
   const ft=$('#flowTog');if(ft)ft.onclick=()=>{A.showFlow=!A.showFlow;renderBoard();syncUI();};
   const t=now();$('#pT').textContent=`T+${fmt(t)}`;$('#prompt').classList.toggle('changing',t>0&&A.latest.length>0);
-  if(t===0){$('#pH').textContent='You’re first due.';$('#pP').textContent=A.mode==='solo'?(A.locked?'Give your initial radio report and make your first orders.':'Make your size-up calls below, then give your initial radio report.'):'Crew: call out the size-up. Instructor: play or advance the clock.';}
-  else if(underControl()){$('#pH').textContent='Fire under control.';$('#pP').textContent='No room is still burning. Open the debrief, or keep the clock running: a room left dry with no line nearby can rekindle.';}
-  else if(A.latest.length){$('#pH').textContent='Conditions changing.';$('#pP').textContent=A.latest.slice(-3).join(' ')+' Update your report, strategy and assignments.';}
-  else{$('#pH').textContent='Reassess.';$('#pP').textContent='No major change in this interval. Does your plan still match conditions?';}
+  if(t===0){$('#pH').textContent='You’re first due.';$('#pP').textContent=A.mode==='solo'?(A.locked?'Give your report, then assign units.':'Make your size-up calls.'):'Crew: call out the size-up. Instructor runs the clock.';}
+  else if(underControl()){$('#pH').textContent='Fire under control.';$('#pP').textContent='Nothing is still burning. Open the debrief, or keep going: a room with no line nearby can rekindle.';}
+  else if(A.latest.length){$('#pH').textContent='Conditions changing.';$('#pP').textContent=A.latest.slice(-3).join(' ');}
+  else{$('#pH').textContent='Reassess.';$('#pP').textContent='No major change. Does your plan still fit?';}
   renderCompanies();renderOrders();renderLog();renderCalls();syncUI();}
 function waterText(){const S=A.S;return S.cos.filter(e=>e.type==='engine'&&S.t>=e.arriveAt).map(e=>{const low=!e.supplied&&e.tankLeft<(+e.eq.tank||0)*M.TASK.lowTankFrac;return `${esc(e.id)} ${e.supplied?'supplied':`<span class="${low?'water-low':''}">tank ${Math.round(e.tankLeft)} gal${low?' (low)':''}</span>${e.supplyBy?' (supply coming)':''}`}`;}).join(' · ')||'No engine on scene';}
 function envText(){const S=A.S,e=S.scn.env||{};return [({day:'Daylight',dusk:'Dusk',night:'Night'})[e.tod]+(e.tod!=='day'?(S.lights?', scene lighting up':', no scene lighting'):''),e.precip!=='none'?({rain:'rain',snow:'snow',fog:'fog: reduced visibility'})[e.precip]:'',e.temp==='cold'?'cold & icy (tasks slower)':e.temp==='hot'?'hot (crew fatigue)':''].filter(Boolean).join(' · ');}
@@ -353,13 +355,13 @@ function truthCalls(){const S=A.S,z=S.z[A.scn.origin],d=dominant()||{vol:0,vel:0
   const fo=z.flashed?'High':(z.vl&&z.T>.3)||z.decay?'High':z.q>.3?'Moderate':'Low';
   return{floor:zoneOf(A.scn.origin).floor,stage,vol:d.vol,vel:d.vel,den:d.den,col:d.col==='gray-black'?'black':d.col,fo};}
 function renderCalls(){const el=$('#callsCard');if(A.mode!=='solo'||!A.S){el.innerHTML='';return;}
-  if(A.locked&&A.lockResult){const r=A.lockResult;el.innerHTML=`<h2 style="margin-top:0">Your size-up at T+${fmt(r.t)} <span class="score ${r.score>=5?'ok':r.score>=3?'mid':'no'}">${r.score}/${r.n}</span></h2>`+r.rows.map(x=>`<div style="font-size:14px;margin:4px 0"><span class="badge2 ${x.ok===true?'ok':x.ok==='close'?'mid':'no'}">${x.ok===true?'✓':x.ok==='close'?'~':'✗'}</span><b>${x.k}:</b> you said ${esc(x.you)} · model: ${esc(x.truth)}</div>`).join('')+`<p class="muted" style="font-size:13px">“Close” means one step off. Smoke is read from the strongest opening. See the debrief for the reasoning and sources.</p>`;return;}
+  if(A.locked&&A.lockResult){const r=A.lockResult;el.innerHTML=`<div class="sech">Your Size-Up · T+${fmt(r.t)} <span class="score ${r.score>=5?'ok':r.score>=3?'mid':'no'}">${r.score}/${r.n}</span></div><div class="sec"><div class="list">`+r.rows.map(x=>`<div class="row"><span class="mk ${x.ok===true?'ok':x.ok==='close'?'w':'no'}">${x.ok===true?'✓':x.ok==='close'?'~':'✕'}</span><span class="k">${x.k}<small>You: ${esc(x.you)} · Model: ${esc(x.truth)}</small></span></div>`).join('')+`</div><div class="secf">“~” is one step off. Smoke is read at the strongest opening.</div></div>`;return;}
   const floors=[...new Set(A.B.zones.map(z=>z.floor))].filter(f=>f!=='Roof');
-  const seg=(k,opts,lab)=>`<div><div class="lbl2">${lab}</div><div class="seg" data-key="call_${k}">${opts.map(([v,t])=>`<button data-v="${v}" class="${String(A.calls[k])===String(v)?'on':''}">${t}</button>`).join('')}</div></div>`;
-  el.innerHTML=`<h2 style="margin-top:0">Your size-up calls</h2>`+seg('floor',floors.map(f=>[f,f==='Attic'?A.B.atticName:f]),'Fire floor')+seg('stage',STAGES.map(s=>[s,s.replace(' / growth','/growth')]),'Fire stage')
-   +seg('vol',[[0,'Light'],[1,'Mod'],[2,'Heavy'],[3,'V. heavy']],'Smoke volume')+seg('vel',[[0,'Lazy'],[1,'Mod'],[2,'Press.'],[3,'Turb.']],'Velocity')+seg('den',[[0,'Thin'],[1,'Mod'],[2,'Thick'],[3,'V. thick']],'Density')
-   +seg('col',[['white','White'],['gray','Gray'],['brown','Brown'],['black','Black']],'Color')+seg('fo',[['Low','Low'],['Moderate','Moderate'],['High','High']],'Hostile event potential')
-   +`<button class="btn primary" id="lockBtn">Lock in my size-up</button>`;
+  const seg=(k,opts,lab,info)=>`<div class="row stack"><div class="lab"><span>${lab}</span>${info?`<button class="i" data-info="${info}" aria-label="About ${lab}">ⓘ</button>`:''}</div><div class="seg" data-key="call_${k}">${opts.map(([v,t])=>`<button data-v="${v}" class="${String(A.calls[k])===String(v)?'on':''}">${t}</button>`).join('')}</div></div>`;
+  el.innerHTML=`<div class="sec"><div class="list">`+seg('floor',floors.map(f=>[f,f==='Attic'?A.B.atticName:f]),'Fire Floor')+seg('stage',STAGES.map(s=>[s,({'Incipient / growth':'Growth','Ventilation-limited':'Vent-limited','Fully developed':'Developed','Decay':'Decay'})[s]]),'Stage','stage')
+   +seg('vol',[[0,'Light'],[1,'Mod'],[2,'Heavy'],[3,'V. heavy']],'Smoke Volume','smoke')+seg('vel',[[0,'Lazy'],[1,'Mod'],[2,'Press.'],[3,'Turb.']],'Velocity')+seg('den',[[0,'Thin'],[1,'Mod'],[2,'Thick'],[3,'V. thick']],'Density')
+   +seg('col',[['white','White'],['gray','Gray'],['brown','Brown'],['black','Black']],'Color')+seg('fo',[['Low','Low'],['Moderate','Moderate'],['High','High']],'Hostile Event Risk')
+   +`</div></div><button class="cta" id="lockBtn">Lock In Size-Up</button>`;
   el.querySelectorAll('.seg[data-key]').forEach(seg=>seg.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=seg.dataset.key.slice(5);let v=b.dataset.v;if(['vol','vel','den'].includes(k))v=+v;A.calls[k]=v;renderCalls();}));
   $('#lockBtn').onclick=lockIn;}
 function lockIn(){const T=truthCalls(),C=A.calls;const rows=[];const num=(k,names,lab)=>{const y=C[k];const ok=y==null?false:y===T[k]?true:Math.abs(y-T[k])===1?'close':false;rows.push({k:lab,you:y==null?'(no call)':names[y],truth:names[T[k]],ok});};
@@ -408,9 +410,25 @@ function debrief(){const S=A.S,sc=A.scn,ta=S.tArr,items=[];const at=t=>`T+${fmt(
   companyDebrief(add,at);debrief360(add,at);
   const out=Object.values(S.z).filter(z=>z.ign);const allOut=out.length&&out.every(z=>z.out);add(allOut?'ok':'mid',allOut?`Fire under control at ${at(S.underControl!=null?S.underControl:Math.max(...out.map(z=>z.tOut||0)))}`:`Fire not yet under control at the end of the drill (still burning: ${out.filter(z=>!z.out).map(z=>zname(z.id)).join(', ')})`,`Burned: ${out.map(z=>zname(z.id)).join(', ')||'none'}.`,['push']);
   return items;}
+function debriefView(items){const never=items.filter(i=>/^Never assigned/.test(i.detail||'')||/never assigned/i.test(i.title));const rest=items.filter(i=>!never.includes(i));
+  const v=rest.slice();if(never.length>1)v.push({st:'mid',title:`${never.length} units never assigned`,detail:never.map(i=>i.title.replace(/:.*$/,'')).join(', ')+'. '+(never[0].detail||''),rules:[]});else v.push(...never);
+  return v.map(i=>({...i,short:i.title.length>58?i.title.slice(0,56).replace(/\s+\S*$/,'')+'…':i.title}));}
 $('#finishBtn').onclick=()=>{A.playing=false;A.wasPlaying=false;A.finished=true;syncUI();const items=debrief();const ok=items.filter(i=>i.st==='ok').length;
-  openModal('Debrief',`${A.S.cmd?cmdDebriefHTML():''}<div class="debrief"><p style="margin:0 0 8px">${esc(A.B.name)} · ${esc(M.FUEL[A.scn.fuel].label)} · drill ended at T+${fmt(now())}. ${ok}/${items.length} items went well.</p>${items.map(i=>`<div class="item"><b><span class="badge2 ${i.st}">${i.st==='ok'?'✓':i.st==='mid'?'!':'✗'}</span>${esc(i.title)}</b>${i.detail?`<small>${esc(i.detail)}</small>`:''}${i.img?`<img class="dbimg" src="${i.img}" alt="${esc(i.title)}">`:''}${ruleHTML(i.rules)}</div>`).join('')}
-  <p class="tip">The model is a simplified teaching tool informed by UL FSRI research. It does not grade you against any department SOP. Training prototype, not for operational use.</p></div><div class="btnrow"><button class="btn ghost" id="dbCopy">Copy debrief</button><button class="btn primary" id="dbShare">Share drill</button></div>`);
+  const V=debriefView(items);const by=g=>V.filter(i=>i.st===g);const first=by('no').length?'no':by('mid').length?'mid':'ok';const pct=items.length?ok/items.length:0;const C=2*Math.PI*15.5;
+  const still=Object.values(A.S.z).filter(z=>z.ign&&!z.out).map(z=>zname(z.id));
+  const rowH=(i,n)=>`<button class="row ic chev dbrow" data-i="${n}"><span class="mk ${i.st==='ok'?'ok':i.st==='mid'?'w':'no'}">${i.st==='ok'?'✓':i.st==='mid'?'!':'✕'}</span><span class="k">${esc(i.short)}</span></button>`;
+  const lists=['no','mid','ok'].map(g=>`<div class="sec dbl${g===first?' on':''}" data-g="${g}"><div class="list">${V.map((i,n)=>i.st===g?rowH(i,n):'').join('')||'<div class="row"><span class="k muted">Nothing here.</span></div>'}</div></div>`).join('');
+  const dets=V.map((i,n)=>`<div class="item dbd" data-i="${n}" hidden><b><span class="badge2 ${i.st}">${i.st==='ok'?'✓':i.st==='mid'?'!':'✗'}</span>${esc(i.title)}</b>${i.detail?`<small>${esc(i.detail)}</small>`:''}${i.img?`<img class="dbimg" src="${i.img}" alt="${esc(i.title)}">`:''}${i.rules.length?`<div class="sech">Research</div>${ruleHTML(i.rules)}`:''}</div>`).join('');
+  openModal('Debrief',`<div class="debrief"><div class="ring"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5" fill="none" stroke="#2c2c2e" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#30d158" stroke-width="4" stroke-dasharray="${(C*pct).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 18 18)" stroke-linecap="round"/></svg>
+   <div><b>${ok} of ${items.length} went well</b><span>Ended T+${fmt(now())} · ${esc(still.length?still.join(', ')+' still burning':A.B.name)}</span></div></div>
+   <div class="sec"><div class="seg big dbseg">${[['no','Fix'],['mid','Watch'],['ok','Good']].map(([g,l])=>`<button data-g="${g}" class="${g===first?'on':''}">${l} (${by(g).length})</button>`).join('')}</div></div>
+   ${lists}${A.S.cmd?`<div class="sec"><div class="list"><button class="row chev" id="dbCmdRow"><span class="k">Command Review</span><span class="v">${cmdScore().total}/100</span></button></div></div>`:''}
+   <button class="cta" id="dbShare">Share Drill</button><button class="tbtn" id="dbCopy">Copy Debrief</button>
+   <p class="note">Simplified teaching model informed by UL FSRI research. Not graded against any department SOP. Training prototype, not for operational use.</p>
+   <div class="dbdet" id="dbDet" hidden><div class="dnav"><button class="navbtn back" id="dbBack"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Debrief</button><b></b><span></span></div>${dets}${A.S.cmd?`<div class="item dbd" data-i="cmd" hidden>${cmdDebriefHTML()}</div>`:''}</div></div>`);
+  const mb=$('#mBody');mb.onclick=e=>{const sg=e.target.closest('.dbseg button');if(sg){mb.querySelectorAll('.dbseg button').forEach(b=>b.classList.toggle('on',b===sg));mb.querySelectorAll('.dbl').forEach(l=>l.classList.toggle('on',l.dataset.g===sg.dataset.g));return;}
+   const r=e.target.closest('.dbrow,#dbCmdRow');if(r){const k=r.id==='dbCmdRow'?'cmd':r.dataset.i;mb.querySelectorAll('.dbd').forEach(d=>d.hidden=d.dataset.i!==k);$('#dbDet').hidden=false;$('#dbDet .dnav b').textContent=k==='cmd'?'Command Review':'Detail';$('#modal .box').scrollTop=0;return;}
+   if(e.target.closest('#dbBack')){$('#dbDet').hidden=true;}};
   A.lastDebrief=items;$('#dbCopy').onclick=()=>copyText(cmdDebriefText().concat(items.map(i=>`[${i.st}] ${i.title}${i.detail?' - '+i.detail:''}`)).join('\n'),'#dbCopy');$('#dbShare').onclick=openShare;};
 
 /* ---------- sources panel ---------- */

@@ -1,117 +1,125 @@
 <div class="app">
-<header class="topbar">
-  <button class="iconbtn" id="backBtn" aria-label="Back" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
-  <div class="ttl"><b id="ttl">SizeUp</b><small id="sub">Step 1 of 4 · Capture the building</small></div>
-  <div class="modesw" role="group" aria-label="Mode"><button data-mode="solo" class="on">Solo</button><button data-mode="crew">Crew</button></div>
-  <span class="badge">TRAINING</span>
+<header class="topbar nav">
+  <button class="navbtn back" id="backBtn" aria-label="Back" hidden><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back</span></button>
+  <button class="navbtn" id="navEnd" hidden>End</button>
+  <div class="ttl"><b id="ttl">SizeUp</b><small id="sub"></small></div>
+  <div class="navr">
+    <button class="navbtn" id="navMode" data-sheet="mode" aria-label="Mode">Solo ▾</button>
+    <button class="navbtn" id="navPreview" data-sheet="preview" hidden>Preview</button>
+    <button class="navbtn" id="navFacts" data-sheet="facts" hidden>Facts</button>
+  </div>
 </header>
-<nav class="steps" id="steps">
-  <button data-go="1"><i>1</i><span>Capture</span></button>
-  <button data-go="2"><i>2</i><span>Fire origin</span></button>
-  <button data-go="3"><i>3</i><span>Set up</span></button>
-  <button data-go="4"><i>4</i><span>Command board</span></button>
-</nav>
 <main>
+<nav class="steps" id="steps" aria-label="Progress">
+  <button data-go="1" aria-label="Step 1: Capture"><i></i><span>Capture</span></button>
+  <button data-go="2" aria-label="Step 2: Fire origin"><i></i><span>Fire origin</span></button>
+  <button data-go="3" aria-label="Step 3: Conditions"><i></i><span>Conditions</span></button>
+  <button data-go="4" aria-label="Step 4: Drill"><i></i><span>Drill</span></button>
+</nav>
+
 <section class="screen on" id="s1">
- <div class="capgrid">
-  <div>
-   <div class="viewfinder">
-     <div class="brk tl"></div><div class="brk tr"></div><div class="brk bl"></div><div class="brk br"></div>
-     <div class="hint">Frame the whole building</div>
-     <div class="center">
-       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10.5L12 4l9 6.5V20H3z"/><path d="M9 20v-5h6v5"/></svg>
-       <b style="font-size:18px">Photograph Side A</b>
-       <span class="muted" style="font-size:14px">Stand where the first-due would stop and get the whole building in frame.</span>
-     </div>
-   </div>
-   <div class="cambar">
-     <label class="camside" for="fileUpload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>Upload</label>
-     <label class="shutter" for="fileCam" aria-label="Take a photo" id="shutter"><span></span></label>
-     <label class="camside" for="fileScn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h10l6 6v10H4z"/><path d="M14 4v6h6"/></svg>Open drill</label>
-   </div>
-   <input class="vh" type="file" id="fileCam" accept="image/*" capture="environment">
-   <input class="vh" type="file" id="fileUpload" accept="image/*">
-   <input class="vh" type="file" id="fileScn" accept=".json,.html,.htm,application/json,text/html">
-   <div class="tip" id="fileErr"></div>
-  </div>
-  <div>
-   <h2>No photo? Use a sample building</h2>
-   <div class="samples">
-     <button class="sample" data-sample="house"><img alt="Sample: 2-story house" id="th_house"><div><b>2-story house</b><small>Single-family · wood frame</small></div></button>
-     <button class="sample" data-sample="mixed"><img alt="Sample: 3-story mixed-use" id="th_mixed"><div><b>3-story mixed-use</b><small>Store + apartments · brick</small></div></button>
-   </div>
-   <p class="tip">Photos stay on this device. Nothing is uploaded. <b>Solo</b>: you make the calls and get a debrief. <b>Crew</b>: big-screen view where the instructor runs the clock and injects events.</p>
-  </div>
- </div>
+ <h1 class="large">New Drill</h1>
+ <div class="s1grid"><div>
+ <label class="camera" for="fileCam"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg><b>Photograph Side A</b><span>Get the whole building in frame</span></label>
+ <label class="cta" for="fileCam" id="shutter" role="button">Take Photo</label>
+ <div class="sec"><div class="list">
+  <label class="row chev" for="fileUpload" role="button"><span class="k">Upload Photo</span></label>
+  <label class="row chev" for="fileScn" role="button"><span class="k">Open Saved Drill</span></label>
+ </div></div>
+ <input class="vh" type="file" id="fileCam" accept="image/*" capture="environment">
+ <input class="vh" type="file" id="fileUpload" accept="image/*">
+ <input class="vh" type="file" id="fileScn" accept=".json,.html,.htm,application/json,text/html">
+ <div class="tip err" id="fileErr"></div>
+ </div><div>
+ <div class="sech">Sample Buildings</div>
+ <div class="sec"><div class="list">
+  <button class="sample row chev" data-sample="house"><img alt="" id="th_house"><span class="k">2-Story House<small>Wood frame</small></span></button>
+  <button class="sample row chev" data-sample="mixed"><img alt="" id="th_mixed"><span class="k">3-Story Mixed-Use<small>Store + apartments</small></span></button>
+ </div><div class="secf">Photos stay on this device.</div></div>
+ </div></div>
+ <button class="note" data-sheet="about">Training prototype · not for operational use</button>
+ <button class="ver" data-sheet="about" id="verStart"></button>
 </section>
 
 <section class="screen" id="s2">
+ <h1 class="large">Fire Origin</h1>
  <div class="twocol">
   <div class="sticky"><div class="slot"></div></div>
-  <div class="sheet">
-    <div class="ctl" id="markCtl" hidden><div class="lbl">Mark your photo <span class="val" id="markHint">Tap to place</span></div>
-      <div class="seg" data-key="markMode"><button data-v="origin">Fire</button><button data-v="window">Window</button><button data-v="door">Door</button><button data-v="garage">Garage</button><button data-v="eave">Eave line</button><button data-v="grade">Grade</button></div>
-      <div class="seg feats" data-key="markMode" style="margin-top:6px" aria-label="Tactical features"><button data-v="fence">Fence</button><button data-v="power">Power lines</button><button data-v="exposure">Exposure</button><button data-v="car">Car</button><button data-v="porch">Porch/deck</button><button data-v="meter">Meter</button></div>
-      <div class="hint">Openings below the grade line (or in an extra lowest story on that side) are the basement. Features carry simple teaching effects: fence = extra hose-stretch time; power lines = no ladders/aerial on that side; car = no aerial on that side; exposure = radiant-heat risk.</div>
-      <div class="row2" style="margin-top:8px"><span class="muted" style="font-size:13px" id="markStat"></span><button class="btn ghost sm" id="undoMark">Undo opening</button></div></div>
-    <div class="ctl"><div class="lbl">Fire room <span class="val" id="floorAuto">Tap the photo</span></div><select id="roomSel" aria-label="Fire room"></select></div>
-    <div class="ctl"><div class="lbl">Building side <span class="val">tabs on the picture too · swipe on a phone</span></div>
-      <div class="seg" data-key="side"><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button><button data-v="D">D</button></div>
-      <div id="sideCtl" class="sidectl" hidden></div></div>
-    <div class="ctl" id="storiesCtl"><div class="lbl">Stories above grade</div>
-      <div class="stepper"><button id="stDown" aria-label="Fewer stories">−</button><output id="stOut">2</output><button id="stUp" aria-label="More stories">+</button><span class="muted" style="font-size:14px;margin-left:6px">sets the floor bands</span></div></div>
-    <div class="ctl" style="border:0;padding-bottom:0"><button class="btn primary" id="toDial" disabled>Continue</button></div>
+  <div class="pane2">
+   <div class="sec"><div class="list">
+    <label class="row selrow"><span class="k">Fire Room</span><span class="v" id="floorAuto">Tap the photo</span><select id="roomSel" aria-label="Fire room"></select></label>
+    <div class="row" id="storiesCtl"><span class="k">Stories</span><output id="stOut">2</output><div class="stepper"><button id="stDown" aria-label="Fewer stories">−</button><button id="stUp" aria-label="More stories">+</button></div></div>
+    <button class="row chev" data-sheet="mark" id="markRow"><span class="k">Mark Openings &amp; Hazards<small>Windows, doors, eave, grade, features</small></span></button>
+   </div></div>
+   <button class="cta" id="toDial" disabled>Continue</button>
   </div>
  </div>
+ <button class="note" data-sheet="about">Training prototype · not for operational use</button>
 </section>
 
 <section class="screen" id="s3">
+ <h1 class="large">Conditions</h1>
  <div class="twocol">
-  <div class="sticky"><div class="slot"></div>
-   <div class="reading" id="reading" style="margin-top:12px"></div>
-  </div>
-  <div class="sheet">
-   <div class="tabs" id="setupTabs" role="tablist" aria-label="Setup sections"><button role="tab" data-tab="cond" class="on" aria-selected="true">Fire &amp; smoke</button><button role="tab" data-tab="wx" aria-selected="false">Time &amp; weather</button><button role="tab" data-tab="disp" aria-selected="false">Dispatch</button><button role="tab" data-tab="times" aria-selected="false">Task times</button><button role="tab" data-tab="cmd" aria-selected="false">Command</button></div>
+  <div class="sticky"><div class="slot"></div></div>
+  <div class="pane2">
+  <div id="setupTabs">
    <div class="tabp on" id="tab-cond">
-    <div class="ctl"><div class="lbl">Contents (fuel) <span class="val" id="vFuel"></span></div>
-      <div class="seg red" data-key="fuel"><button data-v="modern">Modern synthetic</button><button data-v="legacy">Legacy</button></div></div>
-    <div class="ctl"><div class="lbl">Time since ignition at arrival <span class="val" id="vPre"></span></div>
-      <div class="seg" data-key="preburn" data-num><button data-v="150">2½m</button><button data-v="210">3½m</button><button data-v="300">5m</button><button data-v="480">8m</button><button data-v="720">12m</button><button data-v="900">15m</button><button data-v="1200">20m</button></div>
-      <div class="hint" id="preHint"></div></div>
-    <div class="ctl"><div class="lbl">Window glass <span class="val" id="vGlass"></span></div>
-      <div class="seg" data-key="glass"><button data-v="fails">Fails from heat</button><button data-v="hold">Holds (closed-house decay)</button></div></div>
-    <div class="ctl"><div class="lbl">Fire room door <span class="val" id="vFrd"></span></div>
-      <div class="seg" data-key="frdoor"><button data-v="open">Open</button><button data-v="closed">Closed</button></div></div>
-    <div class="ctl"><div class="lbl">Doors &amp; windows at arrival <span class="val">tap the photo too</span></div><div class="olist" id="olist"></div></div>
-    <div class="ctl"><div class="lbl">Interior doors</div><div class="olist" id="dlist"></div></div>
-    <div class="ctl"><div class="lbl">Occupant</div><select id="occSel" aria-label="Occupant"></select></div>
+    <div class="sech">Fire</div>
+    <div class="sec"><div class="list">
+     <div class="row stack"><div class="lab"><span>Contents</span><span class="v" id="vFuel" hidden></span></div><div class="seg big" data-key="fuel"><button data-v="modern">Modern</button><button data-v="legacy">Legacy</button></div></div>
+     <button class="row chev" data-tab="arr"><span class="k">Arrival After Ignition</span><span class="v" id="vPre"></span></button>
+     <div class="row stack"><div class="lab"><span>Window Glass</span><span class="v" id="vGlass" hidden></span></div><div class="seg" data-key="glass"><button data-v="fails">Fails from heat</button><button data-v="hold">Holds</button></div></div>
+     <div class="row stack"><div class="lab"><span>Fire Room Door</span><span class="v sm" id="vFrd"></span></div><div class="seg" data-key="frdoor"><button data-v="open">Open</button><button data-v="closed">Closed</button></div></div>
+    </div></div>
+    <div class="sech">Scene</div>
+    <div class="sec"><div class="list">
+     <button class="row chev" data-tab="open"><span class="k">Doors &amp; Windows</span><span class="v" id="vOpen"></span></button>
+     <button class="row chev" data-tab="idoor"><span class="k">Interior Doors</span><span class="v" id="vIdoor"></span></button>
+     <label class="row selrow"><span class="k">Occupant</span><span class="v" id="vOcc"></span><select id="occSel" aria-label="Occupant"></select></label>
+     <button class="row chev" data-tab="wx"><span class="k">Weather</span><span class="v" id="vWx"></span></button>
+    </div></div>
+    <div class="sech">Response</div>
+    <div class="sec"><div class="list">
+     <button class="row chev" data-tab="disp"><span class="k">Dispatch</span><span class="v" id="vDisp"></span></button>
+     <button class="row chev" data-tab="times"><span class="k">Task Times</span><span class="v" id="vTimes"></span></button>
+     <button class="row chev" data-tab="cmd"><span class="k">Command Practice</span><span class="v" id="vCmd"></span></button>
+    </div></div>
    </div>
-   <div class="tabp" id="tab-wx">
-    <div class="ctl"><div class="lbl">Time of day <span class="val" id="vTod"></span></div>
-      <div class="seg" data-key="tod"><button data-v="day">Day</button><button data-v="dusk">Dusk</button><button data-v="night">Night</button></div>
-      <div class="hint" id="todHint"></div></div>
-    <div class="ctl"><div class="lbl">Precipitation &amp; visibility <span class="val" id="vPrecip"></span></div>
-      <div class="seg" data-key="precip"><button data-v="none">Clear</button><button data-v="rain">Rain</button><button data-v="snow">Snow</button><button data-v="fog">Fog</button></div></div>
-    <div class="ctl"><div class="lbl">Temperature <span class="val" id="vTemp"></span></div>
-      <div class="seg" data-key="temp"><button data-v="mild">Mild</button><button data-v="cold">Cold &amp; icy</button><button data-v="hot">Hot</button></div>
-      <div class="hint" id="tempHint"></div></div>
-    <div class="ctl"><div class="lbl">Wind <span class="val" id="vWind"></span></div>
-      <div class="seg" data-key="windDir"><button data-v="calm">Calm</button><button data-v="A">From A</button><button data-v="B">From B</button><button data-v="C">From C</button><button data-v="D">From D</button></div>
-      <div class="seg" data-key="windSpd" data-num style="margin-top:8px"><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div></div>
-    <div class="ctl"><div class="lbl">Scheduled wind shift <span class="val" id="vShift"></span></div>
-      <div class="seg" data-key="shiftAt" data-num><button data-v="0">None</button><button data-v="180">At T+3</button><button data-v="360">At T+6</button><button data-v="600">At T+10</button></div>
-      <div class="seg" data-key="shiftDir" style="margin-top:8px"><button data-v="A">From A</button><button data-v="B">From B</button><button data-v="C">From C</button><button data-v="D">From D</button></div>
-      <div class="seg" data-key="shiftSpd" data-num style="margin-top:8px"><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div>
-      <div class="hint">The shift happens on the drill clock, so it replays exactly. Wind into an open window of a burning room drives heat and smoke along the flow path (NIST wind-driven fire experiments).</div></div>
-   </div>
-   <div class="tabp" id="tab-disp"><div id="dispatch"></div></div>
-   <div class="tabp" id="tab-times"><div id="settings"></div></div>
-   <div class="tabp" id="tab-cmd"><div id="cmdSetup"></div></div>
-    <div class="ctl" style="border:0;padding-bottom:0;display:grid;gap:10px"><button class="btn primary" id="toBoard">Run size-up drill
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-      <button class="btn ghost" id="surprise">Surprise me: random conditions, answers hidden</button><div class="hint" id="setupSum"></div></div>
+   <div class="tabp detail" id="tab-arr"><div class="dnav"><button class="navbtn back" data-tab="cond"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Conditions</button><b>Arrival</b><span></span></div>
+    <div class="sech">Time since ignition</div>
+    <div class="sec"><div class="seg vlist" data-key="preburn" data-num><button data-v="150">2½ min</button><button data-v="210">3½ min</button><button data-v="300">5 min</button><button data-v="480">8 min</button><button data-v="720">12 min</button><button data-v="900">15 min</button><button data-v="1200">20 min</button></div>
+    <div class="secf" id="preHint"></div></div></div>
+   <div class="tabp detail" id="tab-open"><div class="dnav"><button class="navbtn back" data-tab="cond"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Conditions</button><b>Doors &amp; Windows</b><span></span></div>
+    <div class="sec"><div class="seg" id="openSide" aria-label="Filter by side"></div></div>
+    <div class="sec"><div class="list olist" id="olist"></div><div class="secf">At arrival. You can also tap an opening on the photo.</div></div></div>
+   <div class="tabp detail" id="tab-idoor"><div class="dnav"><button class="navbtn back" data-tab="cond"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Conditions</button><b>Interior Doors</b><span></span></div>
+    <div class="sec"><div class="list olist" id="dlist"></div></div></div>
+   <div class="tabp detail" id="tab-wx"><div class="dnav"><button class="navbtn back" data-tab="cond"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Conditions</button><b>Weather</b><span></span></div>
+    <div class="sec"><div class="list">
+     <div class="row stack"><div class="lab"><span>Time of Day</span><span class="v" id="vTod"></span></div><div class="seg" data-key="tod"><button data-v="day">Day</button><button data-v="dusk">Dusk</button><button data-v="night">Night</button></div><div class="rhint" id="todHint"></div></div>
+     <div class="row stack"><div class="lab"><span>Precipitation</span><span class="v" id="vPrecip"></span></div><div class="seg" data-key="precip"><button data-v="none">Clear</button><button data-v="rain">Rain</button><button data-v="snow">Snow</button><button data-v="fog">Fog</button></div></div>
+     <div class="row stack"><div class="lab"><span>Temperature</span><span class="v" id="vTemp"></span></div><div class="seg" data-key="temp"><button data-v="mild">Mild</button><button data-v="cold">Cold &amp; icy</button><button data-v="hot">Hot</button></div><div class="rhint" id="tempHint"></div></div>
+    </div></div>
+    <div class="sech">Wind</div>
+    <div class="sec"><div class="list">
+     <div class="row stack"><div class="lab"><span>Direction</span><span class="v" id="vWind"></span></div><div class="seg" data-key="windDir"><button data-v="calm">Calm</button><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button><button data-v="D">D</button></div></div>
+     <div class="row stack"><div class="lab"><span>Speed</span></div><div class="seg" data-key="windSpd" data-num><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div></div>
+    </div><div class="secf">From the side named. Wind into an open window drives heat along the flow path.</div></div>
+    <div class="sech">Wind Shift</div>
+    <div class="sec"><div class="list">
+     <div class="row stack"><div class="lab"><span>When</span><span class="v" id="vShift"></span></div><div class="seg" data-key="shiftAt" data-num><button data-v="0">None</button><button data-v="180">T+3</button><button data-v="360">T+6</button><button data-v="600">T+10</button></div></div>
+     <div class="row stack"><div class="lab"><span>New Direction</span></div><div class="seg" data-key="shiftDir"><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button><button data-v="D">D</button></div></div>
+     <div class="row stack"><div class="lab"><span>New Speed</span></div><div class="seg" data-key="shiftSpd" data-num><button data-v="0">Light</button><button data-v="1">Moderate</button><button data-v="2">Strong</button></div></div>
+    </div><div class="secf">Runs on the drill clock, so it replays exactly.</div></div></div>
+   <div class="tabp detail" id="tab-disp"><div class="dnav"><button class="navbtn back" data-tab="cond"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Conditions</button><b>Dispatch</b><button class="navbtn info" data-info="disp" aria-label="About dispatch">ⓘ</button></div><div id="dispatch"></div></div>
+   <div class="tabp detail" id="tab-times"><div class="dnav"><button class="navbtn back" data-tab="cond"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Conditions</button><b>Task Times</b><button class="navbtn info" data-info="times" aria-label="About task times">ⓘ</button></div><div id="settings"></div></div>
+   <div class="tabp detail" id="tab-cmd"><div class="dnav"><button class="navbtn back" data-tab="cond"><svg viewBox="0 0 13 21" aria-hidden="true"><path d="M11 2L2 10.5 11 19" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>Conditions</button><b>Command Practice</b><button class="navbtn info" data-info="cmd" aria-label="About command practice">ⓘ</button></div><div id="cmdSetup"></div></div>
+  </div>
+  <button class="cta" id="toBoard">Start Drill</button>
+  <button class="tbtn" id="surprise">Surprise Me</button>
   </div>
  </div>
+ <button class="note" data-sheet="about">Training prototype · not for operational use</button>
 </section>
 
 <section class="screen" id="s4">
@@ -119,65 +127,78 @@
   <div class="left">
     <div class="slot"></div>
     <div class="clockbar" id="clockbar">
-      <button class="btn primary playbtn" id="playBtn" aria-label="Pause the drill clock">❚❚ Pause</button>
+      <button class="play" id="playBtn" aria-label="Start the drill clock">▶ Play</button>
       <div class="cbclock" id="cbClock" aria-live="off"><b id="cbT">T+0:00</b><small id="cbS">since arrival</small></div>
-      <div class="seg" data-key="speed" data-num aria-label="Clock speed"><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button><button data-v="10">10×</button></div>
-      <button class="btn ghost" id="adv1">+1 min</button>
+      <button class="pill" id="speedPill" data-sheet="clock" aria-label="Clock speed and step">1×</button>
+      <button class="pill" id="adv1">+1 min</button>
+    </div>
+  </div>
+  <div class="panes" id="panes">
+   <div class="pane on" id="pane-sizeup">
+    <div class="prompt" id="prompt">
+      <span class="tchip" id="pT" hidden>T+0:00</span>
+      <h3 id="pH">You’re first due.</h3>
+      <p id="pP">Make your size-up calls.</p>
     </div>
     <div class="ibar crewOnly" id="ibar">
-      <select id="injectSel" aria-label="Inject event"></select><button class="btn outline" id="injectBtn">Inject</button>
-      <button class="btn ghost" id="hideBtn">Hide answers</button>
-      <button class="btn ghost" id="fsBtn">Full screen</button>
+      <div class="sech">Instructor</div>
+      <div class="sec"><div class="list">
+       <div class="row"><select id="injectSel" aria-label="Inject event"></select><button class="pill tint" id="injectBtn">Inject</button></div>
+       <button class="row" id="hideBtn">Hide answers</button>
+       <button class="row" id="fsBtn">Full screen</button>
+      </div></div>
     </div>
-    <div class="facts" id="facts"></div>
-  </div>
-  <div style="display:grid;gap:14px;align-content:start">
-    <div class="prompt" id="prompt">
-      <span class="tchip" id="pT">T+0:00</span>
-      <h3 id="pH">You’re first due.</h3>
-      <p id="pP">Give your initial radio report.</p>
-      <div class="btnrow">
-        <button class="btn outline" id="evolveBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg><span id="evLbl">Evolve +1 min</span></button>
-        <button class="btn primary" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 000 7M15.5 8.5a5 5 0 010 7M5.6 5.6a9 9 0 000 12.8M18.4 5.6a9 9 0 010 12.8"/></svg>Share drill</button>
-      </div>
-      <div class="seg" data-key="stepSize" data-num style="margin-top:10px"><button data-v="30">30 s</button><button data-v="60">1 min</button><button data-v="120">2 min</button><button data-v="300">5 min</button></div>
-    </div>
-    <div class="card calls soloOnly" id="callsCard"></div>
+    <div class="calls soloOnly" id="callsCard"></div>
+   </div>
+   <div class="pane" id="pane-report">
+    <div class="prompt"><h3>Initial Report</h3><p>Build it, then transmit.</p></div>
     <div class="card cf-irr" id="irrBox" hidden></div>
+    <div id="radioWrap" class="sec"><div class="list"><div class="row stack"><label class="lab" for="radio"><span>Radio Report</span><button class="i" data-info="radio" aria-label="What a report includes">ⓘ</button></label>
+      <textarea id="radio" placeholder="Engine 1 on scene, two-story wood-frame house, heavy black smoke from floor 1 Side A…"></textarea></div></div></div>
+    <div class="sec"><div class="list"><div class="row stack"><div class="lab"><span>Strategy</span></div>
+      <div class="seg big" data-key="strategy"><button data-v="Offensive">Offensive</button><button data-v="Defensive">Defensive</button></div></div></div></div>
+    <div class="sec"><div class="list"><button class="row chev" data-sheet="fu" id="fuRow"><span class="k">Follow-Up Report</span><span class="v" id="vFu">After 360</span></button></div></div>
+   </div>
+   <div class="pane" id="pane-units">
+    <div class="prompt ph"><div><h3>Units</h3><p>Tap a unit to assign it.</p></div><button class="pill tint" data-sheet="qo">Quick Order</button></div>
+    <div class="sec"><div class="list colist" id="coList"></div><div class="secf">Times are arrival after you (T+).</div></div>
+    <div class="sech">Hoselines</div>
+    <div class="sec"><div class="lines" id="linesList"></div><div class="statline secf" id="opsStat"></div></div>
+   </div>
+   <div class="pane" id="pane-command">
+    <div id="xferBanner"></div>
+    <div class="sec" id="cmdOff"><div class="list"><button class="row chev" id="cmdOffRow"><span class="k">Command practice is off<small>Turn it on under Conditions › Command Practice</small></span></button></div></div>
     <div class="card cf-card" id="cmdCard" hidden></div>
     <div class="card cf-card" id="canCard" hidden></div>
-    <div class="card resp">
-      <div id="radioWrap"><label class="l" for="radio">Initial radio report</label>
-        <textarea id="radio" placeholder="e.g. Engine 1 on scene, two-story wood-frame residential, heavy black smoke from floor 1 Side A, pushing from the porch eaves…"></textarea>
-        <div class="elements">Commonly includes: unit on scene · building description · conditions · actions / strategy · command · needs</div></div>
-      <div><span class="l">Strategy</span>
-        <div class="seg red" data-key="strategy"><button data-v="Offensive">Offensive</button><button data-v="Defensive">Defensive</button></div></div>
-      <div><span class="l">Companies <span class="muted" style="text-transform:none;letter-spacing:0">(assign a task to a specific company)</span></span>
-        <div class="colist" id="coList"></div></div>
-      <div><span class="l">Quick orders <span class="muted" style="text-transform:none;letter-spacing:0">(auto-assigned to the soonest company that can do it)</span></span>
-        <div style="display:grid;gap:8px">
-          <div class="row2"><select id="lineSel" aria-label="Attack line"></select><button class="btn ghost sm" id="lineGo">Line</button></div>
-          <div class="quick" id="lineQuick" aria-label="Quick line orders for burning rooms"></div>
-          <div class="row2"><select id="ventSel" aria-label="Ventilation"></select><button class="btn ghost sm" id="ventGo">Vent</button></div>
-          <div class="row2"><select id="searchSel" aria-label="Primary search"></select><button class="btn ghost sm" id="searchGo">Search</button></div>
-          <div class="btnrow"><button class="toggle" id="dcToggle" aria-pressed="false"><span><b>Door control</b><small>Entry door held to hose width</small></span><span class="sw"></span></button>
-            <button class="btn ghost" id="supplyGo">Establish water supply</button><button class="btn ghost" id="lightsGo" hidden>Scene lighting</button></div>
-          <div class="statline" id="opsStat"></div>
-          <div class="lines" id="linesList"></div>
-        </div></div>
-      <div><span class="l">Checklist</span><div class="checks" id="checks"></div></div>
-    </div>
-    <div class="card" id="fuCard"></div>
-    <div class="card"><h2 style="margin-top:0">Timeline</h2><div class="log" id="log"></div>
-      <div class="btnrow" style="margin-top:12px"><button class="btn ghost" id="resetBtn">Reset to arrival</button><button class="btn ghost" id="newBtn">New building</button></div>
-      <button class="btn primary" id="finishBtn" style="margin-top:12px">Finish &amp; debrief</button>
-    </div>
-    <details class="card" id="behind"><summary>Behind the behavior: sources &amp; simplifications</summary><div id="rules"></div></details>
+   </div>
+   <div class="pane" id="pane-check">
+    <div class="prompt"><h3>Checklist</h3></div>
+    <div class="sec"><div class="list checks" id="checks"></div></div>
+    <div class="sec"><div class="list">
+     <button class="row chev" data-sheet="fu"><span class="k">Follow-Up Report</span><span class="v" id="vFu2">After 360</span></button>
+     <button class="row chev" data-sheet="log"><span class="k">Timeline</span><span class="v" id="vLog"></span></button>
+     <button class="row chev" id="shareBtn"><span class="k">Share Drill</span></button>
+     <button class="row chev" id="editCond"><span class="k">Edit Conditions</span></button>
+     <button class="row chev" data-sheet="about"><span class="k">About SizeUp</span><span class="v" id="verRow"></span></button>
+    </div></div>
+    <div class="sec"><div class="list">
+     <button class="row tint" id="resetBtn">Reset to Arrival</button>
+     <button class="row tint" id="newBtn">New Building</button>
+    </div></div>
+    <button class="cta" id="finishBtn">Finish &amp; Debrief</button>
+    <button class="note" data-sheet="about">Training prototype · not for operational use</button>
+   </div>
   </div>
  </div>
+ <nav class="tabbar" id="tabbar" aria-label="Drill sections">
+  <button data-pane="sizeup" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Size-Up</button>
+  <button data-pane="report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M12 3V1M10 8h4"/></svg>Report</button>
+  <button data-pane="units"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="13" height="9" rx="1"/><path d="M15 11h4l3 3v3h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>Units</button>
+  <button data-pane="command"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 21V4h11l-2 4 2 4H4"/></svg>Command<span class="bdg" id="cmdBdg" hidden></span></button>
+  <button data-pane="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/></svg>Checklist</button>
+ </nav>
 </section>
 </main>
-<footer>Training prototype, not for operational use. Fire behavior is a simplified teaching model informed by UL FSRI research; it is not a fire model.</footer>
 </div>
 
 <div class="stage" id="stage" style="display:none">
@@ -187,15 +208,68 @@
   <div class="sidedesc" id="sideDesc"></div>
   <div class="sidetag" id="sideTag" hidden>Illustrated view, not a photo</div>
   <div class="fochip" id="foChip">⚠ FLASHOVER</div>
-  <div class="ucbanner" id="ucBanner" role="status"><b>✓ FIRE UNDER CONTROL</b><span id="ucT"></span><span class="ucbtns"><button class="btn primary sm" id="ucDebrief">Open debrief</button><button class="btn ghost sm" id="ucKeep">Keep playing</button></span></div>
+  <div class="ucbanner" id="ucBanner" role="status"><b>✓ Fire Under Control</b><span id="ucT"></span><span class="ucbtns"><button class="pill tintbg" id="ucDebrief">Open Debrief</button><button class="pill" id="ucKeep">Keep Playing</button></span></div>
   <div class="clock" id="clock">T+0:00</div>
   <div class="legend" id="legend"><span style="color:#64b5f6">▲ air in</span> · <span style="color:#ff7043">▲ smoke out</span></div>
+  <button class="sinfo" data-sheet="facts" aria-label="Scene facts">i</button>
   <div class="taphint" id="taphint">Tap where the fire starts</div>
   <div class="toast" id="toast"></div>
 </div>
 
+<div class="dim" id="dim"></div>
+<div class="sheet" id="sh-mode" role="dialog" aria-label="Mode"><div class="grab"></div><div class="sh"><b>Mode</b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="sec"><div class="list modesw" role="group" aria-label="Mode">
+  <button class="row" data-mode="solo"><span class="k">Solo<small>You make the calls and get a debrief</small></span><span class="ck">✓</span></button>
+  <button class="row" data-mode="crew"><span class="k">Crew<small>Big screen · instructor runs the clock</small></span><span class="ck">✓</span></button>
+ </div></div></div>
+<div class="sheet" id="sh-preview" role="dialog" aria-label="At arrival"><div class="grab"></div><div class="sh"><b>At Arrival<small>Shows the answers</small></b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="sec"><div class="reading" id="reading"></div></div><div class="secf pad" id="setupSum"></div></div>
+<div class="sheet nodim" id="sh-mark" role="dialog" aria-label="Mark your photo"><div class="grab"></div><div class="sh"><b>Mark Your Photo<small id="markHint">Tap to place</small></b><button class="x" data-close aria-label="Done">✕</button></div>
+ <div class="ctl" id="markCtl" hidden>
+  <div class="sec"><div class="seg" data-key="markMode"><button data-v="origin">Fire</button><button data-v="window">Window</button><button data-v="door">Door</button><button data-v="garage">Garage</button><button data-v="eave">Eave</button><button data-v="grade">Grade</button></div>
+   <div class="seg feats" data-key="markMode" aria-label="Tactical features"><button data-v="fence">Fence</button><button data-v="power">Power</button><button data-v="exposure">Exposure</button><button data-v="car">Car</button><button data-v="porch">Porch</button><button data-v="meter">Meter</button></div></div>
+  <div class="sec"><div class="list"><div class="row"><span class="k" id="markStat"></span><button class="pill tint" id="undoMark">Undo</button></div></div>
+   <div class="secf">Below the grade line is the basement. <button class="lnk" data-info="feats">Feature effects</button></div></div>
+ </div>
+ <div class="sech">Side</div>
+ <div class="sec"><div class="seg" data-key="side"><button data-v="A">A</button><button data-v="B">B</button><button data-v="C">C</button><button data-v="D">D</button></div>
+  <div id="sideCtl" class="sidectl" hidden></div></div></div>
+<div class="sheet" id="sh-clock" role="dialog" aria-label="Drill clock"><div class="grab"></div><div class="sh"><b>Drill Clock</b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="sech">Speed</div><div class="sec"><div class="seg big" data-key="speed" data-num aria-label="Clock speed"><button data-v="1">1×</button><button data-v="2">2×</button><button data-v="4">4×</button><button data-v="10">10×</button></div></div>
+ <div class="sech">Jump Ahead</div><div class="sec"><div class="seg" data-key="stepSize" data-num><button data-v="30">30 s</button><button data-v="60">1 min</button><button data-v="120">2 min</button><button data-v="300">5 min</button></div></div>
+ <button class="cta" id="evolveBtn"><span id="evLbl">Evolve +1 min</span></button></div>
+<div class="sheet" id="sh-facts" role="dialog" aria-label="Scene facts"><div class="grab"></div><div class="sh"><b>Scene Facts</b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="sec"><div class="list facts" id="facts"></div></div></div>
+<div class="sheet" id="sh-qo" role="dialog" aria-label="Quick order"><div class="grab"></div><div class="sh"><b>Quick Order<small>Goes to the soonest unit that can do it</small></b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="quick" id="lineQuick" aria-label="Quick line orders for burning rooms"></div>
+ <div class="sec"><div class="list">
+  <div class="row"><select id="lineSel" aria-label="Attack line"></select><button class="pill tint" id="lineGo">Line</button></div>
+  <div class="row"><select id="ventSel" aria-label="Ventilation"></select><button class="pill tint" id="ventGo">Vent</button></div>
+  <div class="row"><select id="searchSel" aria-label="Primary search"></select><button class="pill tint" id="searchGo">Search</button></div>
+ </div></div>
+ <div class="sec"><div class="list">
+  <button class="row toggle" id="dcToggle" aria-pressed="false"><span class="k">Door Control<small>Entry door held to hose width</small></span><span class="sw"></span></button>
+  <button class="row tint" id="supplyGo">Establish Water Supply</button>
+  <button class="row tint" id="lightsGo" hidden>Scene Lighting</button>
+ </div></div></div>
+<div class="sheet" id="sh-fu" role="dialog" aria-label="Follow-up report"><div class="grab"></div><div class="sh"><b>Follow-Up Report<small>After the 360</small></b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="card" id="fuCard"></div></div>
+<div class="sheet" id="sh-log" role="dialog" aria-label="Timeline"><div class="grab"></div><div class="sh"><b>Timeline</b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="sec"><div class="log" id="log"></div></div></div>
+<div class="sheet" id="sh-about" role="dialog" aria-label="About SizeUp"><div class="grab"></div><div class="sh"><b>SizeUp<small id="verAbout"></small></b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="sech">What’s New</div>
+ <div class="sec"><div class="list wn" id="wnList"></div></div>
+ <div class="body">Training prototype, not for operational use. Fire behavior is a simplified teaching model informed by UL FSRI research; it is not a fire model.</div>
+ <div class="sec"><div class="list"><button class="row chev" id="behindRow"><span class="k">Sources &amp; Simplifications</span></button></div></div>
+ <div class="sec" id="behind" hidden><div id="rules"></div></div></div>
+<div class="sheet" id="sh-whatsnew" role="dialog" aria-label="What’s new"><div class="grab"></div><div class="sh"><b>What’s New<small id="wnVer"></small></b><span></span></div>
+ <div class="sec"><div class="list wn" id="wnOnce"></div></div>
+ <button class="cta" id="wnContinue">Continue</button></div>
+<div class="sheet" id="sh-info" role="dialog" aria-label="Info"><div class="grab"></div><div class="sh"><b id="infoTitle">Info</b><button class="x" data-close aria-label="Close">✕</button></div>
+ <div class="body" id="infoBody"></div></div>
+
 <div class="modal" id="modal"><div class="box">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b style="font-size:18px" id="mTitle">Share drill</b><button class="iconbtn" id="mClose" aria-label="Close">✕</button></div>
+  <div class="mhead"><span></span><b id="mTitle">Share drill</b><button class="navbtn" id="mClose" aria-label="Close"><b>Done</b></button></div>
   <div id="mBody"></div>
 </div></div>
 <div id="glfail" class="warnbar" style="display:none;position:fixed;left:10px;right:10px;bottom:10px;z-index:60">This device could not start WebGL, so fire and smoke can’t be drawn. Try another browser.</div>

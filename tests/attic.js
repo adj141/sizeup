@@ -119,7 +119,7 @@ fs.writeFileSync(OUT+'timeline.md',md);
  const OUT2='/workspace/sizeup/screens/attic-smoke-oct19/';fs.mkdirSync(OUT2,{recursive:true});const measure=require('./smoke-measure.js');
  const view=async(url,vp,u)=>{const ph=vp[0]<500;const p=await br.newPage({viewport:{width:vp[0],height:vp[1]},deviceScaleFactor:ph?3:1,isMobile:ph,hasTouch:ph});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.addStyleTag({content:'.toast{display:none!important}'});
   await p.evaluate(async u=>{const z=window.__sizeup,M=z.M;await z.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'attic',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',atticU:u,companies:M.PRESETS.generic.companies()});z.A.playing=false;},u);await p.waitForTimeout(3000);return p;};
- const step3=async p=>{await p.locator('#steps button[data-go="3"]').click();await p.waitForTimeout(3500);};
+ const step3=async p=>{await p.evaluate(()=>document.querySelector('#steps button[data-go="3"]').click());await p.waitForTimeout(3500);};
  const R={};
  for(const [k,url] of [['before','file:///workspace/sizeup/tests/base/builds/pre-smoke-f48ba13.html#noautoplay'],['after','file:///workspace/sizeup/index.html#noautoplay']]){
   for(const [vp,tag] of [[[390,844],'iphone'],[[1280,900],'desktop']]){const p=await view(url,vp);R[k+tag+'drill']=await measure(p);await p.screenshot({path:`${OUT2}${k}-${tag}-drill-arrival-5min.png`});

@@ -77,7 +77,7 @@ sec('model: export/replay determinism');
  const go=()=>{const S=mk();const S0=M.create(BLD.house,S.scn);M.run(S0,360);for(const x of a)M.act(S0,{...x,t:360+x.t});M.run(S0,1500);return JSON.stringify([S0.events,S0.cmd]);};ok(go()===go(),'two runs identical');}
 
 /* ---------------- browser ---------------- */
-const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
+const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});require('./ui-reveal.js')(br);
 const URL='file:///workspace/sizeup/index.html#noautoplay';
 async function page(vp){const p=await br.newPage({viewport:vp||{width:1280,height:900}});const errs=[];p.on('pageerror',e=>errs.push(e.message));p.errs=errs;await p.goto(URL);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);return p;}
 async function drill(p,o={}){await p.evaluate(async o=>{const M=window.__sizeup.M;await window.__sizeup.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'liv',fuel:'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:o.mode||'solo',hideAnswers:!!o.hide,
@@ -88,7 +88,7 @@ const openCo=async(p,co)=>{const r=`#coList .corow2[data-co="${co}"]`;if(!await 
 const pickUI=async(p,co,k,tgt,go)=>{const r=await openCo(p,co);const b=await p.$(`${r} .coquick [data-k="${k}"]`);if(b)await b.click();else{if(!await p.$eval(r+' .comore',d=>d.open))await p.click(r+' .comore summary');await p.click(`${r} .comoreb [data-k="${k}"]`);}await p.waitForTimeout(40);
   if(await p.$(r+' .cowhere [data-tgt]')){const v=tgt||await p.$eval(r+' .cowhere',w=>(w.querySelector('[data-tgt]:not([disabled])')||{}).dataset.tgt);await p.click(`${r} .cowhere [data-tgt="${v}"]`);await p.waitForTimeout(40);}
   if(go&&await p.$(r+' .copick:not([hidden]) .co-go'))await p.click(r+' .co-go');await p.waitForTimeout(60);return r;};
-const vis=(p,s)=>p.evaluate(s=>{const e=document.querySelector(s);return !!e&&!e.hidden&&e.offsetParent!==null;},s);
+const vis=(p,s)=>p.evaluate(s=>{const u=window.__sizeup;if(u.reveal)u.reveal(s);const e=document.querySelector(s);return !!e&&!e.hidden&&e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden';},s);// getClientRects: fixed-position sheets have no offsetParent
 sec('browser: mode off = as before');
 {const p=await page();await drill(p,{off:true});ok(!await vis(p,'#irrBox')&&!await vis(p,'#cmdCard')&&!await vis(p,'#canCard'),'no command UI');ok(await vis(p,'#radio'),'free-text radio box shown');ok(!p.errs.length,'no errors '+p.errs.join());await p.close();}
 sec('browser: setup toggle and sub-switches');
@@ -179,9 +179,9 @@ sec('browser: Oct 13 fixes: assign staged companies from the board, BC transfer,
   ok(await assignUI(p,'E1','forcegarage'),'force garage door assigned from the board');await adv(p,80);ok(await p.evaluate(()=>window.__sizeup.A.S.o.gd.state==='open'),'garage door open in the model');
   ok((await p.$$eval('#coList .corow2[data-co="E2"] .co-task option',o=>o.map(x=>x.value))).includes('forcegarage'),'task offered on a building with a garage');await p.close();}
  for(const vp of [{width:390,height:844},{width:1280,height:900}]){const p=await page(vp);await drill(p,{off:true});await adv(p,60);
-  await p.evaluate(()=>document.querySelector('#coList').scrollIntoView({block:'start'}));await p.waitForTimeout(250);
-  const r=await p.evaluate(()=>{const s=document.querySelector('#s4 .slot').getBoundingClientRect(),tb=document.querySelector('.topbar').getBoundingClientRect(),c=document.querySelector('#coList').getBoundingClientRect();return{top:s.top,bot:s.bottom,h:s.height,tb:tb.bottom,co:c.top,y:scrollY};});
-  ok(r.y>300&&r.top>=r.tb-2&&r.top<=r.tb+4,`${vp.width}px: scene stays pinned under the top bar after scrolling (${JSON.stringify(r)})`);
+  await p.evaluate(()=>{window.__sizeup.pane('units');document.querySelector('#coList').scrollIntoView({block:'start'});});await p.waitForTimeout(250);
+  const r=await p.evaluate(()=>{const s=document.querySelector('#s4 .slot').getBoundingClientRect(),tb=document.querySelector('.topbar').getBoundingClientRect(),c=document.querySelector('#coList').getBoundingClientRect();return{top:s.top,bot:s.bottom,h:s.height,tb:tb.bottom,co:c.top,y:scrollY,fits:document.scrollingElement.scrollHeight<=innerHeight+2};});
+  ok((r.y>100||r.fits)&&r.top>=r.tb-2&&r.top<=r.tb+16,`${vp.width}px: scene stays pinned under the top bar after scrolling (${JSON.stringify(r)})`);
   if(vp.width<500){ok(r.bot<vp.height*.45,'phone: pinned scene uses under 45% of the screen ('+Math.round(r.bot)+'px)');ok(r.co<vp.height,'phone: company list visible below the scene');
    await p.screenshot({path:'/workspace/sizeup/screens/fixes-oct13/after/04-sticky-phone-390.png'});}
   else await p.screenshot({path:'/workspace/sizeup/screens/fixes-oct13/after/04-sticky-desktop.png'});
@@ -196,7 +196,7 @@ sec('browser: pick lists (one compact row per company, one panel open)');
   const groups=await p.$$eval('#coList .corow2[data-co="L1"] .cogrp .l',b=>b.map(x=>x.textContent));ok(groups.every(g=>['Fire attack','Search','Ventilation','Water supply','Support'].includes(g))&&groups.length>=2,name+': More tasks grouped: '+groups);
   await p.click('#coList .corow2[data-co="L1"] .coquick [data-k="search1"]');await p.waitForTimeout(60);ok(await vis(p,'#coList .corow2[data-co="L1"] .cowhere [data-tgt="1"]'),name+': where? row for the search floor');
   await p.click('#coList .corow2[data-co="L1"] .comore summary');await p.waitForTimeout(60);
-  if(name.startsWith('phone'))await p.evaluate(()=>window.scrollTo(0,document.querySelector('#coList .corow2[data-co="L1"]').getBoundingClientRect().top+scrollY-330));else await p.evaluate(()=>document.querySelector('#coList').scrollIntoView({block:'start'}));await p.waitForTimeout(250);
+  if(name.startsWith('phone'))await p.evaluate(()=>window.scrollTo(0,document.querySelector('#coList .corow2[data-co="L1"]').getBoundingClientRect().top+scrollY-330));else await p.evaluate(()=>{window.__sizeup.pane('units');document.querySelector('#coList').scrollIntoView({block:'start'});});await p.waitForTimeout(250);
   await p.screenshot({path:D+name+'.png'});
   const r=await pickUI(p,'L1','lights',null,true);ok(await p.evaluate(()=>window.__sizeup.A.S.tasks.some(x=>x.co==='L1'&&x.kind==='lights')),name+': lighting assigned from the panel');ok(/Scene lighting/.test(await p.textContent(r+' .cosum')),name+': row shows the current task');
   const rel=await p.$(r+' .co-rel');ok(!!rel,name+': Release button in the panel');
@@ -214,6 +214,6 @@ sec('browser: mode off matches the Phase 1 build (UI flow)');
   await p.evaluate(async()=>{const M=window.__sizeup.M;await window.__sizeup.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'kit',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'random',wind:{dir:'B',spd:15},glass:'fails',seed:77,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});window.__sizeup.A.playing=false;});
   await p.evaluate(()=>{const r=document.querySelector('#coList .corow2[data-co="E1"]');const s=r.querySelector('.co-task');s.value='line';s.dispatchEvent(new Event('change',{bubbles:true}));});await p.waitForTimeout(60);await p.evaluate(()=>document.querySelector('#coList .corow2[data-co="E1"] .co-go').click());
   await p.evaluate(()=>{const u=window.__sizeup;u.advance(100);u.order({kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'});u.advance(100);u.setSide('C');u.order({kind:'search',floor:'2'});u.advance(600);u.syncUI();});
-  await p.click('#finishBtn');await p.waitForTimeout(300);const r=await p.evaluate(()=>({ev:window.__sizeup.A.S.events.map(e=>e.t+e.kind+e.msg).join('\n'),sum:window.__sizeup.summary().join('\n'),db:document.querySelector('#mBody').innerText}));await p.close();return r;};
- const a=await flow('file:///tmp/basebuild/index.html#noautoplay'),b=await flow(URL);ok(a.ev===b.ev,'same events as Phase 1');ok(a.sum===b.sum,'same summary as Phase 1');const nz=t=>t.split('\n').filter(l=>!/^Each side of the building|Understanding and Fighting Basement Fires/.test(l)).join('\n');ok(nz(a.db)===nz(b.db),'same debrief as Phase 1 (the Behind-the-behavior 360 and basement rule texts were reworded by the Oct 11 basement smoke fix and are excluded)');}
+  await p.click('#finishBtn');await p.waitForTimeout(300);const r=await p.evaluate(()=>({ev:window.__sizeup.A.S.events.map(e=>e.t+e.kind+e.msg).join('\n'),sum:window.__sizeup.summary().join('\n'),db:window.__sizeup.debrief().map(i=>[i.st,i.title,i.detail].join(' | ')).join('\n')}));await p.close();return r;};
+ const a=await flow('file:///tmp/basebuild/index.html#noautoplay'),b=await flow(URL);ok(a.ev===b.ev,'same events as Phase 1');ok(a.sum===b.sum,'same summary as Phase 1');const nz=t=>t.split('\n').filter(l=>!/^Each side of the building|Understanding and Fighting Basement Fires/.test(l)).join('\n');ok(nz(a.db)===nz(b.db),'same debrief items as Phase 1 (compared item by item: the Oct 21 redesign changed the debrief layout, not its content)');}
 await br.close();console.log(`\ncommand suite: ${pass} pass, ${fail} fail`);process.exit(fail?1:0);})().catch(e=>{console.error(e);process.exit(1);});

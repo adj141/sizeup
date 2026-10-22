@@ -47,13 +47,13 @@ function renderDispatch(){const sc=A.scn,el=$('#dispatch');if(!sc||!el)return;co
     <div class="row2"><select id="presetSel" aria-label="Assignment preset">${cur?'':'<option value="" selected>Custom assignment (edited)</option>'}<option value="generic"${cur==='generic'?' selected':''}>${esc(M.PRESETS.generic.name)}</option>${Object.keys(P).map(n=>`<option value="custom:${esc(n)}"${cur==='custom:'+n?' selected':''}>${esc(n)} (saved)</option>`).join('')}</select>
     <button class="btn ghost sm" id="presetDel"${cur.startsWith('custom:')?'':' disabled'}>Delete</button></div>
     <div class="row2" style="margin-top:8px"><input id="presetName" placeholder="Name this assignment" maxlength="40" aria-label="Preset name"><button class="btn ghost sm" id="presetSave">Save preset</button></div>
-    <div class="hint">Generic, editable teaching defaults, <b>not any department's SOP</b>. Saved presets stay on this device; the assignment also travels inside exported drills. T+0 on the drill clock is when the first company arrives.</div></div>
+    <div class="hint keep">Teaching defaults, <b>not any department's SOP</b>. Presets stay on this device.</div></div>
    <div class="ctl"><div class="lbl">Water &amp; hose distances</div><div class="corow"><label>Hydrant distance <input class="set-in" data-k="hydrantDist" type="number" min="0" step="50" value="${sc.settings.hydrantDist}"> ft</label><label>Engine setback <input class="set-in" data-k="setback" type="number" min="0" step="10" value="${sc.settings.setback}"> ft</label></div>
-    <div class="hint">A line must reach: setback + the run inside (or around the building). A supply lay needs at least the hydrant distance of supply hose on the laying engine.</div></div>
+    </div>
    <div class="ctl"><div class="lbl">Companies <span class="val">${sc.companies.length} units · ${sc.companies.reduce((a,c)=>a+(+c.staff||0),0)} members</span></div>
     <div class="cocards">${cos.map(([c,i])=>coCardHTML(c,i)).join('')}</div>
     <div class="btnrow" style="margin-top:10px">${Object.entries(M.CO_TYPES).map(([k,v])=>`<button class="btn ghost sm co-add" data-type="${k}">+ ${esc(v)}</button>`).join('')}</div>
-    <div class="hint">Each company works one task at a time. It can split and take a second task only if it has enough members left over (a hoseline needs 2, or 3 for a 2½ in. line; an engine always keeps 1 at the pump). Lines on scene are limited by crews and preconnects, not by a fixed cap.</div></div>`;}
+    </div>`;}
 $('#dispatch').addEventListener('toggle',e=>{const d=e.target;if(!d.classList||!d.classList.contains('cocard'))return;A.openCards=A.openCards||new Set();const c=A.scn.companies[+d.dataset.i];if(!c)return;if(d.open)A.openCards.add(c.id);else A.openCards.delete(c.id);},true);
 function coAt(t){const card=t.closest('.cocard');return card?A.scn.companies[+card.dataset.i]:null;}
 function dispatchChanged(full){edited();rebuild();warm(2);if(full)renderDispatch();else{const v=$('#presetVal');if(v)v.textContent=presetLabel();const ps=$('#presetSel');if(ps&&!ps.querySelector('option[value=""]'))ps.insertAdjacentHTML('afterbegin','<option value="">Custom assignment (edited)</option>');if(ps)ps.value='';const d=$('#presetDel');if(d)d.disabled=true;}renderSetup();}
@@ -82,7 +82,7 @@ $('#dispatch').addEventListener('click',e=>{const t=e.target,sc=A.scn;
   if(t.closest('.pr-del')){c.eq.pre.splice(+t.closest('.prow').dataset.j,1);dispatchChanged(true);return;}});
 /* ---------- task-time settings tab ---------- */
 function renderSettings(){const sc=A.scn,el=$('#settings');if(!sc||!el)return;
-  el.innerHTML=`<div class="ctl"><div class="hint" style="margin-top:0"><b>Teaching values, editable per drill, not SOP.</b> Each task's time is built from these: e.g. a line's time = (stretch base + per-foot × hose needed) then + per floor + charge, all × the company factor (short staffing, cold, heat fatigue). They are saved and exported with the drill.</div></div>`
+  el.innerHTML=`<div class="ctl"><div class="hint keep" style="margin-top:0"><b>Teaching values, not SOP.</b> Saved with the drill.</div></div>`
    +SET_GROUPS.map(([g,rows])=>`<div class="ctl"><div class="lbl">${esc(g)}</div><div class="setgrid">${rows.map(([k,l,u])=>`<label><span>${esc(l)}</span><span><input class="set-in" data-k="${k}" type="number" min="0" step="any" value="${sc.settings[k]}" aria-label="${esc(l)}"> ${u}</span></label>`).join('')}</div></div>`).join('')
    +`<div class="ctl" style="border:0"><button class="btn ghost" id="setReset">Reset to the default teaching values</button></div>`;}
 $('#settings').addEventListener('change',e=>{const t=e.target;if(!t.classList.contains('set-in'))return;const v=+t.value;if(!isFinite(v)||v<0){t.value=A.scn.settings[t.dataset.k];return;}A.scn.settings[t.dataset.k]=v;rebuild();renderSetup();});

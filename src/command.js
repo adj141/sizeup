@@ -70,8 +70,9 @@ function renderIRR(){const el=$('#irrBox');if(!el)return;const on=cmdOn()&&cmdSu
   const chip=(k,v,l)=>`<button class="cf-opt${r[k]===v?' on':''}" data-irr="${k}" data-v="${esc(v)}">${esc(l)}</button>`;
   const sel=(k,opts,ph)=>`<select data-irrs="${k}" aria-label="${ph}"><option value="">${ph}</option>${opts.map(([v,l])=>`<option value="${esc(v)}"${r[k]===v?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
   const mark=k=>{if(hid)return'';const x=row(k);return x?`<div class="cf-ck ${x.st}">${x.st==='ok'?'✓':'!'} ${esc(x.msg)}</div>`:'';};
-  const chips=IRR_STEPS.map(([k,l],i)=>{const x=row(k);const st=hid?'p':x.st==='ok'?'g':x.st==='mid'?'a':'p';return`<button class="cf-rchip ${st}" data-irrgo="${k}"><i>${st==='g'?'✓':st==='a'?'!':i+1}</i>${esc(l)}</button>`;}).join('');
-  const sec=(k,n,l,body)=>`<div class="cf-field" id="irr-${k}"><div class="cf-fl">${n} · ${esc(l)}</div>${body}${mark(k)}</div>`;
+  const chips=IRR_STEPS.map(([k,l],i)=>{const x=row(k);const cu=k===(IRR_STEPS.some(y=>y[0]===A.irrStep)?A.irrStep:'unit')?' cur':'';const st=hid?'p':x.st==='ok'?'g':x.st==='mid'?'a':'p';return`<button class="cf-rchip ${st}${cu}" data-irrgo="${k}"><i>${st==='g'?'✓':st==='a'?'!':i+1}</i>${esc(l)}</button>`;}).join('');
+  const cur=IRR_STEPS.some(x=>x[0]===A.irrStep)?A.irrStep:'unit';const nx=i=>i<5?`<button class="btn ghost sm cf-next" data-irrgo="${IRR_STEPS[i+1][0]}">Next: ${esc(IRR_STEPS[i+1][1])}</button>`:'';
+  const sec=(k,n,l,body)=>`<div class="cf-field irrs${k===cur?' on':''}" id="irr-${k}"><div class="cf-fl">${n} · ${esc(l)}</div>${body}${mark(k)}${k==='name'?`<div class="cf-fl">Optional free text</div><textarea id="irrFree" rows="2" placeholder="Anything else for incoming units">${esc(r.free)}</textarea>`:''}${nx(n-1)}</div>`;
   const h=`<div class="cf-hd"><h3>Initial radio report</h3><span class="cf-pill gen">Guided</span></div><div class="cf-rchips">${chips}</div>
    ${sec('unit',1,'Unit on scene',`<div class="cf-optrow">${O.unit.map(([v,l])=>chip('unit',v,l)).join('')}</div>`)}
    ${sec('building',2,'Building / occupancy',`<div class="cf-optrow">${O.stories.map(([v,l])=>chip('stories',v,l)).join('')}</div><div class="cf-grid3">${sel('constr',O.constr,'Construction')}${sel('occ',O.occ,'Occupancy')}${sel('size',O.size,'Size')}</div>`)}
@@ -79,12 +80,11 @@ function renderIRR(){const el=$('#irrBox');if(!el)return;const on=cmdOn()&&cmdSu
    ${sec('actions',4,'Actions / strategy',`<div class="cf-grid3">${sel('task',O.task,'Task')}${sel('loc',irrLocOpts(r.task),'Location')}${sel('obj',O.obj,'Objective')}</div><div class="cf-optrow">${O.strategy.map(([v,l])=>chip('strategy',v,l)).join('')}</div>`)}
    ${sec('position',5,'Command position',`<div class="cf-optrow cf-seg3">${O.pos.map(([v,l])=>chip('pos',v,l)).join('')}</div>`)}
    ${sec('name',6,'Command name / location',`<div class="cf-grid3">${sel('name',O.name,'Command name')}${sel('cmdLoc',O.cmdLoc,'Location')}${sel('res',O.res,'Resources')}</div>`)}
-   <div class="cf-field"><div class="cf-fl">Optional free text</div><textarea id="irrFree" rows="2" placeholder="Anything else for incoming units">${esc(r.free)}</textarea></div>
    <div class="cf-fl">Assembled report</div><div class="cf-report" id="irrText">${esc(irrText(r))}</div>
    <div class="cf-tx"><div>${hid?'<span class="muted tiny">Checks hidden until answers are shown.</span>':`<div class="cf-mtr"><i style="width:${Math.round(g.score/6*100)}%"></i></div><span class="muted tiny">${g.score} of 6 steps match the scene right now</span>`}</div><button class="btn primary" id="irrSend">Transmit</button></div>`;
   if(el._h!==h){const f=document.activeElement&&document.activeElement.id==='irrFree';el.innerHTML=h;el._h=h;if(f){const t=$('#irrFree');t.focus();t.setSelectionRange(t.value.length,t.value.length);}}}
 $('#irrBox').addEventListener('click',e=>{const b=e.target.closest('[data-irr]');if(b){const k=b.dataset.irr,v=b.dataset.v;A.irr[k]=A.irr[k]===v?'':v;renderIRR();return;}
-  const go=e.target.closest('[data-irrgo]');if(go){const s=$('#irr-'+go.dataset.irrgo);if(s)s.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
+  const go=e.target.closest('[data-irrgo]');if(go){A.irrStep=go.dataset.irrgo;renderIRR();const s=$('#irr-'+go.dataset.irrgo);if(s)s.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
   if(e.target.closest('#irrUpd')){A.irrEdit=true;A.irr={...CS().irr.r};renderIRR();return;}
   if(e.target.closest('#irrSend'))sendIRR();});
 $('#irrBox').addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('cf-irrd'))A.irrOpenRows=e.target.open;},true);
