@@ -31,6 +31,33 @@ const STRUCT={on:true,       // tests switch this off to prove the rest of the m
    cited 20-35 kW/m2 fallout flux (near-flashover upper layer). k: accumulation rate (TV, ~15-30 s at a flashover-level layer).
    well: small window-well windows heat more slowly (TV). */
 const BGLASS={on:true,fallT:.9,k:10,well:.6};
+/* Above-grade glass and vent-induced flashover (Oct 22 2026, AJ). Source: FSRI-HV08 (Kerber, Impact of Ventilation on Fire Behavior in Legacy
+   and Contemporary Residential Construction, UL 2011).
+   UGLASS: every window, on every floor, now uses the basement BGLASS rule (falls out only on a near-flashover hot layer, T >= BGLASS.fallT).
+     HV08 5.7.2 / Tables 9-10: in the window furnace tests, failure (25% or more of the glass gone, an opening for air; cracking alone was
+     not counted) came at a furnace-side gas temperature of 540-650 C for the modern double-glazed windows and 650-790 C for the legacy
+     single-glazed ones. HV08 8.8.4 / Table 37 uses 600 C as the flashover criterion, so on this model's index (1.0 = flashover level) the
+     modern windows fell out at about 0.9-1.08: teaching mapping, fallT .9 (= 540 C). HV08 4.1: glass breakage does not matter until glass
+     falls out. With 'Window glass: Holds' the glass fails only at the legacy end of the range (T >= holdT, about 660 C): teaching value.
+     Consequence (HV08 9.1, Executive Summary "Stages of fire development"): a closed-up house stays ventilation-limited and decays until
+     someone (crew, occupant or a fire-failed window) gives it air.
+   VFO: vent-induced flashover. A ventilation-limited fire room (modern contents, above grade, not the attic) that gets new air
+     (a failed window, a crew vent, an opened door or a flow path to an opening) heats toward flashover and flashes after a set delay unless
+     water reaches it or the air is taken away again (door closed, opening shut). HV08 8.8.4 / Table 37 (vent to flashover = vent to
+     firefighter untenability + untenability to 600 C): one-story house, living-room fire vented at 8:00: 93-150 s (6 of 7 experiments);
+     two-story house, family-room fire vented at 10:00: 114 s (Exp 13), 160 s (Exp 15), 428 s (Exp 4); the other 5 did not reach 600 C at
+     1 ft. HV08 8.8.5.1: the larger two-story family room responded more slowly. Delay = base x room size x seeded jitter, clamped:
+     a 0.8-size bedroom ~1.5-2 min, the 1.4-size kitchen/family room ~2.4-3.5 min, large rooms up to 4.5 min (teaching values fitted to
+     those ranges). Legacy contents keep the natural model (FSRI-VVR: vent to flashover more than 8 min). on=false restores the
+     pre-Oct-22 rules exactly (older regression suites). */
+const UGLASS={on:true,holdT:1.1};
+const VFO={on:true,
+  dA:.2,             // TV: rise in the room's air (airMap units; one failed window in the room = .5) that counts as a new vent
+  base:120,          // TV: s per unit room size (1.0-size room: 2:00, the middle of the one-story 93-150 s)
+  jit:[.85,1.25],    // TV: seeded spread between drills
+  min:90,max:270,    // TV: clamp 1:30-4:30 (one-story fastest 93 s; two-story typical 114-160 s; the 428 s outlier is left out)
+  fuel:.3};          // TV: needs unburned contents left to flash
+const SEEP={on:true}; // Oct 22b: gap seepage at intact glass reads at most Moderate density and Gray (TV); on=false restores the Oct 22 reading
 const GAPS={on:true}; // Oct 22 smoke fixes: gap-smoke cap (openingVis), light gap seepage and upper-floor corner plume anchor (visual.js); on=false restores the pre-Oct-22 behaviour for older regression suites // on=false restores the pre-Oct-14 rule (older regression suites)
 /* Attic fire (Oct 19 2026, see FIRE-MODEL.md "Attic fires"). Cited: FSRI attic study [FSRI-ATTIC]: attic fires grew to ventilation-limited
    in about 5 min (Table 7.1; 7:45 and 8:00 in Exps 3A/4A); the natural soffit/ridge/gable vents cannot support fuel-limited burning, but the
@@ -532,6 +559,7 @@ function step(S){const dt=1;
       else z.fuel=Math.max(0,z.fuel-z.q*dt/M.load);
       const Ttarget=Math.min(z.q,1.3)*(z.attic?1.0:1.15)/Math.sqrt(z.vf)*(1-z.wet*.6);
       z.T+=(Ttarget-z.T)*dt/(Ttarget>z.T?M.tauT:(w>0?6:240));
+      if(VFO.on)vfoStep(S,z,id,air[id],w,M);
       if(!z.flashed&&z.T>=1&&z.q>=.75&&!z.attic){z.flashed=true;z.tFlash=S.t;ev(S,'flashover',`Flashover: ${zname(S,id)}.`,{zone:id,src:'FSRI-VV'});}
       if(z.flashed&&!z.vl&&z.fuel<.15&&!z.burnt){z.burnt=true;}
       if(z.suppressed&&z.wet<.1&&z.q>.6){z.suppressed=false;ev(S,'spread',`Fire has regrown in ${zname(S,id)}: water was not kept on it.`,{zone:id});}
@@ -619,8 +647,9 @@ function step(S){const dt=1;
     // basement glass (Oct 14 fix): keyed to the basement's own hot layer. Glass cracks at a 60-90 C pane centre-to-edge difference but
     // falls out (opens a vent) only at roughly 20-35 kW/m2 incident flux, i.e. a near-flashover hot layer [GLASS]; in the FSRI/ISFSI basement
     // experiments the fires stayed ventilation-limited with the windows as set [FSRI-BSMT]. A small window-well window heats more slowly (TV).
-    if(BGLASS.on&&below&&!hold){const g=Math.max(0,z.T-BGLASS.fallT)*BGLASS.k*(bo.well?BGLASS.well:1);
-      if(g>0){o.fail+=g*dt;if(o.fail>o.failAt*.35){o.state='failed';o.selfFailed=true;ev(S,'fail',`${oname(S,oid)} has failed from heat and is now venting the fire.`,{zone:o.zone,src:'GLASS'});}}continue;}
+    // Oct 22 (UGLASS): the same near-flashover rule for every window above grade; 'hold' fails only at the legacy end of the HV08 range [FSRI-HV08 5.7.2]
+    if(BGLASS.on&&(below||UGLASS.on)&&!(hold&&!UGLASS.on)){const g=Math.max(0,z.T-(hold?UGLASS.holdT:BGLASS.fallT))*BGLASS.k*(bo&&bo.well?BGLASS.well:1);
+      if(g>0){o.fail+=g*dt;if(o.fail>o.failAt*.35){o.state='failed';o.selfFailed=true;ev(S,'fail',`${oname(S,oid)} has failed from heat and is now venting the fire.`,{zone:o.zone,src:below?'GLASS':'FSRI-HV08'});}}continue;}
     const g=hold?Math.max(0,z.T-.6)*(z.T>.72?1:0):Math.max(0,z.T-.3)*1.0+Math.max(0,z.T-.6)*1.5;
     if(g>0){o.fail+=g*dt;if(o.fail>o.failAt*.35){o.state='failed';o.selfFailed=true;ev(S,'fail',`${oname(S,oid)} has failed from heat and is now venting the fire.`,{zone:o.zone});}}}
   // occupant tenability (FED-like dose; simplification of tenability criteria) [FSRI-VV 4.9, CBYD]
@@ -648,6 +677,24 @@ function step(S){const dt=1;
   S.t+=dt;
   if(S.t%10===0)S.hist.push(snap(S));
 }
+/* vent-induced flashover clock [VFO, FSRI-HV08 Table 37]. Starts when a fire room that has gone ventilation-limited gets new air; while it runs
+   the hot layer climbs (quadratic ramp to 1.0, the fast rise of HV08 Figs 463-464); at the end the room flashes over. Water on the room,
+   wet contents, the new air taken away again, or too little fuel cancel it; a later vent starts a new clock. Below-grade rooms keep the Oct 14
+   basement rules; attics have their own (no flashover); legacy contents keep the natural model. */
+function vfoStep(S,z,id,airNow,w,M){
+  if(z.flashed||z.attic||z.floor==='B'||M!==FUEL.modern)return;
+  if(z.vl&&z.vlAt==null){z.vlAt=S.t;z.air0=airNow;}
+  if(z.vlAt==null)return;
+  const vented=airNow-z.air0>=VFO.dA,blocked=w>0||z.wet>.3||z.fuel<VFO.fuel;
+  if(!z.vfo){if(!vented||blocked)return;
+    const r=S.rndV||(S.rndV=rng(((S.scn.seed||1)^0x27d4eb2d)>>>0));const j=VFO.jit[0]+(VFO.jit[1]-VFO.jit[0])*r();
+    const d=Math.round(clamp(VFO.base*z.vf*j,VFO.min,VFO.max));
+    const by=Object.values(S.o).filter(o=>o.state!=='closed'&&o.state!=='controlled').sort((a,b)=>(b.zone===id)-(a.zone===id))[0];
+    z.vfo={t0:S.t,at:S.t+d,T0:z.T,by:by?by.id:null};return;}
+  if(!vented||blocked){z.vfoCancel=(z.vfoCancel||0)+1;z.vfo=null;return;}
+  const f=clamp((S.t-z.vfo.t0)/Math.max(1,z.vfo.at-z.vfo.t0),0,1);z.T=Math.max(z.T,z.vfo.T0+(1-z.vfo.T0)*f*f);
+  if(S.t>=z.vfo.at){z.T=Math.max(z.T,1);z.flashed=true;z.tFlash=S.t;z.vfoAt=S.t-z.vfo.t0;
+    ev(S,'flashover',`Flashover: ${zname(S,id)}.`,{zone:id,src:'FSRI-HV08',vfo:true,after:S.t-z.vfo.t0,by:z.vfo.by});z.vfo=null;}}
 function connOf(S,zid){for(const cid in S.c){const c=S.c[cid];if(c.type==='door'&&(c.a===zid||c.b===zid))return cid;}return null;}
 function snap(S){const o=S.scn.origin,z=S.z[o];return{t:S.t,q:+z.q.toFixed(3),T:+z.T.toFixed(3),s:+z.s.toFixed(3),vl:z.vl,fl:z.flashed};}
 function run(S,sec){for(let i=0;i<sec;i++)step(S);}
@@ -697,6 +744,13 @@ function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bld
        (closed, family-room fire) smoke was "visible coming from the windows at 390 seconds but no smoke is visible at 510 seconds" and "smoke being
        forced out of the gaps ... greatly diminished or stopped" once the fire went ventilation-limited [FSRI-HV08 9.3, Fig. 481]. Heavy, pressurized
        smoke needs a real opening. GAPS.on=false restores the pre-Oct-22 cap (2 when the leak rate is above .05). */
+    const rgb=SMOKE_RGB[sm.col],drawDen=sm.den;
+    const seep=!open&&GAPS.on&&SEEP.on;if(seep){sm.den=Math.min(sm.den,1);if(sm.col!=='white')sm.col='gray';}
+    /* Oct 22b (AJ): seepage through the gaps of intact glass is DRAWN as light gray wisps (visual.js, GAPS), so the reading the answer key uses
+       now matches the picture: density at most Moderate and colour Gray (white steam/cooling smoke stays White). [TV: HV08 9.3 / Fig. 481 show
+       that gap smoke is visible from a closed house but give no colour or density for it; these caps are teaching values, not FSRI data.]
+       Only the reading changes: the drawn colour (rgb) and drawn density (drawDen) are the fire's own, so the picture is unchanged.
+       SEEP.on=false restores the Oct 22 reading (density and colour uncapped). */
     let flame=0;if(open&&z.ign&&!z.out){if(z.flashed&&z.q>.7)flame=clamp(z.q*.6,0,1.2);else if(z.q>.6&&o.type!=='door')flame=(z.q-.6)*.8;}
     if(o.type==='door'&&open&&!z.flashed)flame*=.3;
     if(z.water>0)flame*=.25;
@@ -704,7 +758,7 @@ function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bld
     let frac=o.type==='door'?.5:.65; // neutral plane: outflow from the top part of a bidirectional opening [FSRI-VV 4.6]
     if(S.fan&&S.fan.on&&S.fan.at===oid){frac=0;rate=0;}
     let pulse=z.decay?1:0;
-    out[oid]={rate,flame,glow,stain:clamp((z.s-.35)*1.6,0,1),frac,pulse,inflow:open&&!(S.fan&&S.fan.at===oid)?(z.ign&&z.q>.2?1:0):0,...sm,rgb:SMOKE_RGB[sm.col],state:o.state,zone:o.zone,steam:z.steam};}
+    out[oid]={rate,flame,glow,stain:clamp((z.s-.35)*1.6,0,1),frac,pulse,inflow:open&&!(S.fan&&S.fan.at===oid)?(z.ign&&z.q>.2?1:0):0,...sm,rgb,...(seep?{drawDen}:{}),state:o.state,zone:o.zone,steam:z.steam};}
   return out;}
 /* Eave / soffit / cornice smoke, localized (Oct 9 2026 rework).
    - Attic smoke leaks along the eave, most over the part of the attic fed from the burning/hot room below, plus any marked gable/soffit
@@ -918,6 +972,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,GAPS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{SEEP,UGLASS,VFO,ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,GAPS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

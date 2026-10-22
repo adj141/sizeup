@@ -33,7 +33,7 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
     // start its plume at the top eave, so a dark cloud sat above the 2nd-floor roofline). 'behind' stays at the ridge.
     const spot=rel==='behind'&&low&&B.roofSpots&&B.roofSpots[z.id];// a low wing with its own roof on this picture: plume rises from that roof, not the main ridge
     const fk=rel==='behind'?(spot?':'+z.id:''):low?'lo':'hi';const key=rel+fk;
-    const g=hid[key]||(hid[key]={rel,fk,spot,fl:z.floor,r:0,rx:0,den:0,vel:0,vol:0,rgb:[0,0,0]});if(low&&(z.floor==='B'||o.level==='B'))g.fl='B';g.r+=r;g.rx+=r*(z.x0+z.x1)/2;g.den=Math.max(g.den,v.den);g.vel=Math.max(g.vel,v.vel);g.vol=Math.max(g.vol,v.vol);v.rgb.forEach((c,k)=>g.rgb[k]+=c*r);};
+    const g=hid[key]||(hid[key]={rel,fk,spot,fl:z.floor,r:0,rx:0,den:0,vel:0,vol:0,rgb:[0,0,0]});if(low&&(z.floor==='B'||o.level==='B'))g.fl='B';g.r+=r;g.rx+=r*(z.x0+z.x1)/2;g.den=Math.max(g.den,v.drawDen!=null?v.drawDen:v.den);g.vel=Math.max(g.vel,v.vel);g.vol=Math.max(g.vol,v.vol);v.rgb.forEach((c,k)=>g.rgb[k]+=c*r);};
   /* Oct 22 (smoke fix): smoke seeping through the gaps of INTACT glass is drawn as light seepage that hugs the window head and thins out
      within about a storey, instead of a dark jet that climbed past the floor above (it read as heavy smoke from the 2nd-floor windows).
      [FSRI-HV08 9.3, Fig. 481: smoke visible from the windows of the closed two-story house, gone once the fire is ventilation-limited] */
@@ -52,7 +52,7 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
       const qw=ww*1.25;vis.flames.push({x:o.x,y:base,w:qw,h:fh,i:.9+v.flame*.45,seed,lean,asp:qw/Math.max(1,fh)*1.6,hv:inside/fh,ow:(ww/2)/(qw*.8)});
       if(o.cover!=null&&v.flame>.5)vis.flames.push({x:o.x,y:o.cover+14*U,w:ww*1.6,h:(30+50*v.flame)*U,i:.6+v.flame*.4,seed:seed+.5,lean,asp:ww*1.6/((30+50*v.flame)*U)*1.6});}
     if(v.rate>.01){const k=o.type==='door'||o.type==='garage'?.45:v.frac;const ey=o.cover!=null?o.cover:top+(broken?o.h*.08:0);
-      vis.emitters.push({key:o.id,kind:broken?'open':'leak',x:o.x,y:ey,w:broken?o.w*.85:o.w*(o.cover!=null?1.6:.9),hgt:broken?o.h*k*.55:4*U,rate:v.rate*(broken?34:gap?45:110)*(o.w>200*U?2:1),vel:v.vel,den:v.den,vol:v.vol,rgb:v.steam>.3?[205,203,198]:broken?v.rgb:v.rgb.map((c,j)=>c*.45+[120,117,112][j]*.55),glow:v.flame>.05?.9:v.glow*.25,pulse:v.pulse,alpha:broken?1:gap?.34:.5,...(gap&&!broken?{gap:true}:{}),cool:v.col==='white'?.1:.35});total+=v.rate*(broken?1:.3);}
+      vis.emitters.push({key:o.id,kind:broken?'open':'leak',x:o.x,y:ey,w:broken?o.w*.85:o.w*(o.cover!=null?1.6:.9),hgt:broken?o.h*k*.55:4*U,rate:v.rate*(broken?34:gap?45:110)*(o.w>200*U?2:1),vel:v.vel,den:v.drawDen!=null?v.drawDen:v.den,vol:v.vol,rgb:v.steam>.3?[205,203,198]:broken?v.rgb:v.rgb.map((c,j)=>c*.45+[120,117,112][j]*.55),glow:v.flame>.05?.9:v.glow*.25,pulse:v.pulse,alpha:broken?1:gap?.34:.5,...(gap&&!broken?{gap:true}:{}),cool:v.col==='white'?.1:.35});total+=v.rate*(broken?1:.3);}
   });
   {const bx=B.bldg||{x0:B.ridge?B.ridge.x0-150*U:0,x1:B.ridge?B.ridge.x1+150*U:B.W};const ey=(B.eaves&&B.eaves[0]?B.eaves[0].y:B.ridge?B.ridge.y+60*U:0);
    // a low plume starts at that floor's band on this picture; a side with no basement band (basement below grade there) starts at grade

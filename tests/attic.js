@@ -3,7 +3,7 @@
 // natural vents keep a VL attic fire burning, burning concentrates at the roof hole, gables and eaves only once the attic is vented;
 // NISTIR 7094 [NIST-ROOF]: roof burning ~6 min and collapse 8-9 min after the fire entered the attic; NIOSH 2005-132: trusses 5-10 min.
 const {chromium}=require('playwright-core');const fs=require('fs');global.window={};
-const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 const ld=f=>{delete require.cache[require.resolve(f)];return require(f);};const M0=ld('./base/model.pre-attic.js');
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++;console.log('  ok:',m);}else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('# '+n);
 const OUT='/workspace/sizeup/screens/attic-oct19/';fs.mkdirSync(OUT,{recursive:true});
@@ -108,7 +108,7 @@ const tl=(MM,o,name)=>{const S=mk(MM,o);const rows=[];let lastF=-1;for(let t=0;t
 tl(M0,{},'BEFORE (live 05c26ab)');tl(M,{},'AFTER');tl(M,{u:.15},'AFTER, origin at the Side B end of the attic (u 0.15)');
 fs.writeFileSync(OUT+'timeline.md',md);
 (async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const shot=async(url,side,t,file,u)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
+ const shot=async(url,side,t,file,u)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});
   await p.evaluate(async([t,u])=>{const z=window.__sizeup,M=z.M;await z.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'attic',fuel:'modern',preburn:t,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',atticU:u,companies:M.PRESETS.generic.companies()});z.A.playing=false;},[t,u]);
   await p.evaluate(s=>{window.__sizeup.setSide(s);window.__sizeup.syncUI();},side);await p.addStyleTag({content:'.toast{display:none!important}'});await p.waitForTimeout(3000);await p.locator('.slot .stage').screenshot({path:file});await p.close();};
  for(const [k,url] of [['before','file:///workspace/sizeup/tests/base/builds/pre-attic-05c26ab.html#noautoplay'],['after','file:///workspace/sizeup/index.html#noautoplay']]){
@@ -117,7 +117,7 @@ fs.writeFileSync(OUT+'timeline.md',md);
  await shot('file:///workspace/sizeup/index.html#noautoplay','A',11*60+30,`${OUT}after-sideA-11.5min-origin-sideB-end.png`,.15);
  // Oct 19 smoke fix: AJ's view (iPhone 390x844, setup Step 3, Side A, 5 min) and the drill at arrival; before = live f48ba13
  const OUT2='/workspace/sizeup/screens/attic-smoke-oct19/';fs.mkdirSync(OUT2,{recursive:true});const measure=require('./smoke-measure.js');
- const view=async(url,vp,u)=>{const ph=vp[0]<500;const p=await br.newPage({viewport:{width:vp[0],height:vp[1]},deviceScaleFactor:ph?3:1,isMobile:ph,hasTouch:ph});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.addStyleTag({content:'.toast{display:none!important}'});
+ const view=async(url,vp,u)=>{const ph=vp[0]<500;const p=await br.newPage({viewport:{width:vp[0],height:vp[1]},deviceScaleFactor:ph?3:1,isMobile:ph,hasTouch:ph});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});await p.addStyleTag({content:'.toast{display:none!important}'});
   await p.evaluate(async u=>{const z=window.__sizeup,M=z.M;await z.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'attic',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',atticU:u,companies:M.PRESETS.generic.companies()});z.A.playing=false;},u);await p.waitForTimeout(3000);return p;};
  const step3=async p=>{await p.evaluate(()=>document.querySelector('#steps button[data-go="3"]').click());await p.waitForTimeout(3500);};
  const R={};

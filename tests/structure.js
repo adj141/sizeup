@@ -1,5 +1,5 @@
 // Structural fuel fix (Oct 13 2026, AJ-approved). Contents burnout does not end a fire; timings cited in FIRE-MODEL.md "Structural fuel and collapse".
-global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++;console.log('  ok:',m);}else{fail++;console.log('  FAIL:',m);}};
 const mk=(b,origin,o={})=>M.create(b,{format:'sizeup-scenario',v:2,sceneId:b.id,origin,fuel:o.fuel||'modern',preburn:0,openings:o.openings||{},doors:o.doors||{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:7,companies:M.PRESETS.generic.companies(),presetName:'generic'});
 const until=(S,t)=>M.run(S,t-S.t);const burning=S=>Object.entries(S.z).filter(([k,z])=>z.ign&&!z.out&&z.q>.05).map(([k])=>k);

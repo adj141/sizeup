@@ -1,6 +1,10 @@
 /* What's New (Oct 21). One entry per release, newest first. To publish a release, add an entry at the top:
    v = release id (also the version label), date = shown to the user, items = 1-3 short plain-language bullets for firefighters. */
 const CHANGELOG=[
+ {v:'2026.10.22.2',date:'Oct 22, 2026',title:'Windows and flashover',items:[
+   'Windows now fall out only when the room is close to flashover, as in the UL FSRI house fire experiments. A closed-up house stays starved for air and the fire dies down until someone opens it up.',
+   'Give a starved fire air (a vent, an opened door) and it flashes over about 1½ to 4½ minutes later unless water gets there first. The debrief names the opening.',
+   'Smoke seeping around closed windows and doors is now scored as gray and no thicker than Moderate, matching the picture.']},
  {v:'2026.10.22',date:'Oct 22, 2026',title:'Smoke you can read',items:[
    'Smoke seeping around a closed window or door now looks light, the way it did in the UL FSRI house fire experiments. Heavy, pushing smoke means a real opening: a failed window or an open door.',
    'No more smoke cloud floating in the sky away from the house. Smoke from a window around the corner now rises at the corner of the roof.']},

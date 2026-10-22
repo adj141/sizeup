@@ -16,6 +16,9 @@ let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)
    smoke reading of closed openings (which appears in summary()). The baselines are compared with it off; a check at the end proves the fire
    (events, zones, water, victim, control) is identical with it on. */
 M.GAPS.on=false;
+/* Oct 22b glass/flashover/seepage (AJ): above-grade near-flashover glass (UGLASS), vent-induced flashover (VFO) and the gap-seepage reading
+   (SEEP) deliberately change fire behaviour and readings; the baselines here are compared with them off. They are tested in glass-flashover-oct22.js. */
+M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;
 function scn(b,o){return{format:'sizeup-scenario',v:2,sceneId:b.id,origin:o.origin,fuel:o.fuel||'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:o.occ||'random',wind:o.wind||{dir:'calm',spd:0},glass:'fails',seed:o.seed,actions:[],tNow:0,
   companies:M0.PRESETS.generic.companies(),presetName:'generic',env:o.env,windShift:o.ws||null,...(o.command?{command:o.command}:{})};}
 function run(MM,b,o,acts,T){const S=MM.create(b,JSON.parse(JSON.stringify(scn(b,o))));MM.run(S,S.scn.preburn);for(const a of acts)MM.act(S,{...a,t:S.scn.preburn+a.t});MM.run(S,S.scn.preburn+T);

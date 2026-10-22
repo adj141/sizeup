@@ -217,16 +217,30 @@ heat moved  = (heat difference)  × k × 0.018   capped at 0.03
 
 ### 4g. Window glass failure
 
-Each closed window keeps a heat counter:
+**Since Oct 22, 2026 (UGLASS) every window, on every floor, uses the near-flashover rule** that basement glass has used since Oct 14:
 
 ```
-glass heat += [ (T − 0.30 if positive) + 1.5 × (T − 0.60 if positive) ]  each second
+glass heat += (T − 0.90 if positive) × 10   each second   (× 0.6 for a small window-well window)
 fails when glass heat > threshold, threshold = 14 to 31.5 (set randomly per window by the scenario seed)
 ```
 
-With modern contents and the default 3½-minute arrival, the living-room glass fails about **4:50–5:20 after ignition**, and flashover follows about **80–85 s** later. The choice **"Window glass: Holds"** only lets glass fail above heat 0.72. That keeps the closed-house decay FSRI describes.
+[FSRI: HV08 5.7.2, Tables 9-10] In the FSRI window furnace tests, failure meant glass falling out (a passage of 25% or more of the glass area), not cracking. Modern double-glazed windows fell out at 540-650 °C furnace-side and legacy single-glazed ones at 650-790 °C. HV08 uses 600 °C as the flashover criterion (8.8.4, Table 37), so on this model's heat index (1.0 = flashover level) the modern windows fell out at about 0.9-1.08. The 0.90 start, the rate and the seeded spread are **teaching values** fitted to that. **"Window glass: Holds"** fails glass only from T 1.1 (the legacy end of the range, TV).
 
-**This whole rule is a simplification.** FSRI notes the fire *can* fail a window, but the timing here is a teaching value, not an FSRI measurement.
+**Consequence:** a closed-up house no longer vents itself before flashover. The fire goes ventilation-limited, and the hot layer peaks and decays (HV08 8.8.1-8.8.2, 9.1), until something gives it air: a crew vent, an opened door, an occupant, or an opening set at the start. Glass then fails only in rooms that are already at flashover level.
+
+*Before Oct 22* (switch `UGLASS.on=false`, kept for the older regression suites): above-grade glass collected `(T − 0.30) + 1.5 × (T − 0.60)` per second. With modern contents and the default 3½-minute arrival, the fire-room glass failed about 5:25-6:50 after ignition, and windows in unburned smoky rooms failed too.
+
+### 4g-2. Vent-induced flashover (VFO, Oct 22, 2026)
+
+A **ventilation-limited** room fire with **modern contents**, above grade (not the attic or basement), that gets **new air** (the air reaching the room rises by 0.2 or more: a vented window, an opened door, or a flow path to an opening) starts a flashover clock:
+
+```
+delay = clamp(120 s × room size × seeded jitter 0.85-1.25, 90 s, 270 s)
+while the clock runs, the hot layer climbs: T ≥ T0 + (1 − T0) × f²   (f = elapsed / delay)
+at the end: flashover (T = 1)
+```
+
+Water on the room, wet contents (wet > 0.3), too little fuel left (< 0.3), or the new air taken away again (door or window closed) cancels the clock. A later vent starts a new one. [FSRI: HV08 8.8.4, Table 37] Vent to flashover (600 °C at 1 ft) was 93-150 s in six of seven one-story living-room experiments (vented at 8:00; the door-only case did not flash). In the two-story family-room experiments (vented at 10:00) it was 114 s, 160 s and 428 s, and five did not reach 600 °C (8.8.5.1: the larger volume responded more slowly). So a 1.0-size room takes about 1:42-2:30 and the 1.4-size kitchen/family room about 2:23-3:30. The base, jitter and clamp are **teaching values**. Legacy contents keep the natural model (FSRI-VVR: vent to flashover took more than 8 minutes). The flashover log entry records the clock (`after`) and the opening that gave the air (`by`), and the debrief names it. Switch: `VFO.on=false`.
 
 ### 4h. What you see: smoke volume, velocity, density, color
 
@@ -242,6 +256,7 @@ These come from the room the smoke is leaving. **The cue mapping is the widely t
 **How much smoke leaves each opening:**
 - Open: `smoke × (0.4 + T)`, ×0.35 if the door is controlled, ×1.6 for a roof vent, and ×1.7 at the other openings when a fan is running.
 - Closed (leaking around the frame): `(smoke − 0.3) × (0.3 × T + 0.25 × building pressure × starved factor)`. **Below-grade fire** [NIOSH-BG for the indicator; the numbers are teaching values]: while a basement room is burning, closed openings of the rooms above it leak at `max(that, (smoke − 0.15) × (0.08 + 0.3 × T + 0.25 × building pressure × starved factor))`, so smoky but still-cool floors show at their gaps. NIOSH: *"Internal indicators of a below-grade fire include the presence of modest heat and dense smoke at the ground or first floor level, and the absence of visible fire."* That the same smoke shows at the first-floor window and door gaps outside is SizeUp judgment. Fires that never reach the basement are unaffected. The volume and velocity you can see from a gap are capped (Moderate, or Heavy if it's pushing hard). In a closed-up house this is the **first** smoke you see, from the fire room's own windows and door.
+- **Gap seepage reading (Oct 22, 2026; switch `SEEP.on`)**: smoke through the gaps of a closed opening reads at most **Moderate volume, Moderate velocity and Moderate density**, and **Gray** (White stays White for steam or cooling smoke). The picture draws gap seepage as light gray wisps, and the answer key now reads what is drawn. **Teaching values**: FSRI-HV08 9.3 / Fig. 481 show gap smoke from the closed two-story house but give no colour or density for it. The drawing is unchanged (it uses the fire's own colour and density).
 - **Starved factor** [FSRI: HV08 for the behavior; thresholds are teaching values]: 1 while every burning room still has air (oxygen reservoir R ≥ 0.3), falling linearly to 0 at R = 0.05. FSRI: "once the fire became ventilation limited the smoke being forced out of the gaps of the houses greatly diminished or stopped all together." So a starved, closed-up fire shows little or no smoke, and the app does not read that as a small fire.
 - **Building pressure** = `1.7 × q × T` of the hottest fire ÷ (1 + 2.5 × total open-opening area), capped at 1. A growing fire in a closed-up house pushes smoke around the windows and doors of its smoky rooms (and, once the top floor is smoke-charged, at the eaves above it); opening the house relieves it. [Simplification]
 

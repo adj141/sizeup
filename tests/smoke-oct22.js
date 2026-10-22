@@ -39,16 +39,28 @@ sec('intact glass: at most light-to-moderate seepage (FSRI-HV08 9.3)');
  ok(oldHeavy>0,`old: intact glass read Heavy/Pressurized (${oldHeavy} frames)`);
  ok(worst.vol<=1&&worst.vel<=1,`new: intact-glass smoke at most Moderate volume / Moderate velocity over ${n} frames (worst vol ${worst.vol} vel ${worst.vel})`);
  ok(leakA<=.34+1e-9,`intact-glass emitters are drawn light (alpha ${leakA}) and flagged as gap seepage`);ok(leakR<=45+1e-6,`intact-glass draw rate at most 45x the model rate (was 110x): ${leakR.toFixed(1)}`);}
-sec("AJ's timeline (kit, modern, arrival 3:30, seed 10)");
-{const S=mk(M,BLD.house,{origin:'kit',seed:10,preburn:210});for(let t=0;t<210+125;t++)M.step(S);let ov=M.openingVis(S);
+sec("AJ's timeline (kit, modern, arrival 3:30, seed 10), pre-Oct-22b glass rule (UGLASS/VFO off)");
+{M.UGLASS.on=false;M.VFO.on=false;const S=mk(M,BLD.house,{origin:'kit',seed:10,preburn:210});for(let t=0;t<210+125;t++)M.step(S);let ov=M.openingVis(S);
  ok(['w1k','rd','w1bk'].every(k=>S.o[k].state==='closed'&&ov[k].vol<=1&&ov[k].vel<=1),`T+2:05: kitchen glass intact, gap smoke only (w1k vol ${ov.w1k.vol} vel ${ov.w1k.vel})`);
  ok(Object.keys(ov).filter(k=>/^w2/.test(k)).every(k=>ov[k].rate<=.01),'T+2:05: no smoke from the 2nd-floor windows yet');
  const vC=V.build(S,BLD.house,M,'C');ok(vC.emitters.every(e=>e.kind!=='leak'||e.y>=262),'T+2:05 Side C: the only smoke is gap seepage at the 1st-floor kitchen glass');
  for(let t=0;t<90;t++)M.step(S);ov=M.openingVis(S);ok(S.o.w1k.state==='failed'&&ov.w1k.flame>0,'T+3:35: kitchen window has failed from heat, flames showing');
  ok(Object.keys(ov).filter(k=>/^w2/.test(k)).every(k=>S.o[k].state==='closed'&&ov[k].vol<=1),'T+3:35: 2nd-floor glass intact, light seepage at most');
  for(let t=0;t<65;t++)M.step(S);ov=M.openingVis(S);ok(['w2a','w2b','w2c','w2d'].every(k=>S.o[k].state!=='closed'||ov[k].vol<=1&&ov[k].vel<=1),'T+4:40 Side A: 2nd-floor front windows intact, light seepage');
- ok(BLD.house.conns.find(c=>c.id==='foy-hall2').type==='stair'&&S.c['foy-hall2'].state!=='closed',`default: interior stair open (foy-hall2 ${S.c['foy-hall2'].state})`);}
+ ok(BLD.house.conns.find(c=>c.id==='foy-hall2').type==='stair'&&S.c['foy-hall2'].state!=='closed',`default: interior stair open (foy-hall2 ${S.c['foy-hall2'].state})`);M.UGLASS.on=true;M.VFO.on=true;}
+sec("Oct 22b: gap seepage reads Gray and at most Moderate density (AJ, Side C T+1:09; TV)");
+{let n=0,bad=[],oldBlack=0,drawDiff=0;for(const z of ['kit','liv','foy','br1','br4','hall2','gar','bsmt'])for(const fuel of ['modern','legacy'])for(const seed of [10,3]){const S=mk(M,BLD.house,{origin:z,fuel,seed});
+  for(let t=0;t<=900;t++){if(t%15===0){M.SEEP.on=false;const o0=M.openingVis(S),e0=t%60===0?JSON.stringify(['A','C'].map(sd=>V.build(S,BLD.house,M,sd).emitters)):'';M.SEEP.on=true;const ov=M.openingVis(S);
+    if(e0&&e0!==JSON.stringify(['A','C'].map(sd=>V.build(S,BLD.house,M,sd).emitters)))drawDiff++;
+    for(const k in ov){if(S.o[k].state!=='closed'||ov[k].rate<=.01)continue;n++;if(ov[k].den>1||!['gray','white'].includes(ov[k].col)||ov[k].vol>1||ov[k].vel>1)bad.push(`${z}/${fuel}/${seed} ${k}@${t} ${ov[k].col} den${ov[k].den}`);if(o0[k].den>1||/black|brown/.test(o0[k].col))oldBlack++;}}
+   M.step(S);}}
+ ok(oldBlack>0,`SEEP off (Oct 22 reading): gap seepage read Thick or Black in ${oldBlack} frames`);
+ ok(bad.length===0,`gap seepage reads Gray (White for steam/cooling) and at most Moderate volume, velocity and density over ${n} frames ${bad.slice(0,3).join('; ')}`);
+ ok(drawDiff===0,`the drawing is unchanged by the reading cap (${drawDiff} frames differ)`);
+ const S=mk(M,BLD.house,{origin:'kit',seed:10,preburn:210});for(let t=0;t<210+69;t++)M.step(S);const ov=M.openingVis(S);
+ ok(S.o.rd.state==='closed'&&ov.rd.rate>.05&&ov.rd.col==='gray'&&ov.rd.den===1&&ov.rd.vol===1&&ov.rd.vel===1,`AJ T+1:09 Side C: rear slider seepage reads Moderate gray, moderate, moderate (${ov.rd.vol}/${ov.rd.vel}/${ov.rd.den}/${ov.rd.col})`);
+ M.SEEP.on=false;const o0=M.openingVis(S);M.SEEP.on=true;ok(o0.rd.col==='black'&&o0.rd.den===2,`SEEP off: the Oct 22 reading was Thick black (${o0.rd.den}/${o0.rd.col})`);}
 sec('flag off restores the pre-fix drawing exactly');
-{M.GAPS.on=false;let diff=0,n=0;for(const z of ['kit','liv','br3'])  {const S=mk(M,BLD.house,{origin:z}),S0=mk(M0,BLD.house,{origin:z});for(let t=0;t<=900;t++){if(t%60===0)for(const sd of 'ABCD'){n++;if(JSON.stringify(V.build(S,BLD.house,M,sd).emitters)!==JSON.stringify(V0.build(S0,BLD.house,M0,sd).emitters))diff++;}M.step(S);M0.step(S0);}}
- M.GAPS.on=true;ok(diff===0,`GAPS.on=false: emitters identical to the pre-fix build (${n} frames, ${diff} differ)`);}
+{M.GAPS.on=false;M.UGLASS.on=false;M.VFO.on=false;let diff=0,n=0;for(const z of ['kit','liv','br3'])  {const S=mk(M,BLD.house,{origin:z}),S0=mk(M0,BLD.house,{origin:z});for(let t=0;t<=900;t++){if(t%60===0)for(const sd of 'ABCD'){n++;if(JSON.stringify(V.build(S,BLD.house,M,sd).emitters)!==JSON.stringify(V0.build(S0,BLD.house,M0,sd).emitters))diff++;}M.step(S);M0.step(S0);}}
+ M.GAPS.on=true;M.UGLASS.on=true;M.VFO.on=true;ok(diff===0,`GAPS.on=false (UGLASS/VFO off): emitters identical to the pre-fix build (${n} frames, ${diff} differ)`);}
 console.log(`\nsmoke-oct22 suite: ${pass} pass, ${fail} fail`);process.exit(fail?1:0);

@@ -2,7 +2,7 @@
 // layer at a cited fallout condition (BGLASS.fallT, near-flashover; 20-35 kW/m2 fallout flux). FSRI/ISFSI basement experiments: fires stayed
 // ventilation-limited with windows as set until fire service ventilation.
 const {chromium}=require('playwright-core');const fs=require('fs');global.window={};
-const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 const ld=f=>{delete require.cache[require.resolve(f)];return require(f);};const M0=ld('./base/model.pre-basementwindow.js');
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++;console.log('  ok:',m);}else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('# '+n);
 const OUT='/workspace/sizeup/screens/basement-window-oct14/';fs.mkdirSync(OUT,{recursive:true});
@@ -34,7 +34,7 @@ tl(M,{},'AFTER, stair door default (closed)');tl(M,{doors:{'kit-bsmt':'open'}},'
 tl(M0,{},'BEFORE (live f6888c5), stair door default (closed)');tl(M0,{doors:{'kit-bsmt':'open'}},'BEFORE (live f6888c5), stair door open');
 fs.writeFileSync(OUT+'timeline.md',md);
 (async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const shot=async(url,side,t,doors,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
+ const shot=async(url,side,t,doors,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});
   await p.evaluate(async([t,doors])=>{const u=window.__sizeup,M=u.M;await u.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'bsmt',fuel:'modern',preburn:t,openings:{},doors,occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});u.A.playing=false;},[t,doors]);
   await p.evaluate(s=>{window.__sizeup.setSide(s);window.__sizeup.syncUI();},side);await p.addStyleTag({content:'.toast{display:none!important}'});await p.waitForTimeout(3000);await p.locator('.slot .stage').screenshot({path:file});await p.close();};
  for(const [k,url] of [['before','file:///workspace/sizeup/tests/base/builds/pre-basement-window-f6888c5.html#noautoplay'],['after','file:///workspace/sizeup/index.html#noautoplay']])

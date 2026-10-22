@@ -1,6 +1,6 @@
 // Oct 13 fixes: smoke above the roofline from first-floor openings around the corner (item 7), Side D garage view (item 3). Run: node fixes-oct13.js
 const {chromium}=require('playwright-core');const fs=require('fs'),cp=require('child_process');
-global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 const V=eval(fs.readFileSync('/workspace/sizeup/src/visual.js','utf8')+';SizeupVisual');
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('\n# '+n);
 const OUT='/workspace/sizeup/screens/fixes-oct13/';const OLD='file:///workspace/sizeup/tests/base/builds/pre-oct13-fixes.html#noautoplay',NEW='file:///workspace/sizeup/index.html#noautoplay';
@@ -18,7 +18,7 @@ sec('Side D garage view');
 {const D=BLD.house.views.D,o=BLD.house.openings;const g=id=>o.find(x=>x.id===id);ok(g('gsdD').x>600&&g('gwD').w>=100,'D: side door at the far end, wide double window');
  ok(cp.execSync('md5sum /workspace/sizeup/assets/house-c.jpg /workspace/sizeup/assets/house-d.jpg').toString().split('\n').map(l=>l.split(' ')[0]).filter(Boolean).length===2,'C and D are different files');}
 (async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});
- const shot=async(url,side,t,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
+ const shot=async(url,side,t,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});const errs=[];p.on('pageerror',e=>errs.push(e.message));await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});
   await p.evaluate(async t=>{const u=window.__sizeup,M=u.M;await u.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'liv',fuel:'modern',preburn:t,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});u.A.playing=false;},t);
   await p.evaluate(s=>{window.__sizeup.setSide(s);window.__sizeup.syncUI();},side);await p.addStyleTag({content:'.toast{display:none!important}'});await p.waitForTimeout(3000);await p.locator('.slot .stage').screenshot({path:file});await p.close();return errs;};
  for(const [k,url] of [['before',OLD],['after',NEW]]){fs.mkdirSync(OUT+k,{recursive:true});

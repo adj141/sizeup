@@ -1,6 +1,6 @@
 // Command fundamentals mode: node model tests + browser UI tests. Run: node command.js
 const {chromium}=require('playwright-core');const fs=require('fs');
-global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+global.window={};const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++;}else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('\n# '+n);
 const NOTE='not affiliated with, endorsed by, or a substitute for any commercial incident-command certification program';
 function mk(o={}){const sc={sceneId:'house',origin:o.origin||'liv',fuel:'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:o.occ||'none',wind:{dir:'calm',spd:0},glass:'fails',seed:o.seed||5,actions:[],tNow:0,
@@ -79,7 +79,7 @@ sec('model: export/replay determinism');
 /* ---------------- browser ---------------- */
 const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist']});require('./ui-reveal.js')(br);
 const URL='file:///workspace/sizeup/index.html#noautoplay';
-async function page(vp){const p=await br.newPage({viewport:vp||{width:1280,height:900}});const errs=[];p.on('pageerror',e=>errs.push(e.message));p.errs=errs;await p.goto(URL);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);return p;}
+async function page(vp){const p=await br.newPage({viewport:vp||{width:1280,height:900}});const errs=[];p.on('pageerror',e=>errs.push(e.message));p.errs=errs;await p.goto(URL);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});return p;}
 async function drill(p,o={}){await p.evaluate(async o=>{const M=window.__sizeup.M;await window.__sizeup.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'liv',fuel:'modern',preburn:o.preburn||360,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:o.mode||'solo',hideAnswers:!!o.hide,
   companies:M.PRESETS.generic.companies(),...(o.off?{}:{command:{on:true,sub:{...(o.sub||{})},set:{...(o.set||{})},terms:{}}})});window.__sizeup.A.playing=false;window.__sizeup.syncUI();},o);await p.waitForTimeout(150);}
 const adv=(p,n)=>p.evaluate(n=>{const u=window.__sizeup;const ne=u.advance(n);u.syncUI();u.renderBoard();return ne.length;},n);
@@ -210,7 +210,7 @@ sec('browser: mobile 390px');
  const tap=await p.evaluate(()=>[...document.querySelectorAll('#irrBox .cf-opt,#cmdCard button')].filter(b=>b.offsetParent&&b.getBoundingClientRect().height<34).length);ok(tap===0,'tap targets at least 34px');
  await p.click('#finishBtn');await p.waitForTimeout(300);const dov=await p.evaluate(()=>document.querySelector('.modal .box').scrollWidth<=document.querySelector('.modal .box').clientWidth+1);ok(dov,'debrief fits at 390px');await p.close();}
 sec('browser: mode off matches the Phase 1 build (UI flow)');
-{const flow=async url=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
+{const flow=async url=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});
   await p.evaluate(async()=>{const M=window.__sizeup.M;await window.__sizeup.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'kit',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'random',wind:{dir:'B',spd:15},glass:'fails',seed:77,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});window.__sizeup.A.playing=false;});
   await p.evaluate(()=>{const r=document.querySelector('#coList .corow2[data-co="E1"]');const s=r.querySelector('.co-task');s.value='line';s.dispatchEvent(new Event('change',{bubbles:true}));});await p.waitForTimeout(60);await p.evaluate(()=>document.querySelector('#coList .corow2[data-co="E1"] .co-go').click());
   await p.evaluate(()=>{const u=window.__sizeup;u.advance(100);u.order({kind:'assign',co:'E2',task:'supply',to:'E1',mode:'forward'});u.advance(100);u.setSide('C');u.order({kind:'search',floor:'2'});u.advance(600);u.syncUI();});

@@ -5,7 +5,7 @@ let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('  FAIL: 
 const PH={width:390,height:844};
 (async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});require('./ui-reveal.js')(br);
 async function page(vp,url,o={}){const ph=(vp||PH).width<500;const ctx=await br.newContext({viewport:vp||PH,deviceScaleFactor:o.dsf||(ph?3:1),isMobile:ph,hasTouch:ph});const p=await ctx.newPage();const errs=[];p.on('pageerror',e=>errs.push(e.message));p.errs=errs;p.ctx=ctx;
-  await p.goto(url||URL);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.addStyleTag({content:'.toast{display:none!important}'});return p;}
+  await p.goto(url||URL);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});await p.addStyleTag({content:'.toast{display:none!important}'});return p;}
 const drill=(p,o={})=>p.evaluate(async o=>{const z=window.__sizeup,M=z.M;await z.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'br2',fuel:'modern',preburn:300,openings:{},doors:{},occupant:'random',wind:{dir:'calm',spd:0},glass:'fails',seed:7,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies(),...(o.cmd?{command:{on:true,sub:{},set:{},terms:{}}}:{})});z.A.playing=false;z.syncUI();},o);
 const m=p=>p.evaluate(()=>{const vis=e=>e&&e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden';
   const scr=document.querySelector('.screen.on');const words=t=>(t.match(/[A-Za-z0-9][\w’'.+/-]*/g)||[]).length;
@@ -70,8 +70,8 @@ sec('What’s New and About');
  await p.screenshot({path:'/workspace/sizeup/screens/ios-redesign/after-00-whats-new.png'}).catch(()=>{});
  await p.click('#dim',{position:{x:20,y:20}}).catch(()=>{});ok(await p.evaluate(()=>document.querySelector('#sh-whatsnew').classList.contains('on')),'backdrop tap does not dismiss it');
  await p.click('#wnContinue');ok(await p.evaluate(V=>localStorage.getItem(window.__sizeup.WN_KEY)===V,V),'Continue stores the version');
- await p.reload();await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.waitForTimeout(700);ok(await p.evaluate(()=>!document.querySelector('#sh-whatsnew').classList.contains('on')),'second launch: no sheet');
- await p.evaluate(()=>localStorage.setItem(window.__sizeup.WN_KEY,'2026.10.13'));await p.reload();await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.waitForTimeout(700);
+ await p.reload();await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});await p.waitForTimeout(700);ok(await p.evaluate(()=>!document.querySelector('#sh-whatsnew').classList.contains('on')),'second launch: no sheet');
+ await p.evaluate(()=>localStorage.setItem(window.__sizeup.WN_KEY,'2026.10.13'));await p.reload();await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});await p.waitForTimeout(700);
  ok(await p.evaluate(()=>document.querySelector('#sh-whatsnew').classList.contains('on')&&document.querySelectorAll('#wnOnce .wnr').length===3),'after an update from Oct 13: shows the 3 newer releases');await p.click('#wnContinue');
  const CL=await p.evaluate(()=>window.__sizeup.CHANGELOG);ok(CL.length>=6,'changelog seeded ('+CL.length+' releases)');
  ok(CL.every((c,i)=>i===0||c.v<CL[i-1].v),'newest first');ok(CL.every(c=>c.date&&c.items.length>=1&&c.items.length<=3),'a date and 1-3 bullets per release');

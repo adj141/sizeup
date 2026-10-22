@@ -1,7 +1,7 @@
 // Oct 13 basement glass fix: a basement fire failed the first-floor living-room glass ~T+3/4 min (default preburn 3:30). Cause: the floor
 // burn-through was timed from ignition (6:00), opening the floor to the living room before the basement fire was even severe.
 const {chromium}=require('playwright-core');const fs=require('fs');global.window={};
-const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 const ld=f=>{delete require.cache[require.resolve(f)];return require(f);};const M0=ld('./base/model.pre-basementglass.js');
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('# '+n);
 const OUT='/workspace/sizeup/screens/basement-glass-oct13/';fs.mkdirSync(OUT,{recursive:true});
@@ -32,7 +32,7 @@ for(const {name,S} of TL){md+=`## ${name}\n\n| Time | T+ (arr 3:30) | Event |\n|
 {const {S}=trace(M0,{});md+='## BEFORE (live 7b253c5), door default\n\n| Time | Event |\n|---|---|\n';for(const e of S.events.filter(e=>KEY.test(e.msg)&&e.t<=600))md+=`| ${mmss(e.t)} | ${e.msg.split('. ')[0]} |\n`;}
 fs.writeFileSync(OUT+'timeline.md',md);
 (async()=>{const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const shot=async(url,t,doors,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
+ const shot=async(url,t,doors,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});
   await p.evaluate(async([t,doors])=>{const u=window.__sizeup,M=u.M;await u.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'bsmt',fuel:'modern',preburn:t,openings:{},doors,occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:5,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});u.A.playing=false;},[t,doors]);
   await p.evaluate(()=>{window.__sizeup.setSide('A');window.__sizeup.syncUI();});await p.addStyleTag({content:'.toast{display:none!important}'});await p.waitForTimeout(3000);await p.locator('.slot .stage').screenshot({path:file});await p.close();};
  for(const [k,url] of [['before','file:///workspace/sizeup/tests/base/builds/pre-basement-glass-7b253c5.html#noautoplay'],['after','file:///workspace/sizeup/index.html#noautoplay']])

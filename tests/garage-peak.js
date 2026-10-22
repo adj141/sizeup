@@ -1,7 +1,7 @@
 // Oct 13 garage peak fix: a garage fire showed smoke at the roof peak on Side B (the garage is a 1-story wing on the D end, hidden behind
 // the house from B). Cause: the far-side (Side D) garage window failed and the hidden-side rule drew a "behind the ridge" plume at the peak.
 const {chromium}=require('playwright-core');const fs=require('fs');global.window={};
-const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');
+const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 const ld=f=>{delete require.cache[require.resolve(f)];return require(f);};const M0=ld('./base/model.pre-garagefix.js');
 const V=new Function(fs.readFileSync('/workspace/sizeup/src/visual.js','utf8')+';return SizeupVisual;')();
 const V0=new Function(fs.readFileSync('./base/visual.pre-garagefix.js','utf8')+';return SizeupVisual;')();
@@ -32,7 +32,7 @@ sec('other origins unchanged by the fix (no garage zone involved)');
  M.GAPS.on=true;ok(bad===0,`emitters identical old vs new for non-garage fires (${n} frames, ${bad} differ)`);}
 (async()=>{const OUT='/workspace/sizeup/screens/garage-peak-oct13/';fs.mkdirSync(OUT,{recursive:true});
  const br=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
- const shot=async(url,side,t,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);
+ const shot=async(url,side,t,file)=>{const p=await br.newPage({viewport:{width:1280,height:900}});await p.goto(url);await p.waitForFunction(()=>window.__sizeup&&window.__sizeup.ready);await p.evaluate(()=>{const M=window.__sizeup.M;if(M.UGLASS){M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;}});
   await p.evaluate(async t=>{const u=window.__sizeup,M=u.M;await u.loadScenario({format:'sizeup-scenario',v:2,sceneId:'house',origin:'gar',fuel:'modern',preburn:t,openings:{},doors:{},occupant:'none',wind:{dir:'calm',spd:0},glass:'fails',seed:12345,actions:[],tNow:0,mode:'solo',companies:M.PRESETS.generic.companies()});u.A.playing=false;},t);
   await p.evaluate(s=>{window.__sizeup.setSide(s);window.__sizeup.syncUI();},side);await p.addStyleTag({content:'.toast{display:none!important}'});await p.waitForTimeout(3000);await p.locator('.slot .stage').screenshot({path:file});await p.close();};
  for(const [k,url] of [['before','file:///workspace/sizeup/tests/base/builds/pre-garage-fix-be661a9.html#noautoplay'],['after','file:///workspace/sizeup/index.html#noautoplay']])
