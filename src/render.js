@@ -13,7 +13,7 @@ function makeNoise(N){// tileable value-noise FBM in 4 channels
   const px=new Uint8Array(N*N*4);for(let c=0;c<4;c++){let mn=1,mx=0;for(const v of ch[c]){mn=Math.min(mn,v);mx=Math.max(mx,v);}for(let i=0;i<N*N;i++)px[i*4+c]=Math.round((ch[c][i]-mn)/(mx-mn)*255);}
   return px;}
 const VS_PHOTO=`attribute vec2 a;uniform vec4 u_view;varying vec2 v;void main(){v=a;gl_Position=vec4((u_view.xy+a*u_view.zw)*vec2(2.,-2.)+vec2(-1.,1.),0.,1.);}`;
-const FS_PHOTO=`precision mediump float;varying vec2 v;uniform sampler2D u_img,u_noise;uniform vec2 u_size;uniform float u_time,u_dim,u_gk,u_fog,u_flood;uniform vec3 u_amb,u_fogc;
+const FS_PHOTO=`precision mediump float;varying vec2 v;uniform sampler2D u_img,u_noise;uniform vec2 u_size;uniform float u_time,u_dim,u_gk,u_fog,u_flood,u_glook;uniform vec3 u_amb,u_fogc;
 uniform vec4 u_L[8];uniform vec4 u_W[24];uniform vec4 u_WP[24];uniform int u_nL,u_nW;
 void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*u_amb*(1.-u_dim);
  col+=base*vec3(.86,.9,1.)*u_flood*(.25+.75*smoothstep(.2,1.,v.y)); // apparatus scene lighting, strongest low on the facade
@@ -45,7 +45,14 @@ void main(){vec2 p=v*u_size;vec3 base=texture2D(u_img,v).rgb;vec3 col=base*u_amb
    vec3 room=mix(upper,lower,m);
    vec3 inside;
    if(P.z>.5)inside=mix(vec3(.03,.025,.02),room,clamp(g*1.4+.25,0.,1.));
-   else{vec3 glass=base*(u_amb+u_flood*.4)*(1.-P.y*.85)+light*.18*u_gk;vec3 behind=mix(upper,lower,m)*.8;inside=mix(glass,behind+glass*.12,clamp(g*.75*(1.-P.y*.5),0.,1.));}
+   else if(u_glook<.5){vec3 glass=base*(u_amb+u_flood*.4)*(1.-P.y*.85)+light*.18*u_gk;vec3 behind=mix(upper,lower,m)*.8;inside=mix(glass,behind+glass*.12,clamp(g*.75*(1.-P.y*.5),0.,1.));}
+   else{ // Oct 23 (GLOOK): INTACT glass must not read as a failed window. Smoke behind it darkens the pane (to ~45%, TV), but the
+     // frame and muntins stay (bright pixels of the picture) and a faint sky sheen shows it is still glass [FSRI-HV08 5.7.2: glass held until near flashover]
+     float lum=dot(base,vec3(.299,.587,.114));float mun=smoothstep(.48,.7,lum);
+     vec3 glass=base*(u_amb+u_flood*.4)*(1.-P.y*.55)+light*.18*u_gk;vec3 behind=mix(upper,lower,m)*.8;
+     inside=mix(glass,behind+glass*.15,clamp(g*.75*(1.-P.y*.5),0.,.8));
+     float sh=smoothstep(.3,0.,abs(q.x*.55-q.y*.85+.15))*(.07+.05*P.y)*(1.-mun);inside+=sh*(u_amb+u_flood*.3);
+     vec3 frame=base*(u_amb+u_flood*.4)*(1.-P.y*.22)+light*.3*u_gk;inside=mix(inside,frame,mun);}
    float edge=smoothstep(1.,.9,max(abs(q.x),abs(q.y)));col=mix(col,inside,edge);}
 
  // fog / precipitation haze: scatters the fire glow into a halo
@@ -151,7 +158,7 @@ function create(canvas){
     const L=new Float32Array(32),Wd=new Float32Array(96),WP=new Float32Array(96);let nL=0,nW=0,dim=0;
     if(vis){(vis.lights||[]).slice(0,8).forEach((l,i)=>{L.set([l.x,l.y,l.r,l.i],i*4);nL++;});(vis.windows||[]).slice(0,24).forEach((w,i)=>{Wd.set([w.x,w.y,w.w,w.h],i*4);WP.set([w.glow,w.stain,w.broken?1:0,w.seed],i*4);nW++;});dim=vis.dim||0;}
     gl.uniform4fv(pr.u.u_L,L);gl.uniform4fv(pr.u.u_W,Wd);gl.uniform4fv(pr.u.u_WP,WP);gl.uniform1i(pr.u.u_nL,nL);gl.uniform1i(pr.u.u_nW,nW);gl.uniform1f(pr.u.u_dim,dim);
-    const E=(vis&&vis.env)||{};gl.uniform3fv(pr.u.u_amb,E.amb||[1,1,1]);gl.uniform1f(pr.u.u_gk,E.gk||1);gl.uniform1f(pr.u.u_fog,E.fog||0);gl.uniform3fv(pr.u.u_fogc,E.fogc||[.7,.72,.75]);gl.uniform1f(pr.u.u_flood,E.flood||0);
+    const E=(vis&&vis.env)||{};gl.uniform3fv(pr.u.u_amb,E.amb||[1,1,1]);gl.uniform1f(pr.u.u_gk,E.gk||1);gl.uniform1f(pr.u.u_fog,E.fog||0);gl.uniform3fv(pr.u.u_fogc,E.fogc||[.7,.72,.75]);gl.uniform1f(pr.u.u_flood,E.flood||0);gl.uniform1f(pr.u.u_glook,E.glook==null?1:E.glook);
     gl.drawArrays(gl.TRIANGLES,0,6);
     if(!vis)return;
     // Oct 19: clip smoke and flames to the photo (never draw over the letterbox bars around a letterboxed picture)

@@ -6,7 +6,7 @@ function envOf(S){const e=S.scn.env||{};const tod=e.tod||'day',pr=e.precip||'non
   const T={day:{amb:[1,1,1],gk:1,samb:[1,1,1],fogc:[.74,.76,.79],ug:0},
     dusk:{amb:[.5,.45,.56],gk:1.7,samb:[.52,.5,.58],fogc:[.36,.34,.42],ug:.9},
     night:{amb:[.075,.09,.15],gk:2.6,samb:[.16,.17,.22],fogc:[.05,.06,.08],ug:2.2}}[tod]||{};
-  const o={amb:T.amb.slice(),gk:T.gk,samb:T.samb.slice(),fogc:T.fogc.slice(),ug:T.ug,fog:0,flood:0,sfog:0,tod,precip:pr,lit};
+  const o={amb:T.amb.slice(),gk:T.gk,samb:T.samb.slice(),fogc:T.fogc.slice(),ug:T.ug,fog:0,flood:0,sfog:0,tod,precip:pr,lit,glook:(typeof SizeupModel!=='undefined'&&SizeupModel.GLOOK&&!SizeupModel.GLOOK.on)?0:1};
   if(lit&&tod!=='day'){o.flood=tod==='night'?.42:.22;o.samb=o.samb.map(v=>Math.max(v,tod==='night'?.62:.72));o.fogc=o.fogc.map(v=>v+(tod==='night'?.16:.08));}
   if(pr==='rain'){o.amb=o.amb.map((v,i)=>v*[.78,.81,.88][i]);o.samb=o.samb.map(v=>v*.92);o.fog=.12;}
   if(pr==='snow'){o.amb=o.amb.map((v,i)=>v*[.9,.93,1][i]);o.fog=.2;o.fogc=o.fogc.map(v=>tod==='day'?v+.08:v+.03);}

@@ -242,6 +242,17 @@ at the end: flashover (T = 1)
 
 Water on the room, wet contents (wet > 0.3), too little fuel left (< 0.3), or the new air taken away again (door or window closed) cancels the clock. A later vent starts a new one. [FSRI: HV08 8.8.4, Table 37] Vent to flashover (600 °C at 1 ft) was 93-150 s in six of seven one-story living-room experiments (vented at 8:00; the door-only case did not flash). In the two-story family-room experiments (vented at 10:00) it was 114 s, 160 s and 428 s, and five did not reach 600 °C (8.8.5.1: the larger volume responded more slowly). So a 1.0-size room takes about 1:42-2:30 and the 1.4-size kitchen/family room about 2:23-3:30. The base, jitter and clamp are **teaching values**. Legacy contents keep the natural model (FSRI-VVR: vent to flashover took more than 8 minutes). The flashover log entry records the clock (`after`) and the opening that gave the air (`by`), and the debrief names it. Switch: `VFO.on=false`.
 
+### 4g-3. How intact glass is drawn (GLOOK, Oct 23, 2026)
+
+AJ (Oct 23, test build 16bfacd): a fire in Bedroom 4 (floor 2, rear, B/C corner) "and the window fail immediately". The model never failed that glass: with the bedroom door closed the room goes ventilation-limited and its hot layer peaks around 0.62-0.69, well under the near-flashover level (0.9, or 1.1 with "glass holds"), across 30 seeds and arrivals of 0, 3:30 and 5 min. The picture was the problem: the renderer darkened the pane of any smoke-filled room to 15% of the picture (smoke stain = (room smoke − 0.35) × 1.6, full by about 3:20 after ignition in that small closed room), which wiped out the frame and muntins, so an intact window looked exactly like a failed, open one.
+
+Now (switch `GLOOK.on`, default on):
+- The pane darkens only to about 45% at full stain (teaching value, TV: HV08 gives no measure of how dark smoke-logged glass looks).
+- The frame and muntins (the bright parts of the picture) keep nearly their normal brightness, and a faint sky sheen crosses the glass, so it reads as glass.
+- A failed window is unchanged: you see into the room (smoke, glow, fire), with no frame or muntins.
+
+Grounding: glass held until the room was close to flashover in the FSRI furnace and house experiments [FSRI-HV08 5.7.2, Tables 9-10], so a closed smoke-filled room should show closed, darkened windows, not open ones. `GLOOK.on=false` restores the old picture.
+
 ### 4h. What you see: smoke volume, velocity, density, color
 
 These come from the room the smoke is leaving. **The cue mapping is the widely taught "Reading Smoke" approach, not an FSRI measurement. [Simplification]**

@@ -57,7 +57,13 @@ const VFO={on:true,
   jit:[.85,1.25],    // TV: seeded spread between drills
   min:90,max:270,    // TV: clamp 1:30-4:30 (one-story fastest 93 s; two-story typical 114-160 s; the 428 s outlier is left out)
   fuel:.3};          // TV: needs unburned contents left to flash
-const SEEP={on:true}; // Oct 22b: gap seepage at intact glass reads at most Moderate density and Gray (TV); on=false restores the Oct 22 reading
+const SEEP={on:true};
+/* Oct 23 (GLOOK, AJ: "the window fail immediately"): the model kept the glass intact, but the renderer darkened a smoke-filled room's
+   intact pane to 15% with no frame or muntins left, so it read exactly like a failed, open window. Now intact glass keeps its frame and
+   muntins and a faint sky sheen, and the smoke stain darkens the pane only to about 45% (teaching value, TV: HV08 gives no figure for how
+   dark smoke-logged glass looks; it does say glass held until close to flashover [FSRI-HV08 5.7.2]). A failed window still shows the open
+   room with no frame. GLOOK.on=false restores the old picture. */
+const GLOOK={on:true}; // Oct 22b: gap seepage at intact glass reads at most Moderate density and Gray (TV); on=false restores the Oct 22 reading
 const GAPS={on:true}; // Oct 22 smoke fixes: gap-smoke cap (openingVis), light gap seepage and upper-floor corner plume anchor (visual.js); on=false restores the pre-Oct-22 behaviour for older regression suites // on=false restores the pre-Oct-14 rule (older regression suites)
 /* Attic fire (Oct 19 2026, see FIRE-MODEL.md "Attic fires"). Cited: FSRI attic study [FSRI-ATTIC]: attic fires grew to ventilation-limited
    in about 5 min (Table 7.1; 7:45 and 8:00 in Exps 3A/4A); the natural soffit/ridge/gable vents cannot support fuel-limited burning, but the
@@ -972,6 +978,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{SEEP,UGLASS,VFO,ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,GAPS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{GLOOK,SEEP,UGLASS,VFO,ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,GAPS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;
