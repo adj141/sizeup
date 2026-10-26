@@ -57,20 +57,22 @@ const house={id:'house',name:'2-story house',W:1285,H:546,stories:2,atticName:'A
  roofSpots:{br1:{x:360,y:118},br2:{x:500,y:112},br3:{x:740,y:116},hall2:{x:600,y:110},attic:{x:600,y:110},gar:{x:900,y:300}},
  /* Builder truth for Sides B/C/D (hidden from the drill user). Pictures are illustrations drawn for this project, not photos. */
  views:{
-  A:{zx:{br1:[290,400],br2:[400,610],hall2:[520,640],br3:[640,860]},stories:2,desc:'Front: 2 stories, porch, attached 2-car garage on the D end.'},
-  B:{img:'house-b',illustrated:true,W:1000,H:546,stories:2,grade:494,
+  /* taps (Oct 26): where each room sits behind this side's wall, in this picture's coordinates, so tapping a wall picks the room behind it
+     (incl. rooms with no window on this side, e.g. Bedroom 4 at the B/C corner). Roof/attic bands always pick the attic. */
+  A:{taps:[{z:'br1',x0:232,x1:400,y0:148,y1:262},{z:'br2',x0:400,x1:625,y0:148,y1:262},{z:'br3',x0:625,x1:990,y0:148,y1:262},{z:'liv',x0:232,x1:500,y0:262,y1:456},{z:'foy',x0:500,x1:646,y0:262,y1:456},{z:'gar',x0:646,x1:1129,y0:262,y1:456}],zx:{br1:[290,400],br2:[400,610],hall2:[520,640],br3:[640,860]},stories:2,desc:'Front: 2 stories, porch, attached 2-car garage on the D end.'},
+  B:{img:'house-b',taps:[{z:'br4',x0:200,x1:480,y0:146,y1:262},{z:'br1',x0:480,x1:760,y0:146,y1:262},{z:'kit',x0:200,x1:480,y0:262,y1:440},{z:'liv',x0:480,x1:880,y0:262,y1:440},{z:'bsmt',x0:200,x1:760,y0:440,y1:494}],illustrated:true,W:1000,H:546,stories:2,grade:494,
    floors:[{f:'Roof',y0:0,y1:46},{f:'Attic',y0:46,y1:146},{f:'2',y0:146,y1:262},{f:'1',y0:262,y1:440},{f:'B',y0:440,y1:494}],
    bldg:{x0:200,x1:760},eaves:[{x0:200,x1:252,y:146},{x0:708,x1:760,y:146}],eaveVents:[{x:480,w:40,y:104,kind:'gable'}],ridge:{x0:470,x1:490,y:46},roofSpots:{},
    hideZones:['gar'], // the 1-story garage wing is on the D end, entirely behind the house from Side B
   
    zx:{br4:[200,480],br1:[480,760]},zc:{liv:620,foy:620,kit:340,br1:620,br2:560,br3:500,br4:340,hall2:480,bsmt:380,gar:480,attic:480},
    desc:'Side B (left as you face the front): gable end, 2 stories, basement window at the rear corner as the grade drops. Overhead power lines from a pole to the service mast. Electric meter. Front porch at the A end.'},
-  C:{img:'house-c',illustrated:true,W:1285,H:546,stories:3,grade:494,walkout:true,
+  C:{img:'house-c',taps:[{z:'br3',x0:285,x1:600,y0:148,y1:262},{z:'hall2',x0:600,x1:680,y0:148,y1:262},{z:'br4',x0:680,x1:1023,y0:148,y1:262},{z:'gar',x0:150,x1:285,y0:200,y1:262},{z:'gar',x0:150,x1:565,y0:262,y1:378},{z:'kit',x0:565,x1:1023,y0:262,y1:378},{z:'bsmt',x0:565,x1:1023,y0:378,y1:494}],illustrated:true,W:1285,H:546,stories:3,grade:494,walkout:true,
    floors:[{f:'Roof',y0:0,y1:76},{f:'Attic',y0:76,y1:148},{f:'2',y0:148,y1:262},{f:'1',y0:262,y1:378},{f:'B',y0:378,y1:494}],
    bldg:{x0:156,x1:1023},eaves:[{x0:285,x1:1023,y:146}],ridge:{x0:455,x1:935,y:76},roofSpots:{br3:{x:450,y:112},hall2:{x:640,y:104},attic:{x:640,y:104},br4:{x:850,y:112},br1:{x:900,y:100},br2:{x:760,y:100}},
    zx:{br3:[285,600],hall2:[600,680],br4:[680,1023]},zc:{liv:880,foy:730,kit:760,gar:360,br1:900,br2:780,br3:450,br4:860,hall2:640,bsmt:790,attic:650},
    desc:'Side C (rear): 3 stories visible. The yard falls away to a walk-out basement with a slider and a window under the deck. Kitchen slider onto the deck at floor 1. Back-yard fence with a gate.'},
-  D:{img:'house-d',illustrated:true,W:1000,H:546,stories:2,grade:456,
+  D:{img:'house-d',taps:[{z:'br3',x0:180,x1:760,y0:146,y1:236},{z:'gar',x0:105,x1:885,y0:236,y1:300},{z:'gar',x0:130,x1:860,y0:300,y1:456}],illustrated:true,W:1000,H:546,stories:2,grade:456,
    floors:[{f:'Roof',y0:0,y1:50},{f:'Attic',y0:50,y1:146},{f:'2',y0:146,y1:300},{f:'1',y0:300,y1:456}],
    bldg:{x0:130,x1:860},eaves:[{x0:180,x1:232,y:146},{x0:708,x1:760,y:146}],eaveVents:[{x:470,w:40,y:108,kind:'gable'}],ridge:{x0:460,x1:480,y:44},roofSpots:{},
    zx:{br3:[180,760]},zc:{gar:480,br3:470,liv:300,foy:330,kit:640,br1:300,br2:340,br4:640,hall2:470,bsmt:640,attic:470},

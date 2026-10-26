@@ -72,11 +72,11 @@ sec('browser: answer key, debrief, What’s New');
    await L([]);z.advance(69);z.setSide('C');const k=z.truthCalls(),txt=z.smokeText();
    await L([]);z.advance(900);const closed={fo:z.A.S.events.filter(e=>e.kind==='flashover').length,fail:z.A.S.events.filter(e=>e.kind==='fail').length};
    await L([{t:330,kind:'open',opening:'fd'}]);z.advance(500);const fo=z.A.S.events.find(e=>e.kind==='flashover');const db=z.debrief?(()=>{try{const d=z.debrief();return typeof d==='string'?d:JSON.stringify(d);}catch(e){return 'ERR '+e.message;}})():'';
-   return{k,txt,closed,fo:fo&&{t:fo.t,after:fo.after,by:fo.by,vfo:fo.vfo},db,V:z.VERSION,top:z.CHANGELOG[0]};});
+   return{k,txt,closed,fo:fo&&{t:fo.t,after:fo.after,by:fo.by,vfo:fo.vfo},db,V:z.VERSION,top:z.CHANGELOG[0],fx:z.CHANGELOG.find(c=>c.v!=='2026.10.22'&&/flashover/i.test(c.title+c.items.join(' ')))};});
  ok(r.k.vol===1&&r.k.vel===1&&r.k.den===1&&r.k.col==='gray',`AJ T+1:09 Side C answer key: Moderate / Moderate / Moderate / Gray (${r.k.vol}/${r.k.vel}/${r.k.den}/${r.k.col}) "${r.txt.slice(0,60)}"`);
  ok(r.closed.fo===0&&r.closed.fail===0,`closed house in the app: no glass failure, no flashover by T+15 (${JSON.stringify(r.closed)})`);
  ok(r.fo&&r.fo.vfo&&r.fo.by==='fd'&&r.fo.after>=90&&r.fo.after<=270,`front door opened at T+5:30 (scenario action times are drill time): kitchen flashes ${r.fo&&mm(r.fo.after)} later, logged with the front door`);
  ok(/Flashover after arrival[^"]*after air from Front door/i.test(r.db),`debrief names the vent before the flashover (${(r.db.match(/Flashover after arrival[^"]{0,120}/)||[''])[0]})`);
- ok(r.V===r.top.v&&r.V!=='2026.10.22'&&/flashover/i.test(r.top.title+r.top.items.join(' ')),`What’s New: new top entry ${r.V} "${r.top.title}"`);
+ ok(r.V===r.top.v&&r.V!=='2026.10.22'&&r.fx,`What’s New: top entry ${r.V} "${r.top.title}"; flashover entry ${r.fx&&r.fx.v} "${r.fx&&r.fx.title}"`); // Oct 26: later releases may sit above the flashover entry
  ok(!errs.length,'no page errors '+errs.join());await br.close();}
 console.log(`\nglass-flashover-oct22 suite: ${pass} pass, ${fail} fail`);process.exit(fail?1:0);})();

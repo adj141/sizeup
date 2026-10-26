@@ -1,6 +1,8 @@
 /* What's New (Oct 21). One entry per release, newest first. To publish a release, add an entry at the top:
    v = release id (also the version label), date = shown to the user, items = 1-3 short plain-language bullets for firefighters. */
 const CHANGELOG=[
+ {v:'2026.10.26',date:'Oct 26, 2026',title:'Tap the right room',items:[
+   'Tapping a wall on Side B, C or D now picks the room that is really behind it, including rooms with no window on that side (for example Bedroom 4 at the B/C corner), the basement and the garage.']},
  {v:'2026.10.23',date:'Oct 23, 2026',title:'Smoky windows',items:[
    'A window in a smoke-filled room now still looks like a closed window: the glass darkens, but the frame and panes stay visible. Before, it turned solid black and looked like it had already failed.',
    'Glass still falls out only when the room gets close to flashover, on every floor and every side of the house.']},

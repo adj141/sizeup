@@ -121,17 +121,25 @@ async function loadPhoto(file){if(!file)return;$('#fileErr').textContent='';try{
 /* ---------- step 2: origin & marking ---------- */
 function buildRoomSel(){const B=A.B;$('#roomSel').innerHTML=B.zones.map(z=>`<option value="${z.id}">${esc(z.name)}${z.hidden?' (interior)':''}</option>`).join('');$('#roomSel').value=A.scn.origin;}
 $('#roomSel').onchange=e=>{A.scn.origin=e.target.value;A.originSet=true;delete A.scn.atticU;const z=zoneOf(A.scn.origin);const o=A.B.openings.find(o=>o.zone===z.id&&!o.hidden);A.originPt=o?{x:o.x,y:o.y,side:'A'}:{side:'A',x:(z.x0+z.x1)/2,y:A.B.floors.find(f=>f.f===z.floor)?((f=>(f.y0+f.y1)/2)(A.B.floors.find(f=>f.f===z.floor))):A.B.H/2};A.S=null;syncUI();};
-function zoneAt(x,y){const B=curView();const o=B.openings.find(o=>!o.hidden&&Math.abs(x-o.x)<o.w/2+10&&Math.abs(y-o.y)<o.h/2+10);if(o)return o.zone;
-  let f=null;for(const b of B.floors)if(y>=b.y0&&y<b.y1)f=b.f;if(f==='Roof'||f==='Attic')return(B.zones.find(z=>z.attic)||{}).id;if(f==='B'||!f)f='1';
+function zoneAt(x,y){const B=curView();if(!B||B.has===false||!B.floors)return null;const o=B.openings.find(o=>!o.hidden&&Math.abs(x-o.x)<o.w/2+10&&Math.abs(y-o.y)<o.h/2+10);if(o)return o.zone;
+  let f=null;for(const b of B.floors)if(y>=b.y0&&y<b.y1)f=b.f;if(f==='Roof'||f==='Attic')return(B.zones.find(z=>z.attic)||{}).id;
+  // Oct 26 (AJ): the room that sits behind this spot on THIS side, from the side's footprint map (hidden/windowless rooms included).
+  // Before, hidden rooms were skipped and side pictures used Side A's room positions, so the B/C-corner wall picked Bedroom 3/1/2, not Bedroom 4.
+  const tp=((A.B.views||{})[A.side||'A']||{}).taps;
+  if(tp&&tp.length){const zf=id=>(A.B.zones.find(z=>z.id===id)||{}).floor;const hit=tp.find(r=>x>=r.x0&&x<r.x1&&y>=r.y0&&y<r.y1);if(hit)return hit.z;
+    const fb=f==='B'||!f?'1':f; // below grade with no basement behind it (lawn, slab): the floor-1 room above it on this side
+    const c=tp.filter(r=>zf(r.z)===fb);const d=r=>x<r.x0?r.x0-x:x>=r.x1?x-r.x1:0;if(c.length){c.sort((a,b)=>d(a)-d(b));return c[0].z;}}
+  if(f==='B'||!f)f='1';
   const c=B.zones.filter(z=>z.floor===f&&!z.hidden);if(!c.length)return B.zones[0].id;c.sort((a,b)=>Math.abs((a.x0+a.x1)/2-x)-Math.abs((b.x0+b.x1)/2-x));return(c.find(z=>x>=z.x0&&x<=z.x1)||c[0]).id;}
-function onTap(cx,cy){if(!A.B)return;if(cx<rect.x||cx>rect.x+rect.w||cy<rect.y||cy>rect.y+rect.h)return;const p=toScene(cx,cy);
+function onTap(cx,cy){if(!A.B)return;{const V=curView();if(!V||V.has===false)return;} // no picture of this side: nothing to tap (Oct 26)
+  if(cx<rect.x||cx>rect.x+rect.w||cy<rect.y||cy>rect.y+rect.h)return;const p=toScene(cx,cy);
   if(A.screen===2){if(A.side!=='A'&&A.B.id==='photo'&&A.markMode!=='origin'){sideMarkTap(p);return;}
     if(A.B.id==='photo'&&A.markMode!=='origin'&&FEATS[A.markMode]){featTap(A.photoMarks,p,curView());rebuildPhoto();return;}
     if(A.B.id==='photo'&&A.markMode!=='origin'){const mk=A.photoMarks;const bh=(mk.grade-mk.eave)/mk.stories;
       if(A.markMode==='eave')mk.eave=Math.round(Math.min(p.y,mk.grade-40));else if(A.markMode==='grade')mk.grade=Math.round(Math.max(p.y,mk.eave+40));
       else{const hit=mk.openings.findIndex(o=>Math.abs(p.x-o.x)<o.w/2&&Math.abs(p.y-o.y)<o.h/2);if(hit>=0)mk.openings.splice(hit,1);else{const t=A.markMode,h=t==='door'?bh*.78:t==='garage'?bh*.72:bh*.5,w=t==='door'?h*.45:t==='garage'?h*2:h*.7;mk.openings.push({type:t,x:Math.round(p.x),y:Math.round(t!=='window'?Math.min(p.y,mk.grade-h/2):p.y),w:Math.round(w),h:Math.round(h)});}}
       const keep=A.scn.origin;A.B=photoBuilding(A.B.W,A.B.H,mk);buildRoomSel();if(A.B.zones.some(z=>z.id===keep))A.scn.origin=keep;$('#roomSel').value=A.scn.origin;A.S=null;syncUI();return;}
-    A.scn.origin=zoneAt(p.x,p.y);A.originPt={...p,side:A.side};A.originSet=true;
+    {const zid=zoneAt(p.x,p.y);if(!zid)return;A.scn.origin=zid;}A.originPt={...p,side:A.side};A.originSet=true;
     // attic origin: remember where along the attic it starts, so the fire spreads from there (Oct 19)
     if(zoneOf(A.scn.origin)&&zoneOf(A.scn.origin).attic&&M.atticU)A.scn.atticU=+M.atticU(A.B,A.side,p.x).toFixed(3);else delete A.scn.atticU;$('#roomSel').value=A.scn.origin;A.S=null;syncUI();return;}
   if(A.screen===3){const o=curView().openings.find(o=>!o.hidden&&Math.abs(p.x-o.x)<o.w/2+8&&Math.abs(p.y-o.y)<o.h/2+8);if(o){cycleOpening(o.id);}}}
@@ -490,6 +498,6 @@ document.addEventListener('keydown',e=>{if(A.screen!==4||$('#modal').classList.c
 (async()=>{await initSamples();syncUI();requestAnimationFrame(loop);
   const emb=document.getElementById('sizeup-scenario');if(emb){try{await loadScenario(JSON.parse(emb.textContent));}catch(e){console.error(e);$('#fileErr').textContent='Embedded drill could not be loaded.';}}
   window.__sizeup.ready=true;})();
-Object.assign(window.__sizeup,{setSide,curView,findingsNow:()=>M.findings(A.S),syncUI,rebuild,advance,order,debrief,scenarioObj,scenarioHTML,loadScenario,truthCalls,summary,exportPNG,buildInjects,smokeText,openShare,layout});
+Object.assign(window.__sizeup,{zoneAt,setSide,curView,findingsNow:()=>M.findings(A.S),syncUI,rebuild,advance,order,debrief,scenarioObj,scenarioHTML,loadScenario,truthCalls,summary,exportPNG,buildInjects,smokeText,openShare,layout});
 
 })();
