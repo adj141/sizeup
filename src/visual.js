@@ -80,7 +80,9 @@ function build(S,B0,M,side){side=side||'A';const B=M.viewOf?M.viewOf(B0,side):B0
   const e=M.eavesVis(S,side);if(e&&e.segs&&e.rate>.02){const ey=B.eaves[0].y;
     /* Oct 19 (attic smoke fix): a fire that started in the attic pushes smoke out through the soffit and ridge vents, so it is drawn as
        separate wisps/columns from vent points (narrow, small puffs, opacity and rate falling off away from the origin) instead of a
-       blanket of wide eave emitters. Pressure push from rooms below (src 'push') keeps the earlier drawing. [FSRI-ATTIC 7.5, 7.6] */
+       blanket of wide eave emitters. Pressure push from rooms below (src 'push') keeps the earlier drawing. [FSRI-ATTIC 7.5, 7.6]
+       Oct 26b: the model no longer makes 'push' segments (EATTIC.on), so a room fire draws nothing at the eaves until the attic has smoke;
+       with EATTIC.on=false the push drawing below returns unchanged. */
     if(e.vents){for(const v0 of e.vents){const v={...v0,...(v0.draw||{})};const rel=Math.min(1,v.rate/Math.max(.05,e.rate));
         vis.emitters.push({key:'vent:'+v.src+':'+Math.round(v.x),kind:'vent',x:v.x,y:v.y,w:(v.src==='ridge'?10:14)*U,hgt:3*U,rate:v.rate*(v.src==='ridge'?3.5:4.5),vel:Math.min(1,v.vel),den:v.den,vol:v.vol,rgb:v.rgb,
           alpha:(.5+.13*v.den)*(.3+.7*rel),cool:.45,glow:e.flame?.4:0,pulse:v.pulse?'attic':0});}}

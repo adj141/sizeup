@@ -61,6 +61,6 @@ sec("Oct 22b: gap seepage reads Gray and at most Moderate density (AJ, Side C T+
  ok(S.o.rd.state==='closed'&&ov.rd.rate>.05&&ov.rd.col==='gray'&&ov.rd.den===1&&ov.rd.vol===1&&ov.rd.vel===1,`AJ T+1:09 Side C: rear slider seepage reads Moderate gray, moderate, moderate (${ov.rd.vol}/${ov.rd.vel}/${ov.rd.den}/${ov.rd.col})`);
  M.SEEP.on=false;const o0=M.openingVis(S);M.SEEP.on=true;ok(o0.rd.col==='black'&&o0.rd.den===2,`SEEP off: the Oct 22 reading was Thick black (${o0.rd.den}/${o0.rd.col})`);}
 sec('flag off restores the pre-fix drawing exactly');
-{M.GAPS.on=false;M.UGLASS.on=false;M.VFO.on=false;let diff=0,n=0;for(const z of ['kit','liv','br3'])  {const S=mk(M,BLD.house,{origin:z}),S0=mk(M0,BLD.house,{origin:z});for(let t=0;t<=900;t++){if(t%60===0)for(const sd of 'ABCD'){n++;if(JSON.stringify(V.build(S,BLD.house,M,sd).emitters)!==JSON.stringify(V0.build(S0,BLD.house,M0,sd).emitters))diff++;}M.step(S);M0.step(S0);}}
- M.GAPS.on=true;M.UGLASS.on=true;M.VFO.on=true;ok(diff===0,`GAPS.on=false (UGLASS/VFO off): emitters identical to the pre-fix build (${n} frames, ${diff} differ)`);}
+{M.GAPS.on=false;M.UGLASS.on=false;M.VFO.on=false;M.EATTIC.on=false;let diff=0,n=0;for(const z of ['kit','liv','br3'])  {const S=mk(M,BLD.house,{origin:z}),S0=mk(M0,BLD.house,{origin:z});for(let t=0;t<=900;t++){if(t%60===0)for(const sd of 'ABCD'){n++;if(JSON.stringify(V.build(S,BLD.house,M,sd).emitters)!==JSON.stringify(V0.build(S0,BLD.house,M0,sd).emitters))diff++;}M.step(S);M0.step(S0);}}
+ M.GAPS.on=true;M.UGLASS.on=true;M.VFO.on=true;M.EATTIC.on=true;ok(diff===0,`GAPS.on=false (UGLASS/VFO off): emitters identical to the pre-fix build (${n} frames, ${diff} differ)`);}
 console.log(`\nsmoke-oct22 suite: ${pass} pass, ${fail} fail`);process.exit(fail?1:0);

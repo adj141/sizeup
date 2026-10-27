@@ -1,6 +1,9 @@
 /* What's New (Oct 21). One entry per release, newest first. To publish a release, add an entry at the top:
    v = release id (also the version label), date = shown to the user, items = 1-3 short plain-language bullets for firefighters. */
 const CHANGELOG=[
+ {v:'2026.10.26.2',date:'Oct 26, 2026',title:'Eaves follow the attic',items:[
+   'A room fire no longer puts smoke out of the eaves on its own. Early on, its smoke shows at the gaps around its windows and doors, as in the UL FSRI bedroom fire experiments.',
+   'Eave smoke now means smoke has reached the attic: from an attic fire, or once a room fire has filled the attic above it (in the sample house about 6 to 9 minutes after ignition).']},
  {v:'2026.10.26',date:'Oct 26, 2026',title:'Tap the right room',items:[
    'Tapping a wall on Side B, C or D now picks the room that is really behind it, including rooms with no window on that side (for example Bedroom 4 at the B/C corner), the basement and the garage.']},
  {v:'2026.10.23',date:'Oct 23, 2026',title:'Smoky windows',items:[

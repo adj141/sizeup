@@ -64,6 +64,14 @@ const SEEP={on:true};
    dark smoke-logged glass looks; it does say glass held until close to flashover [FSRI-HV08 5.7.2]). A failed window still shows the open
    room with no frame. GLOOK.on=false restores the old picture. */
 const GLOOK={on:true}; // Oct 22b: gap seepage at intact glass reads at most Moderate density and Gray (TV); on=false restores the Oct 22 reading
+/* Oct 26b (EATTIC, AJ: "should there be the volume of smoke ... coming from the eaves" at 3:30 from the 2nd-floor B/C bedroom): eaves
+   follow the attic. Eave/soffit smoke now comes ONLY from the attic's own smoke (attic smoke above 0.15, the existing attic path), never
+   straight from a smoke-filled top-floor room (the old 'pressure push'). In the FSRI/NIJ ranch bedroom fires (all exterior vents closed),
+   room-fire smoke showed at the gaps around the windows and doors (Exp 7, 210 s: "large volume of light gray smoke is pushing out of the
+   gaps around the bedroom window"); the report never describes eave or soffit smoke [FSRI-FDP, Tables 4.11-4.12]. Eave smoke and pulsing
+   are described for fires in the attic [FSRI-ATTIC]. A room fire therefore shows at the eaves only once its smoke has reached the attic
+   (ceiling leakage or burn-through) and built up there. EATTIC.on=false restores the pre-Oct-26 push (older regression suites). */
+const EATTIC={on:true};
 const GAPS={on:true}; // Oct 22 smoke fixes: gap-smoke cap (openingVis), light gap seepage and upper-floor corner plume anchor (visual.js); on=false restores the pre-Oct-22 behaviour for older regression suites // on=false restores the pre-Oct-14 rule (older regression suites)
 /* Attic fire (Oct 19 2026, see FIRE-MODEL.md "Attic fires"). Cited: FSRI attic study [FSRI-ATTIC]: attic fires grew to ventilation-limited
    in about 5 min (Table 7.1; 7:45 and 8:00 in Exps 3A/4A); the natural soffit/ridge/gable vents cannot support fuel-limited burning, but the
@@ -769,7 +777,8 @@ function openingVis(S){const out={};const own=S._own||airMap(S).own;const bp=bld
 /* Eave / soffit / cornice smoke, localized (Oct 9 2026 rework).
    - Attic smoke leaks along the eave, most over the part of the attic fed from the burning/hot room below, plus any marked gable/soffit
      vents (B.eaveVents [{x,w,kind:'gable'|'soffit',y?}]) which concentrate it.
-   - Pressure push at the eaves only comes from the TOP floor (the rooms directly under the roof), once that floor is itself charged
+   - Oct 26b (EATTIC.on, default): the pressure push below is OFF; eave smoke comes only from the attic's own smoke [FSRI-FDP, FSRI-ATTIC].
+   - (EATTIC.on=false only) Pressure push at the eaves only comes from the TOP floor (the rooms directly under the roof), once that floor is itself charged
      with smoke (s > 0.5), above that room, and fades as the fire goes ventilation-limited. A first-floor room fire therefore shows
      at its own window/door gaps first, not at the eaves. [simplification; the eave cue follows FSRI-ATTIC]
    - Deliberate pulsing only for a ventilation-limited attic with no roof opening: "Once the ridge vent seals, the eaves will act as
@@ -803,7 +812,7 @@ function eavesVis(S,side){const B=S.B,a=S.z.attic;side=side||'A';
   const segs=[];const gap=sm=>({vol:Math.min(2,sm.vol),vel:Math.min(2,sm.vel),den:Math.min(1,sm.den),col:sm.col,P:sm.P});
   for(const e of pieces){const cover=[];
     for(const bz of tops){const z=S.z[bz.id];const [zx0,zx1]=zr(bz);const x0=Math.max(e.x0,zx0),x1=Math.min(e.x1,zx1);if(x1-x0<5)continue;cover.push([x0,x1]);
-      const push=bp*vk*Math.max(0,z.s-.5)*.45;
+      const push=EATTIC.on?0:bp*vk*Math.max(0,z.s-.5)*.45; // Oct 26b: no direct room-to-eave push; eaves follow the attic (EATTIC)
       const share=atticRate*(.12+.88*(fMax>.02?feed(z)/fMax:1))*loc(x0,x1);
       if(Math.max(push,share)<=.005)continue;const fromAttic=share>=push;const sm=fromAttic?smA():gap(smokeOf(S,bz.id));
       segs.push({x0,x1,y:e.y,zone:bz.id,src:fromAttic?'attic':'push',rate:Math.max(push,share),pulse:fromAttic?pulse:0,flame:fromAttic?flameAt(x0,x1):0,...sm});}
@@ -978,6 +987,6 @@ function cmdAfterAssign(S,a,before){const C=S.cmd;if(!C)return;const n=S.tasks.l
   const kind=a.task||a.kind;const fit={backup:['line'],supply:['supply'],relief:['line','search1','search2'],ems:['rehab']};
   for(const r of C.cans){if(r.acted!=null||!r.need)continue;if(r.need==='assign'?r.co===co:(fit[r.need]||[]).includes(kind)){r.acted=S.t;break;}}}
 
-return{GLOOK,SEEP,UGLASS,VFO,ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,GAPS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
+return{EATTIC,GLOOK,SEEP,UGLASS,VFO,ATTIC,atticU,atticRules,atticSmokeWhere,BGLASS,GAPS,STRUCT,CHASE_K,belowGrade,CMD_SET,CMD_SUB,CMD_TERMS,TASK_OBJ,cmdCfg,cmdTruth,gradeIRR,cmdGated,seenSides,SIDES,feats,viewOf,findings,checkFollowup,FIND,FIND_RE,openStair,vlPush,DEF_SET,PRESETS,TASKDEF,CO_TYPES,CONT,newCompany,eqDefault,preDefault,coStatus,freeCrew,crewUsed,canDo,bcInCommand,hoseNeed,lineTimes,coTasks,diaTxt,coById,occByTime,OCC_P,bldgPressure,create,step,run,act,lineSpec,lineReach,stageOf,smokeOf,openingVis,eavesVis,summary,flowPath,FUEL,TASK,VOLN,VELN,DENN,SMOKE_RGB,airMap,front,zname,oname};
 })();
 if(typeof module!=='undefined')module.exports=SizeupModel;

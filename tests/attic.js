@@ -3,7 +3,7 @@
 // natural vents keep a VL attic fire burning, burning concentrates at the roof hole, gables and eaves only once the attic is vented;
 // NISTIR 7094 [NIST-ROOF]: roof burning ~6 min and collapse 8-9 min after the fire entered the attic; NIOSH 2005-132: trusses 5-10 min.
 const {chromium}=require('playwright-core');const fs=require('fs');global.window={};
-const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;/* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
+const BLD=require('/workspace/sizeup/src/buildings.js');const M=require('/workspace/sizeup/src/model.js');M.UGLASS.on=false;M.VFO.on=false;M.SEEP.on=false;M.EATTIC.on=false;/* Oct 26b: eaves follow the attic (new rules in eave-attic-oct26.js); this suite keeps the old room-to-eave push *//* Oct 22b: pre-glass/flashover/seepage-reading behaviour (new rules tested in glass-flashover-oct22.js) */
 const ld=f=>{delete require.cache[require.resolve(f)];return require(f);};const M0=ld('./base/model.pre-attic.js');
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++;console.log('  ok:',m);}else{fail++;console.log('  FAIL:',m);}};const sec=n=>console.log('# '+n);
 const OUT='/workspace/sizeup/screens/attic-oct19/';fs.mkdirSync(OUT,{recursive:true});
